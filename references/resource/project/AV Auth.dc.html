@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<main style="position: relative; z-index: 1; min-height: 76vh; display: grid; place-items: center; padding: 50px 20px 80px; font-family: 'Courier Prime', ui-monospace, monospace; animation: av-fade .28s ease both;">
+  <div style="width: 100%; max-width: 430px; border: 1px solid rgba(0,245,255,.3); background: rgba(10,11,18,.95); box-shadow: 0 0 60px rgba(0,245,255,.16); padding: 34px 28px; display: grid; gap: 22px;">
+    <div style="text-align: center; font-family: 'Press Start 2P', monospace; font-size: 16px; color: #00f5ff; letter-spacing: 1px; animation: av-flicker 5s infinite;">ARCADE<span style="color: #ff006e;">VAULT</span></div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; border: 1px solid rgba(255,255,255,.12);">
+      <div onClick="{{ tabLogin }}" style="padding: 14px 8px; text-align: center; font-family: 'Press Start 2P', monospace; font-size: 9px; cursor: pointer; color: {{ loginColor }}; background: {{ loginBg }};">INICIAR SESIÓN</div>
+      <div onClick="{{ tabRegister }}" style="padding: 14px 8px; text-align: center; font-family: 'Press Start 2P', monospace; font-size: 9px; cursor: pointer; color: {{ registerColor }}; background: {{ registerBg }};">CREAR CUENTA</div>
+    </div>
+    <div style="display: grid; gap: 16px;">
+      <label style="display: grid; gap: 8px; font-size: 12px; letter-spacing: 2px; color: #8b98a3; text-transform: uppercase;">Usuario
+        <input value="{{ user }}" onChange="{{ onUser }}" placeholder="jugador_01" style="padding: 14px; background: rgba(0,245,255,.04); border: 1px solid rgba(0,245,255,.3); color: #e6f2f5; font-family: 'Courier Prime', monospace; font-size: 15px;" style-focus="border-color: #00f5ff; box-shadow: 0 0 20px rgba(0,245,255,.4);" />
+      </label>
+      <sc-if value="{{ registering }}" hint-placeholder-val="{{ false }}">
+        <label style="display: grid; gap: 8px; font-size: 12px; letter-spacing: 2px; color: #8b98a3; text-transform: uppercase;">Correo electrónico
+          <input placeholder="tu@correo.com" style="padding: 14px; background: rgba(0,245,255,.04); border: 1px solid rgba(0,245,255,.3); color: #e6f2f5; font-family: 'Courier Prime', monospace; font-size: 15px;" style-focus="border-color: #00f5ff; box-shadow: 0 0 20px rgba(0,245,255,.4);" />
+        </label>
+      </sc-if>
+      <label style="display: grid; gap: 8px; font-size: 12px; letter-spacing: 2px; color: #8b98a3; text-transform: uppercase;">Contraseña
+        <input type="password" placeholder="••••••••" style="padding: 14px; background: rgba(0,245,255,.04); border: 1px solid rgba(0,245,255,.3); color: #e6f2f5; font-family: 'Courier Prime', monospace; font-size: 15px;" style-focus="border-color: #00f5ff; box-shadow: 0 0 20px rgba(0,245,255,.4);" />
+      </label>
+    </div>
+    <div onClick="{{ submit }}" style="text-align: center; font-family: 'Press Start 2P', monospace; font-size: 11px; white-space: nowrap; padding: 17px; border: 1px solid #00f5ff; color: #0a0a0f; background: #00f5ff; cursor: pointer;" style-hover="box-shadow: 0 0 30px rgba(0,245,255,.6);" style-active="transform: scale(.96);">{{ action }}</div>
+    <div onClick="{{ guest }}" style="text-align: center; font-size: 13px; letter-spacing: 2px; color: #f5ff00; cursor: pointer; text-transform: uppercase;" style-hover="text-shadow: 0 0 14px rgba(245,255,0,.7);">Jugar como invitado</div>
+    <div style="display: flex; align-items: center; gap: 12px; color: #333c45; font-size: 11px; letter-spacing: 2px;">
+      <div style="flex: 1; height: 1px; background: rgba(255,255,255,.1);"></div><span style="white-space: nowrap;">O CONTINÚA CON</span><div style="flex: 1; height: 1px; background: rgba(255,255,255,.1);"></div>
+    </div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+      <div onClick="{{ submit }}" style="text-align: center; padding: 14px; border: 1px solid rgba(255,255,255,.16); color: #cdd8de; font-size: 13px; letter-spacing: 1px; cursor: pointer;" style-hover="border-color: #00f5ff; color: #00f5ff;" style-active="transform: scale(.96);">Google</div>
+      <div onClick="{{ submit }}" style="text-align: center; padding: 14px; border: 1px solid rgba(255,255,255,.16); color: #cdd8de; font-size: 13px; letter-spacing: 1px; cursor: pointer;" style-hover="border-color: #00f5ff; color: #00f5ff;" style-active="transform: scale(.96);">GitHub</div>
+    </div>
+    <p style="margin: 0; font-size: 11px; line-height: 1.7; color: #3b454e;">// Demo local. Aquí conectaría el backend real (REST o Supabase) para sesiones y puntuaciones sincronizadas.</p>
+  </div>
+</main>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;onLogin&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;(name: string) =&gt; void&quot;},&quot;onGuest&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;}}">
+class Component extends DCLogic {
+  state = { tab: 'login', user: '' };
+
+  submit = () => {
+    const name = (this.state.user || 'JUGADOR_01').toUpperCase().slice(0, 14);
+    if (this.props.onLogin) this.props.onLogin(name);
+  };
+
+  renderVals() {
+    const reg = this.state.tab === 'register';
+    return {
+      registering: reg,
+      action: reg ? 'CREAR CUENTA' : 'ENTRAR AL VAULT',
+      tabLogin: () => this.setState({ tab: 'login' }),
+      tabRegister: () => this.setState({ tab: 'register' }),
+      loginColor: reg ? '#6f7d88' : '#00f5ff',
+      loginBg: reg ? 'transparent' : 'rgba(0,245,255,.12)',
+      registerColor: reg ? '#ff006e' : '#6f7d88',
+      registerBg: reg ? 'rgba(255,0,110,.12)' : 'transparent',
+      user: this.state.user,
+      onUser: e => this.setState({ user: e.target.value }),
+      submit: this.submit,
+      guest: () => this.props.onGuest && this.props.onGuest()
+    };
+  }
+}
+
+</script>
+</body>
+</html>

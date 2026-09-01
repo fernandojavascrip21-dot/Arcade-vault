@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet" />
+<script src="av-data.js"></script>
+<script src="av-scores.js"></script>
+<script src="av-engine.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #0a0a0f; }
+  a { color: #00f5ff; text-decoration: none; }
+  a:hover { color: #f5ff00; }
+  input::placeholder { color: #46525e; }
+  input:focus { outline: none; }
+  @keyframes av-flicker {
+    0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% { opacity: 1; text-shadow: 0 0 8px rgba(0,245,255,.9), 0 0 26px rgba(0,245,255,.55), 0 0 60px rgba(255,0,110,.35); }
+    20%, 22%, 24%, 55% { opacity: .72; text-shadow: 0 0 2px rgba(0,245,255,.4); }
+  }
+  @keyframes av-grid { 0% { background-position: 0 0, 0 0; } 100% { background-position: 0 60px, 0 60px; } }
+  @keyframes av-pulse {
+    0%, 100% { box-shadow: 0 0 0 rgba(0,245,255,0), inset 0 0 14px rgba(0,245,255,.15); transform: translateY(0); }
+    50% { box-shadow: 0 0 34px rgba(0,245,255,.65), inset 0 0 22px rgba(0,245,255,.3); transform: translateY(-1px); }
+  }
+  @keyframes av-row { from { opacity: 0; transform: translateX(-16px); } to { opacity: 1; transform: none; } }
+  @keyframes av-fade { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  @keyframes av-caret { 50% { opacity: 0; } }
+</style>
+</helmet>
+
+<div style="position: relative; min-height: 100vh; background: #0a0a0f; color: #cdd8de; font-family: 'Courier Prime', ui-monospace, monospace; overflow-x: hidden;">
+
+  <div style="position: fixed; inset: 0; z-index: 0; pointer-events: none; background-image: linear-gradient(rgba(0,245,255,.10) 1px, transparent 1px), linear-gradient(90deg, rgba(255,0,110,.08) 1px, transparent 1px); background-size: 100% 60px, 60px 100%; animation: av-grid 4.5s linear infinite; mask-image: linear-gradient(to bottom, transparent, #000 35%, #000 65%, transparent);"></div>
+  <div style="position: fixed; inset: -20% -30% 40% -30%; z-index: 0; pointer-events: none; background: radial-gradient(ellipse at 50% 0%, rgba(255,0,110,.16), transparent 60%);"></div>
+  <sc-if value="{{ scanlines }}" hint-placeholder-val="{{ true }}">
+    <div style="position: fixed; inset: 0; z-index: 60; pointer-events: none; opacity: .55; background: repeating-linear-gradient(to bottom, rgba(0,0,0,.42) 0 1px, rgba(0,0,0,0) 1px 3px);"></div>
+  </sc-if>
+
+  <nav style="position: sticky; top: 0; z-index: 40; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 22px; background: rgba(8,8,13,.9); backdrop-filter: blur(8px); border-bottom: 1px solid rgba(0,245,255,.28); box-shadow: 0 6px 30px rgba(0,0,0,.6);">
+    <div onClick="{{ goLibrary }}" style="font-family: 'Press Start 2P', monospace; font-size: 14px; white-space: nowrap; letter-spacing: 1px; color: #00f5ff; cursor: pointer; text-shadow: 0 0 10px rgba(0,245,255,.8);" style-hover="color: #f5ff00; text-shadow: 0 0 12px rgba(245,255,0,.8);">ARCADE<span style="color: #ff006e; text-shadow: 0 0 10px rgba(255,0,110,.9);">VAULT</span></div>
+
+    <sc-if value="{{ wide }}" hint-placeholder-val="{{ true }}">
+      <div style="display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 12px 22px;">
+        <div style="display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid rgba(245,255,0,.35); background: rgba(245,255,0,.05);">
+          <span style="font-size: 10px; letter-spacing: 2px; color: #b9bf6a; white-space: nowrap;">CRÉDITOS</span>
+          <span style="font-family: 'Press Start 2P', monospace; font-size: 12px; color: #f5ff00; text-shadow: 0 0 12px rgba(245,255,0,.6);">{{ creditsText }}</span>
+          <div onClick="{{ insertCoin }}" style="font-family: 'Press Start 2P', monospace; font-size: 8px; white-space: nowrap; padding: 7px 8px; border: 1px solid rgba(245,255,0,.5); color: #f5ff00; cursor: pointer; letter-spacing: 1px;" style-hover="background: rgba(245,255,0,.16); box-shadow: 0 0 16px rgba(245,255,0,.45);" style-active="transform: scale(.94);">+ MONEDA</div>
+        </div>
+        <div onClick="{{ goLibrary }}" style="position: relative; white-space: nowrap; flex: 0 0 auto; font-size: 14px; letter-spacing: 2px; text-transform: uppercase; cursor: pointer; padding-bottom: 6px; color: #cdd8de;" style-hover="color: #00f5ff;">Biblioteca
+          <sc-if value="{{ onLibrary }}" hint-placeholder-val="{{ true }}">
+            <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: #00f5ff; box-shadow: 0 0 10px #00f5ff, 0 0 20px rgba(0,245,255,.7);"></div>
+          </sc-if>
+        </div>
+        <div onClick="{{ goHall }}" style="position: relative; white-space: nowrap; flex: 0 0 auto; font-size: 14px; letter-spacing: 2px; text-transform: uppercase; cursor: pointer; padding-bottom: 6px; color: #cdd8de;" style-hover="color: #00f5ff;">Salón de la Fama
+          <sc-if value="{{ onHall }}" hint-placeholder-val="{{ false }}">
+            <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: #00f5ff; box-shadow: 0 0 10px #00f5ff, 0 0 20px rgba(0,245,255,.7);"></div>
+          </sc-if>
+        </div>
+        <sc-if value="{{ loggedIn }}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid #f5ff00; color: #f5ff00; font-family: 'Press Start 2P', monospace; font-size: 11px; box-shadow: 0 0 14px rgba(245,255,0,.4);">{{ userInitial }}</div>
+            <div style="font-size: 13px; letter-spacing: 1px; white-space: nowrap;">{{ userName }}</div>
+            <div onClick="{{ logout }}" style="font-size: 11px; letter-spacing: 1px; color: #6f7d88; cursor: pointer; text-transform: uppercase; white-space: nowrap;" style-hover="color: #ff006e;">Salir</div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ loggedOut }}" hint-placeholder-val="{{ true }}">
+          <div onClick="{{ goAuth }}" style="font-family: 'Press Start 2P', monospace; font-size: 10px; white-space: nowrap; flex: 0 0 auto; padding: 12px 16px; border: 1px solid #ff006e; color: #ff006e; cursor: pointer; background: rgba(255,0,110,.06);" style-hover="background: rgba(255,0,110,.18); box-shadow: 0 0 22px rgba(255,0,110,.55);" style-active="transform: scale(.96);">INICIAR SESIÓN</div>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ narrow }}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div onClick="{{ insertCoin }}" style="display: flex; align-items: center; gap: 8px; padding: 9px 10px; border: 1px solid rgba(245,255,0,.35); background: rgba(245,255,0,.05); cursor: pointer;" style-active="transform: scale(.94);">
+          <span style="font-size: 9px; letter-spacing: 1px; color: #b9bf6a;">CRÉD.</span>
+          <span style="font-family: 'Press Start 2P', monospace; font-size: 11px; color: #f5ff00;">{{ creditsText }}</span>
+        </div>
+        <div onClick="{{ toggleMenu }}" style="display: grid; gap: 5px; padding: 10px; border: 1px solid rgba(0,245,255,.4); cursor: pointer;">
+          <div style="width: 22px; height: 2px; background: #00f5ff;"></div>
+          <div style="width: 22px; height: 2px; background: #00f5ff;"></div>
+          <div style="width: 22px; height: 2px; background: #00f5ff;"></div>
+        </div>
+      </div>
+    </sc-if>
+  </nav>
+
+  <sc-if value="{{ coinMsg }}" hint-placeholder-val="{{ false }}">
+    <div style="position: fixed; top: 74px; right: 22px; z-index: 50; font-family: 'Press Start 2P', monospace; font-size: 10px; white-space: nowrap; padding: 12px 14px; border: 1px solid #f5ff00; color: #f5ff00; background: rgba(10,10,15,.94); box-shadow: 0 0 26px rgba(245,255,0,.4); letter-spacing: 1px; animation: av-fade .2s ease both;">{{ coinMsg }}</div>
+  </sc-if>
+
+  <sc-if value="{{ menuOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ toggleMenu }}" style="position: fixed; inset: 0; z-index: 55; background: rgba(4,4,8,.7); backdrop-filter: blur(3px);">
+      <div style="position: absolute; top: 0; right: 0; bottom: 0; width: 76%; max-width: 320px; background: #0c0c14; border-left: 1px solid rgba(0,245,255,.35); box-shadow: -10px 0 50px rgba(0,245,255,.18); padding: 26px 22px; display: grid; align-content: start; gap: 22px; animation: av-fade .22s ease both;">
+        <div style="font-family: 'Press Start 2P', monospace; font-size: 10px; color: #46525e; letter-spacing: 1px;">MENÚ</div>
+        <div onClick="{{ goLibrary }}" style="font-family: 'Press Start 2P', monospace; font-size: 12px; color: #00f5ff; cursor: pointer;">Biblioteca</div>
+        <div onClick="{{ goHall }}" style="font-family: 'Press Start 2P', monospace; font-size: 12px; color: #00f5ff; cursor: pointer;">Salón de la Fama</div>
+        <div onClick="{{ goAuth }}" style="font-family: 'Press Start 2P', monospace; font-size: 12px; color: #ff006e; cursor: pointer;">Iniciar Sesión</div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ onLibrary }}" hint-placeholder-val="{{ true }}">
+    <dc-import name="AV Library" stored="{{ stored }}" on-open="{{ openGame }}" hint-size="100%,900px"></dc-import>
+  </sc-if>
+
+  <sc-if value="{{ onDetail }}" hint-placeholder-val="{{ false }}">
+    <dc-import name="AV Detail" game-id="{{ gameId }}" stored="{{ stored }}" on-play="{{ playGame }}" on-back="{{ goLibrary }}" hint-size="100%,800px"></dc-import>
+  </sc-if>
+
+  <sc-if value="{{ onPlayer }}" hint-placeholder-val="{{ false }}">
+    <dc-import name="AV Player" player-name="{{ playerName }}" is-guest="{{ isGuest }}" difficulty="{{ difficulty }}" on-exit="{{ goLibrary }}" on-save="{{ saveScore }}" on-spend-credit="{{ spendCredit }}" hint-size="100%,760px"></dc-import>
+  </sc-if>
+
+  <sc-if value="{{ onAuth }}" hint-placeholder-val="{{ false }}">
+    <dc-import name="AV Auth" on-login="{{ login }}" on-guest="{{ playGuest }}" hint-size="100%,700px"></dc-import>
+  </sc-if>
+
+  <sc-if value="{{ onHall }}" hint-placeholder-val="{{ false }}">
+    <dc-import name="AV Hall" stored="{{ stored }}" game-id="{{ gameId }}" player-name="{{ playerName }}" hint-size="100%,860px"></dc-import>
+  </sc-if>
+
+  <footer style="position: relative; z-index: 1; padding: 26px 22px 40px; text-align: center; font-size: 11px; letter-spacing: 3px; color: #2f383f; border-top: 1px solid rgba(255,255,255,.06);">ARCADE VAULT · 1986–2026 · INSERTA MONEDA</footer>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;scanlines&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Pantalla&quot;},&quot;difficulty&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;FÁCIL&quot;,&quot;NORMAL&quot;,&quot;DIFÍCIL&quot;],&quot;default&quot;:&quot;NORMAL&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Juego&quot;},&quot;startScreen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Biblioteca&quot;,&quot;Salón de la Fama&quot;,&quot;Iniciar sesión&quot;],&quot;default&quot;:&quot;Biblioteca&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Pantalla&quot;}}">
+/* Contenedor: rutas, sesión, créditos y almacenamiento.
+   Datos en av-data.js · rankings en av-scores.js · motor en av-engine.js
+   Pantallas en AV Library / AV Detail / AV Player / AV Auth / AV Hall. */
+class Component extends DCLogic {
+  state = {
+    screen: 'library', menuOpen: false, wide: true,
+    gameId: 'rompemuros', user: null, guest: false,
+    credits: 3, coinMsg: '', stored: {}
+  };
+
+  componentDidMount() {
+    this.onResize = () => this.setState({ wide: window.innerWidth >= 1000 });
+    window.addEventListener('resize', this.onResize);
+    this.onResize();
+    this.poll = setInterval(() => {
+      if (window.AVScores) { clearInterval(this.poll); this.setState({ stored: window.AVScores.load() }); }
+    }, 60);
+    const start = this.props.startScreen;
+    const map = { 'Salón de la Fama': 'hall', 'Iniciar sesión': 'auth' };
+    if (start && map[start]) this.setState({ screen: map[start] });
+  }
+
+  componentWillUnmount() {
+    window.removeEventListener('resize', this.onResize);
+    clearInterval(this.poll);
+    clearTimeout(this.coinT);
+  }
+
+  go = (screen) => this.setState({ screen: screen, menuOpen: false });
+  goLibrary = () => this.go('library');
+  goHall = () => this.go('hall');
+  goAuth = () => this.go('auth');
+  toggleMenu = () => this.setState(s => ({ menuOpen: !s.menuOpen }));
+  openGame = (id) => this.setState({ gameId: id, screen: 'detail', menuOpen: false });
+
+  flashCoin(msg) {
+    clearTimeout(this.coinT);
+    this.setState({ coinMsg: msg });
+    this.coinT = setTimeout(() => this.setState({ coinMsg: '' }), 1800);
+  }
+
+  insertCoin = () => {
+    this.setState(s => ({ credits: Math.min(99, s.credits + 1) }));
+    this.flashCoin('MONEDA ACEPTADA');
+  };
+
+  spendCredit = () => {
+    if (this.state.credits <= 0) { this.flashCoin('INSERTA UNA MONEDA'); return false; }
+    this.setState(s => ({ credits: s.credits - 1 }));
+    this.flashCoin('CRÉDITO CONSUMIDO');
+    return true;
+  };
+
+  playGame = () => {
+    if (!this.spendCredit()) return;
+    this.setState({ screen: 'player', menuOpen: false });
+  };
+
+  saveScore = (score) => {
+    if (!window.AVScores) return;
+    const next = window.AVScores.add(this.state.stored, this.state.gameId, this.state.user || 'INVITADO', score);
+    this.setState({ stored: next });
+  };
+
+  login = (name) => this.setState({ user: name, guest: false, screen: 'library', menuOpen: false });
+  playGuest = () => this.setState({ user: null, guest: true, screen: 'library', menuOpen: false });
+  logout = () => this.setState({ user: null, guest: false });
+
+  renderVals() {
+    const s = this.state;
+    return {
+      scanlines: this.props.scanlines !== false,
+      difficulty: this.props.difficulty || 'NORMAL',
+      wide: s.wide, narrow: !s.wide, menuOpen: s.menuOpen,
+      onLibrary: s.screen === 'library', onDetail: s.screen === 'detail',
+      onPlayer: s.screen === 'player', onAuth: s.screen === 'auth', onHall: s.screen === 'hall',
+      loggedIn: !!s.user, loggedOut: !s.user, userName: s.user, userInitial: (s.user || 'J').charAt(0),
+      playerName: s.user || 'INVITADO', isGuest: !s.user,
+      creditsText: String(s.credits).padStart(2, '0'), coinMsg: s.coinMsg, insertCoin: this.insertCoin,
+      goLibrary: this.goLibrary, goHall: this.goHall, goAuth: this.goAuth, toggleMenu: this.toggleMenu, logout: this.logout,
+      gameId: s.gameId, stored: s.stored,
+      openGame: this.openGame, playGame: this.playGame, spendCredit: this.spendCredit,
+      saveScore: this.saveScore, login: this.login, playGuest: this.playGuest
+    };
+  }
+}
+
+</script>
+</body>
+</html>

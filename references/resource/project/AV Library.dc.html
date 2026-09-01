@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<main style="position: relative; z-index: 1; max-width: 1240px; margin: 0 auto; padding: 56px 22px 90px; font-family: 'Courier Prime', ui-monospace, monospace; animation: av-fade .3s ease both;">
+  <header style="text-align: center; display: grid; gap: 18px; justify-items: center; margin-bottom: 46px;">
+    <h1 style="margin: 0; font-family: 'Press Start 2P', monospace; font-size: clamp(28px, 6vw, 62px); line-height: 1.25; color: #00f5ff; animation: av-flicker 4.2s infinite;">ARCADE<br /><span style="color: #ff006e; text-shadow: 0 0 12px rgba(255,0,110,.9), 0 0 44px rgba(255,0,110,.5);">VAULT</span></h1>
+    <p style="margin: 0; font-size: 15px; letter-spacing: 4px; color: #f5ff00; text-transform: uppercase; text-shadow: 0 0 12px rgba(245,255,0,.5);">Inserta una moneda para jugar</p>
+    <div style="display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; width: 100%; max-width: 720px; margin-top: 10px;">
+      <input value="{{ query }}" onChange="{{ onQuery }}" placeholder="Buscar juego por nombre..." style="flex: 1 1 260px; padding: 15px 18px; background: rgba(0,245,255,.04); border: 1px solid rgba(0,245,255,.35); color: #e6f2f5; font-family: 'Courier Prime', monospace; font-size: 15px; letter-spacing: 1px;" style-focus="border-color: #00f5ff; box-shadow: 0 0 22px rgba(0,245,255,.45);" />
+    </div>
+    <div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
+      <sc-for list="{{ categories }}" as="c" hint-placeholder-count="5">
+        <div onClick="{{ c.select }}" style="padding: 9px 14px; font-size: 12px; letter-spacing: 2px; white-space: nowrap; text-transform: uppercase; cursor: pointer; border: 1px solid {{ c.border }}; color: {{ c.color }}; background: {{ c.bg }};" style-hover="border-color: #f5ff00; color: #f5ff00;" style-active="transform: scale(.96);">{{ c.label }}</div>
+      </sc-for>
+    </div>
+  </header>
+
+  <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(268px, 1fr)); gap: 26px;">
+    <sc-for list="{{ games }}" as="g" hint-placeholder-count="6">
+      <article onClick="{{ g.open }}" style="position: relative; cursor: pointer; display: grid; grid-template-rows: auto 1fr; border: 1px solid rgba(0,245,255,.24); background: linear-gradient(180deg, rgba(16,18,28,.95), rgba(9,9,14,.95)); transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease;" style-hover="transform: translateY(-8px) perspective(900px) rotateX(4deg) rotateY(-3deg) scale(1.02); border-color: #00f5ff; box-shadow: 0 0 30px rgba(0,245,255,.4), 0 24px 50px rgba(0,0,0,.6);">
+        <div style="position: relative; aspect-ratio: 16 / 10; background: {{ g.thumb }}; display: grid; place-items: center; border-bottom: 1px solid rgba(0,245,255,.2); overflow: hidden;">
+          <div style="position: absolute; inset: 0; background: repeating-linear-gradient(135deg, rgba(0,0,0,.28) 0 6px, rgba(0,0,0,0) 6px 12px);"></div>
+          <div style="position: relative; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: rgba(255,255,255,.82); padding: 6px 10px; background: rgba(0,0,0,.45);">carátula</div>
+          <div style="position: absolute; top: 10px; left: 10px; font-family: 'Press Start 2P', monospace; font-size: 8px; white-space: nowrap; padding: 6px 8px; background: rgba(0,0,0,.6); color: #f5ff00; letter-spacing: 1px;">{{ g.category }}</div>
+        </div>
+        <div style="padding: 20px; display: grid; gap: 14px; align-content: start;">
+          <h3 style="margin: 0; font-family: 'Press Start 2P', monospace; font-size: 14px; line-height: 1.5; color: #e9f6f9;">{{ g.title }}</h3>
+          <p style="margin: 0; font-size: 14px; line-height: 1.5; color: #8b98a3;">{{ g.desc }}</p>
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 11px; border: 1px dashed rgba(245,255,0,.35); background: rgba(245,255,0,.05);">
+            <span style="font-size: 10px; letter-spacing: 2px; color: #b9bf6a; text-transform: uppercase; white-space: nowrap;">Mejor puntuación</span>
+            <span style="font-family: 'Press Start 2P', monospace; font-size: 11px; color: #f5ff00; white-space: nowrap;">{{ g.best }}</span>
+          </div>
+          <div style="margin-top: 4px; text-align: center; font-family: 'Press Start 2P', monospace; font-size: 11px; white-space: nowrap; padding: 14px; border: 1px solid rgba(0,245,255,.5); color: #00f5ff; letter-spacing: 1px;" style-hover="background: rgba(0,245,255,.14); box-shadow: 0 0 24px rgba(0,245,255,.5); color: #fff;" style-active="transform: scale(.96);">JUGAR</div>
+        </div>
+      </article>
+    </sc-for>
+  </div>
+
+  <sc-if value="{{ noResults }}" hint-placeholder-val="{{ false }}">
+    <div style="margin-top: 40px; text-align: center; font-size: 14px; letter-spacing: 2px; color: #6f7d88;">NINGÚN JUEGO COINCIDE CON LA BÚSQUEDA</div>
+  </sc-if>
+</main>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;stored&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;Record&lt;string, {name:string,score:number,date:string}[]&gt;&quot;},&quot;onOpen&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;(gameId: string) =&gt; void&quot;}}">
+class Component extends DCLogic {
+  state = { query: '', cat: 'Todos' };
+
+  componentDidMount() {
+    this.poll = setInterval(() => {
+      if (window.AVData && window.AVScores) { clearInterval(this.poll); this.forceUpdate(); }
+    }, 60);
+  }
+  componentWillUnmount() { clearInterval(this.poll); }
+
+  renderVals() {
+    const D = window.AVData, S = window.AVScores;
+    if (!D || !S) return { games: [], categories: [], query: this.state.query, noResults: false };
+    const stored = this.props.stored || {};
+    const q = this.state.query.trim().toLowerCase();
+    const games = D.GAMES
+      .filter(g => (this.state.cat === 'Todos' || g.category === this.state.cat) && (!q || g.title.toLowerCase().includes(q) || g.desc.toLowerCase().includes(q)))
+      .map(g => Object.assign({}, g, {
+        best: S.best(stored, g.id),
+        open: () => this.props.onOpen && this.props.onOpen(g.id)
+      }));
+    return {
+      query: this.state.query,
+      onQuery: e => this.setState({ query: e.target.value }),
+      categories: D.CATEGORIES.map(c => ({
+        label: c,
+        select: () => this.setState({ cat: c }),
+        border: this.state.cat === c ? '#00f5ff' : 'rgba(255,255,255,.14)',
+        color: this.state.cat === c ? '#00f5ff' : '#8b98a3',
+        bg: this.state.cat === c ? 'rgba(255,255,255,.06)' : 'transparent'
+      })),
+      games: games,
+      noResults: games.length === 0
+    };
+  }
+}
+
+</script>
+</body>
+</html>

@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<main style="position: relative; z-index: 1; max-width: 1020px; margin: 0 auto; padding: 34px 18px 80px; font-family: 'Courier Prime', ui-monospace, monospace; animation: av-fade .25s ease both;">
+  <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; padding: 16px 20px; border: 1px solid rgba(0,245,255,.3); background: rgba(8,10,16,.92);">
+    <div style="display: flex; flex-wrap: wrap; gap: 26px;">
+      <div style="display: grid; gap: 6px;">
+        <span style="font-size: 10px; letter-spacing: 2px; color: #6f7d88; white-space: nowrap;">PUNTUACIÓN</span>
+        <span style="font-family: 'Press Start 2P', monospace; font-size: 15px; color: #f5ff00; text-shadow: 0 0 12px rgba(245,255,0,.5);">{{ scoreText }}</span>
+      </div>
+      <div style="display: grid; gap: 6px;">
+        <span style="font-size: 10px; letter-spacing: 2px; color: #6f7d88;">VIDAS</span>
+        <span style="font-family: 'Press Start 2P', monospace; font-size: 15px; color: #ff006e;">{{ livesText }}</span>
+      </div>
+      <div style="display: grid; gap: 6px;">
+        <span style="font-size: 10px; letter-spacing: 2px; color: #6f7d88;">NIVEL</span>
+        <span style="font-family: 'Press Start 2P', monospace; font-size: 15px; color: #00f5ff;">{{ levelText }}</span>
+      </div>
+      <div style="display: grid; gap: 6px;">
+        <span style="font-size: 10px; letter-spacing: 2px; color: #6f7d88;">JUGADOR</span>
+        <span style="font-size: 14px; color: #cdd8de;">{{ playerName }}</span>
+      </div>
+    </div>
+    <div style="display: flex; gap: 10px;">
+      <div onClick="{{ togglePause }}" style="font-family: 'Press Start 2P', monospace; font-size: 10px; white-space: nowrap; padding: 13px 16px; border: 1px solid rgba(245,255,0,.5); color: #f5ff00; cursor: pointer;" style-hover="background: rgba(245,255,0,.12);" style-active="transform: scale(.96);">{{ pauseLabel }}</div>
+      <div onClick="{{ exit }}" style="font-family: 'Press Start 2P', monospace; font-size: 10px; white-space: nowrap; padding: 13px 16px; border: 1px solid rgba(255,0,110,.5); color: #ff006e; cursor: pointer;" style-hover="background: rgba(255,0,110,.14);" style-active="transform: scale(.96);">SALIR</div>
+    </div>
+  </div>
+
+  <div style="position: relative; margin-top: 24px; padding: 22px; border-radius: 26px; background: linear-gradient(180deg, #1a1c24, #0d0e13); border: 1px solid rgba(0,245,255,.22); box-shadow: 0 0 60px rgba(0,245,255,.16), inset 0 2px 0 rgba(255,255,255,.06), 0 30px 60px rgba(0,0,0,.7);">
+    <div style="position: relative; border-radius: 18px; overflow: hidden; background: #04040a; box-shadow: inset 0 0 70px rgba(0,245,255,.14), inset 0 0 22px rgba(0,0,0,.9);">
+      <canvas ref="{{ canvasRef }}" style="display: block; width: 100%; height: auto; transform: perspective(900px) scale(1.005); filter: saturate(1.15) contrast(1.05);"></canvas>
+      <div style="position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.55) 100%);"></div>
+      <div style="position: absolute; inset: 0; pointer-events: none; opacity: .35; background: repeating-linear-gradient(to bottom, rgba(0,0,0,.5) 0 1px, rgba(0,0,0,0) 1px 3px);"></div>
+      <sc-if value="{{ paused }}" hint-placeholder-val="{{ false }}">
+        <div style="position: absolute; inset: 0; display: grid; place-items: center; background: rgba(4,4,10,.78);">
+          <div style="font-family: 'Press Start 2P', monospace; font-size: 20px; color: #f5ff00; letter-spacing: 2px; text-shadow: 0 0 20px rgba(245,255,0,.6);">EN PAUSA</div>
+        </div>
+      </sc-if>
+    </div>
+    <div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; margin-top: 16px; font-size: 11px; letter-spacing: 2px; color: #46525e;">
+      <span>MUEVE CON EL RATÓN O ← →</span>
+      <span>ARCADE VAULT CRT-19</span>
+    </div>
+  </div>
+  <p style="margin: 18px 2px 0; font-size: 12px; line-height: 1.7; color: #46525e;">// Contenedor de juego aislado: aquí se monta el canvas o un iframe sandbox con archivos HTML externos.</p>
+
+  <sc-if value="{{ gameOver }}" hint-placeholder-val="{{ false }}">
+    <div style="position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; padding: 20px; background: rgba(4,4,9,.86); backdrop-filter: blur(4px); animation: av-fade .25s ease both;">
+      <div style="width: 100%; max-width: 460px; border: 1px solid #ff006e; background: #0c0a12; box-shadow: 0 0 60px rgba(255,0,110,.4); padding: 34px 28px; display: grid; gap: 20px; justify-items: center; text-align: center;">
+        <div style="font-family: 'Press Start 2P', monospace; font-size: 20px; color: #ff006e; letter-spacing: 1px; text-shadow: 0 0 18px rgba(255,0,110,.7);">FIN DEL JUEGO</div>
+        <div style="font-size: 12px; letter-spacing: 3px; color: #6f7d88;">PUNTUACIÓN FINAL</div>
+        <div style="font-family: 'Press Start 2P', monospace; font-size: 34px; color: #f5ff00; text-shadow: 0 0 22px rgba(245,255,0,.55);">{{ scoreText }}</div>
+        <sc-if value="{{ notSaved }}" hint-placeholder-val="{{ true }}">
+          <div onClick="{{ saveScore }}" style="width: 100%; text-align: center; font-family: 'Press Start 2P', monospace; font-size: 11px; white-space: nowrap; padding: 16px; border: 1px solid #00f5ff; color: #00f5ff; cursor: pointer; background: rgba(0,245,255,.07);" style-hover="background: #00f5ff; color: #0a0a0f;" style-active="transform: scale(.96);">GUARDAR PUNTUACIÓN</div>
+        </sc-if>
+        <sc-if value="{{ saveMsg }}" hint-placeholder-val="{{ false }}">
+          <div style="font-family: 'Press Start 2P', monospace; font-size: 11px; color: #00f5ff; letter-spacing: 1px;">{{ saveMsg }}<span style="animation: av-caret 1s step-end infinite;">_</span></div>
+        </sc-if>
+        <sc-if value="{{ isGuest }}" hint-placeholder-val="{{ false }}">
+          <div style="font-size: 11px; line-height: 1.6; color: #6f7d88;">Modo invitado: la puntuación se guarda solo en este dispositivo.</div>
+        </sc-if>
+        <div style="display: grid; gap: 10px; width: 100%; margin-top: 4px;">
+          <div onClick="{{ replay }}" style="text-align: center; font-family: 'Press Start 2P', monospace; font-size: 10px; white-space: nowrap; padding: 15px; border: 1px solid rgba(245,255,0,.5); color: #f5ff00; cursor: pointer;" style-hover="background: rgba(245,255,0,.12);" style-active="transform: scale(.96);">JUGAR DE NUEVO</div>
+          <div onClick="{{ exit }}" style="text-align: center; font-family: 'Press Start 2P', monospace; font-size: 10px; white-space: nowrap; padding: 15px; border: 1px solid rgba(255,255,255,.2); color: #8b98a3; cursor: pointer;" style-hover="border-color: #ff006e; color: #ff006e;" style-active="transform: scale(.96);">VOLVER AL VAULT</div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</main>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;playerName&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;INVITADO&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;isGuest&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;difficulty&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;FÁCIL&quot;,&quot;NORMAL&quot;,&quot;DIFÍCIL&quot;],&quot;default&quot;:&quot;NORMAL&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;onExit&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onSave&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;(score: number) =&gt; void&quot;},&quot;onSpendCredit&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; boolean&quot;}}">
+class Component extends DCLogic {
+  state = { score: 0, lives: 3, level: 1, paused: false, over: false, saved: false, saveMsg: '' };
+
+  componentDidMount() {
+    this.poll = setInterval(() => {
+      if (window.AVEngine) { clearInterval(this.poll); this.boot(); }
+    }, 60);
+  }
+  componentWillUnmount() {
+    clearInterval(this.poll);
+    clearInterval(this.typer);
+    if (this.game) this.game.destroy();
+  }
+
+  canvasRef = (el) => {
+    this.canvas = el;
+    if (!el) { if (this.game) { this.game.destroy(); this.game = null; } return; }
+    this.boot();
+  };
+
+  boot() {
+    if (!this.canvas || !window.AVEngine || this.game) return;
+    this.game = new window.AVEngine.Breakout(this.canvas, {
+      difficulty: this.props.difficulty || 'NORMAL',
+      onScore: total => this.setState({ score: total }),
+      onLives: n => this.setState({ lives: n }),
+      onLevel: n => this.setState({ level: n }),
+      onOver: total => this.setState({ score: total, over: true }),
+      onPauseKey: () => this.togglePause()
+    });
+    this.game.start(3, 1);
+  }
+
+  togglePause = () => {
+    const p = !this.state.paused;
+    this.setState({ paused: p });
+    if (this.game) this.game.setPaused(p);
+  };
+
+  replay = () => {
+    if (this.props.onSpendCredit && !this.props.onSpendCredit()) return;
+    clearInterval(this.typer);
+    this.setState({ score: 0, lives: 3, level: 1, over: false, paused: false, saved: false, saveMsg: '' });
+    if (this.game) this.game.start(3, 1);
+  };
+
+  saveScore = () => {
+    if (this.props.onSave) this.props.onSave(this.state.score);
+    this.setState({ saved: true, saveMsg: '' });
+    const full = 'PUNTUACIÓN GUARDADA';
+    let i = 0;
+    clearInterval(this.typer);
+    this.typer = setInterval(() => {
+      i++;
+      this.setState({ saveMsg: full.slice(0, i) });
+      if (i >= full.length) clearInterval(this.typer);
+    }, 55);
+  };
+
+  renderVals() {
+    const s = this.state;
+    return {
+      canvasRef: this.canvasRef,
+      scoreText: s.score.toLocaleString('es-ES'),
+      livesText: '♥'.repeat(Math.max(0, s.lives)) || '—',
+      levelText: String(s.level).padStart(2, '0'),
+      playerName: this.props.playerName || 'INVITADO',
+      paused: s.paused, pauseLabel: s.paused ? 'SEGUIR' : 'PAUSA',
+      togglePause: this.togglePause,
+      exit: () => this.props.onExit && this.props.onExit(),
+      gameOver: s.over, notSaved: s.over && !s.saved, saveMsg: s.saveMsg,
+      saveScore: this.saveScore, replay: this.replay,
+      isGuest: s.over && !!this.props.isGuest
+    };
+  }
+}
+
+</script>
+</body>
+</html>
