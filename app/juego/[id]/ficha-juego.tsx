@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { CrtFrame } from "@/components/crt-frame";
+import { GameCover } from "@/components/game-cover";
 import { ScoreBoard } from "@/components/score-board";
 import { useCredits } from "@/contexts/credits-context";
 import { useScores } from "@/contexts/scores-context";
@@ -32,7 +33,7 @@ export function FichaJuego({ game }: { game: Game }) {
 
       <div className="grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] items-start gap-8">
         <section className="grid gap-[22px]">
-          <CrtFrame background={game.thumb} />
+          <CrtFrame background={game.thumb} art={<GameCover id={game.id} />} />
 
           <h1 className="font-display text-[clamp(22px,4vw,38px)] leading-[1.35] text-cian [text-shadow:0_0_14px_rgba(0,245,255,.7),0_0_46px_rgba(0,245,255,.3)]">
             {game.title}

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { CSSProperties } from "react";
 
+import { GameCover } from "@/components/game-cover";
 import type { Game } from "@/lib/types";
 
 const stripes: CSSProperties = {
@@ -16,13 +17,13 @@ export function GameCard({ game, best }: { game: Game; best: string }) {
       className="group grid grid-rows-[auto_1fr] border border-cian/25 bg-[linear-gradient(180deg,rgba(16,18,28,.95),rgba(9,9,14,.95))] transition duration-200 hover:-translate-y-2 hover:border-cian hover:shadow-[0_0_30px_rgba(0,245,255,.4),0_24px_50px_rgba(0,0,0,.6)]"
     >
       <div
-        className="relative grid aspect-[16/10] place-items-center overflow-hidden border-b border-cian/20"
+        className="relative aspect-[16/10] overflow-hidden border-b border-cian/20"
         style={{ background: game.thumb }}
       >
-        <div className="absolute inset-0" style={stripes} />
-        <div className="relative bg-black/45 px-2.5 py-1.5 text-[11px] uppercase tracking-[3px] text-white/80">
-          carátula
+        <div className="absolute inset-0">
+          <GameCover id={game.id} />
         </div>
+        <div className="absolute inset-0" style={stripes} />
         <div className="absolute left-2.5 top-2.5 whitespace-nowrap bg-black/60 px-2 py-1.5 font-display text-[8px] tracking-wider text-amarillo">
           {game.category}
         </div>

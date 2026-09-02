@@ -11,16 +11,19 @@ const vignette: CSSProperties = {
 };
 
 // Marco CRT de la maqueta. Placeholder estático (sin canvas ni juego): pinta el
-// gradiente `background` y admite `children` para superponer texto (pausa, HUD…).
+// gradiente `background`. `art` va bajo las capas CRT (carátula); `children` va
+// encima de todo (overlays como "EN PAUSA").
 export function CrtFrame({
   background,
   label = "PREVISUALIZACIÓN",
   className = "",
+  art,
   children,
 }: {
   background: string;
   label?: string;
   className?: string;
+  art?: ReactNode;
   children?: ReactNode;
 }) {
   return (
@@ -29,6 +32,7 @@ export function CrtFrame({
     >
       <div className="relative overflow-hidden rounded-xl bg-[#04040a] shadow-[inset_0_0_50px_rgba(0,245,255,.12)]">
         <div className="aspect-[16/10] w-full" style={{ background }} />
+        {art ? <div className="absolute inset-0">{art}</div> : null}
         <div className="pointer-events-none absolute inset-0 opacity-30" style={scanlines} />
         <div className="pointer-events-none absolute inset-0" style={vignette} />
         {label ? (
