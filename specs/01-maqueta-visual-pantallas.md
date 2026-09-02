@@ -155,8 +155,8 @@ interface CreditsValue {
 
 ## 5 — Criterios de aceptación
 
-- [ ] `npm run build` y `npm run lint` terminan sin errores ni warnings nuevos.
-- [ ] Existen y renderizan sin error en consola las rutas `/`, `/juego/rompemuros`, `/jugar/rompemuros`, `/auth` y `/salon-fama`.
+- [x] `npm run build` y `npm run lint` terminan sin errores ni warnings nuevos.
+- [x] Existen y renderizan sin error en consola las rutas `/`, `/juego/rompemuros`, `/jugar/rompemuros`, `/auth` y `/salon-fama`.
 - [ ] `/juego/no-existe` y `/jugar/no-existe` muestran la página `not-found`.
 - [ ] La barra de navegación, el fondo de rejilla, el resplandor, las scanlines y el footer aparecen en las cinco rutas.
 - [ ] Pulsar "+ MONEDA" incrementa el contador de créditos en 1 (tope 99) y muestra el aviso "MONEDA ACEPTADA" que desaparece solo.

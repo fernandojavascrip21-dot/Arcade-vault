@@ -2,7 +2,7 @@
 //
 // Los rankings semilla viven en app/data.ts. Este módulo solo añade el estado
 // local del navegador (localStorage) y lo combina con la semilla. Cuando haya
-// backend real, `load` / `add` pasarán a hablar con la API.
+// backend real, la lectura/escritura pasará a hablar con la API.
 
 import { SEED } from "@/app/data";
 import type { BoardRow, ScoreEntry } from "@/lib/types";
@@ -76,4 +76,53 @@ export function rankColor(index: number): string {
   if (index === 1) return "#cfd8dc";
   if (index === 2) return "#ff8a00";
   return "#4f5b64";
+}
+
+// --- Store para useSyncExternalStore -------------------------------------------
+// Evita setState-en-effect: el componente se suscribe a localStorage y React
+// resuelve la hidratación con el snapshot de servidor (siempre {} estable).
+
+const EMPTY: StoredScores = {};
+let cache: StoredScores = EMPTY;
+let cacheRaw: string | null = null;
+const listeners = new Set<() => void>();
+
+export function subscribeScores(onChange: () => void): () => void {
+  listeners.add(onChange);
+  if (typeof window !== "undefined") {
+    window.addEventListener("storage", onChange);
+  }
+  return () => {
+    listeners.delete(onChange);
+    if (typeof window !== "undefined") {
+      window.removeEventListener("storage", onChange);
+    }
+  };
+}
+
+// Devuelve una referencia estable: solo cambia si el JSON de localStorage cambió.
+export function getScoresSnapshot(): StoredScores {
+  if (typeof window === "undefined") return EMPTY;
+  const raw = localStorage.getItem(SCORES_KEY);
+  if (raw !== cacheRaw) {
+    cacheRaw = raw;
+    try {
+      cache = raw ? (JSON.parse(raw) as StoredScores) : EMPTY;
+    } catch {
+      cache = EMPTY;
+    }
+  }
+  return cache;
+}
+
+export function getScoresServerSnapshot(): StoredScores {
+  return EMPTY;
+}
+
+// Guarda una puntuación local y notifica a los suscriptores.
+export function saveScore(gameId: string, name: string, score: number): void {
+  const next = add(getScoresSnapshot(), gameId, name, score);
+  cache = next;
+  cacheRaw = JSON.stringify(next);
+  listeners.forEach((l) => l());
 }

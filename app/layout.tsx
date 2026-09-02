@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Press_Start_2P, Courier_Prime } from "next/font/google";
+import { Providers } from "@/contexts/providers";
 import "./globals.css";
 
 const pressStart = Press_Start_2P({
@@ -28,7 +29,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="es"
       className={`${pressStart.variable} ${courierPrime.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <Providers>{children}</Providers>
+      </body>
     </html>
   );
 }
