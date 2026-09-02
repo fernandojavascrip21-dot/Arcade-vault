@@ -1,26 +1,140 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Tokens base del scaffold — se conservan, solo se ajustan los valores a la maqueta. */
+  --background: #0a0a0f;
+  --foreground: #cdd8de;
+
+  /* Acentos neón de la maqueta (av-* .dc.html). */
+  --cian: #00f5ff;
+  --magenta: #ff006e;
+  --amarillo: #f5ff00;
+  --texto-tenue: #6f7d88;
+  --texto-debil: #46525e;
+  --linea: rgba(0, 245, 255, 0.28);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-cian: var(--cian);
+  --color-magenta: var(--magenta);
+  --color-amarillo: var(--amarillo);
+  --color-texto-tenue: var(--texto-tenue);
+  --color-texto-debil: var(--texto-debil);
+  --color-linea: var(--linea);
+
+  /* Fuentes arcade — sustituyen a Geist en las variables de tema. */
+  --font-sans: var(--font-courier-prime), ui-monospace, "Courier New", monospace;
+  --font-mono: var(--font-courier-prime), ui-monospace, "Courier New", monospace;
+  --font-display: var(--font-press-start), ui-monospace, monospace;
+
+  --animate-flicker: av-flicker 4.2s infinite;
+  --animate-grid: av-grid 4.5s linear infinite;
+  --animate-pulse-neon: av-pulse 1.8s ease-in-out infinite;
+  --animate-row: av-row 0.5s ease both;
+  --animate-fade: av-fade 0.28s ease both;
+  --animate-caret: av-caret 1s step-end infinite;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    /* La maqueta es de estética oscura única: se mantiene la paleta arcade. */
+    --background: #0a0a0f;
+    --foreground: #cdd8de;
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-courier-prime), ui-monospace, "Courier New", monospace;
+}
+
+a {
+  color: var(--cian);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--amarillo);
+}
+
+input::placeholder {
+  color: var(--texto-debil);
+}
+
+input:focus {
+  outline: none;
+}
+
+@keyframes av-flicker {
+  0%,
+  19%,
+  21%,
+  23%,
+  25%,
+  54%,
+  56%,
+  100% {
+    opacity: 1;
+    text-shadow: 0 0 8px rgba(0, 245, 255, 0.9), 0 0 26px rgba(0, 245, 255, 0.55),
+      0 0 60px rgba(255, 0, 110, 0.35);
+  }
+  20%,
+  22%,
+  24%,
+  55% {
+    opacity: 0.72;
+    text-shadow: 0 0 2px rgba(0, 245, 255, 0.4);
+  }
+}
+
+@keyframes av-grid {
+  0% {
+    background-position: 0 0, 0 0;
+  }
+  100% {
+    background-position: 0 60px, 0 60px;
+  }
+}
+
+@keyframes av-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 rgba(0, 245, 255, 0), inset 0 0 14px rgba(0, 245, 255, 0.15);
+    transform: translateY(0);
+  }
+  50% {
+    box-shadow: 0 0 34px rgba(0, 245, 255, 0.65), inset 0 0 22px rgba(0, 245, 255, 0.3);
+    transform: translateY(-1px);
+  }
+}
+
+@keyframes av-row {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes av-fade {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes av-caret {
+  50% {
+    opacity: 0;
+  }
 }
