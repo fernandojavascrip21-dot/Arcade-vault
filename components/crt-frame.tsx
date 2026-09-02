@@ -31,9 +31,11 @@ export function CrtFrame({
         <div className="aspect-[16/10] w-full" style={{ background }} />
         <div className="pointer-events-none absolute inset-0 opacity-30" style={scanlines} />
         <div className="pointer-events-none absolute inset-0" style={vignette} />
-        <div className="absolute left-3 top-2.5 whitespace-nowrap bg-black/55 px-2 py-1.5 font-display text-[8px] tracking-wider text-cian">
-          {label}
-        </div>
+        {label ? (
+          <div className="absolute left-3 top-2.5 whitespace-nowrap bg-black/55 px-2 py-1.5 font-display text-[8px] tracking-wider text-cian">
+            {label}
+          </div>
+        ) : null}
         {children ? (
           <div className="absolute inset-0">{children}</div>
         ) : null}
