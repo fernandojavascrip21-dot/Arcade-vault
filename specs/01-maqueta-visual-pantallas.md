@@ -1,6 +1,6 @@
 # SPEC 01 — Maqueta visual de las pantallas de Arcade Vault
 
-> **Status:** Aprovado
+> **Status:** Implementado
 > **Depends on:** —
 > **Date:** 2026-09-01
 > **Objective:** Construir la maqueta visual navegable de las cinco pantallas de Arcade Vault (biblioteca, ficha de juego, sala de juego, autenticación y salón de la fama) en Next.js 16 con sesión, créditos y puntuaciones simulados en el cliente, sin implementar ningún juego.
@@ -157,26 +157,26 @@ interface CreditsValue {
 
 - [x] `npm run build` y `npm run lint` terminan sin errores ni warnings nuevos.
 - [x] Existen y renderizan sin error en consola las rutas `/`, `/juego/rompemuros`, `/jugar/rompemuros`, `/auth` y `/salon-fama`.
-- [ ] `/juego/no-existe` y `/jugar/no-existe` muestran la página `not-found`.
-- [ ] La barra de navegación, el fondo de rejilla, el resplandor, las scanlines y el footer aparecen en las cinco rutas.
-- [ ] Pulsar "+ MONEDA" incrementa el contador de créditos en 1 (tope 99) y muestra el aviso "MONEDA ACEPTADA" que desaparece solo.
-- [ ] Con el ancho de ventana por debajo de 1000 px, la nav muestra el chip de créditos y el botón hamburguesa; al pulsarlo se abre un panel lateral con "Biblioteca", "Salón de la Fama" e "Iniciar Sesión".
-- [ ] En la biblioteca, escribir "serpiente" en el buscador deja exactamente una tarjeta; el filtro "Espacio" deja exactamente dos; el filtro "Puzzle" con un texto que no casa muestra "NINGÚN JUEGO COINCIDE CON LA BÚSQUEDA".
-- [ ] Cada tarjeta de la biblioteca navega a `/juego/[id]` del juego correspondiente.
-- [ ] En la ficha, "MEJOR: …" y la tabla lateral coinciden con `board()` para ese juego.
-- [ ] Con créditos > 0, "JUGAR AHORA" navega a `/jugar/[id]` y el contador de créditos baja en 1.
-- [ ] Con créditos en 0, "JUGAR AHORA" muestra "INSERTA UNA MONEDA" y no cambia de ruta.
-- [ ] En la sala de juego, "PAUSA" muestra el overlay "EN PAUSA" y cambia su etiqueta a "SEGUIR".
-- [ ] "SIMULAR FIN DE PARTIDA" abre el modal con una puntuación final numérica.
-- [ ] En el modal, "GUARDAR PUNTUACIÓN" oculta el botón y muestra "PUNTUACIÓN GUARDADA" con efecto de tecleo.
-- [ ] Tras guardar, la puntuación aparece en `/salon-fama` (pestaña de ese juego) y, si su `name` coincide con la sesión, con el badge "TU MEJOR MARCA".
-- [ ] La puntuación guardada persiste tras recargar la página (sigue en `localStorage` bajo `arcadevault.scores.v1`).
-- [ ] "JUGAR DE NUEVO" en el modal consume un crédito; si no hay créditos, no reinicia y muestra el aviso.
-- [ ] En `/auth`, enviar el formulario con usuario "neonkid" deja "NEONKID" y el avatar "N" en la nav y redirige a `/`.
-- [ ] "Jugar como invitado" redirige a `/` y la nav sigue mostrando "INICIAR SESIÓN" (sesión de invitado, sin nombre).
-- [ ] "Salir" en la nav limpia el nombre de usuario.
-- [ ] Los créditos y la sesión vuelven a su estado inicial (3 créditos, sin usuario) tras recargar la página.
-- [ ] Ninguna página lee `localStorage`, `window` o `matchMedia` durante el render en servidor.
+- [x] `/juego/no-existe` y `/jugar/no-existe` muestran la página `not-found`.
+- [x] La barra de navegación, el fondo de rejilla, el resplandor, las scanlines y el footer aparecen en las cinco rutas.
+- [x] Pulsar "+ MONEDA" incrementa el contador de créditos en 1 (tope 99) y muestra el aviso "MONEDA ACEPTADA" que desaparece solo.
+- [x] Con el ancho de ventana por debajo de 1000 px, la nav muestra el chip de créditos y el botón hamburguesa; al pulsarlo se abre un panel lateral con "Biblioteca", "Salón de la Fama" e "Iniciar Sesión".
+- [x] En la biblioteca, escribir "serpiente" en el buscador deja exactamente una tarjeta; el filtro "Espacio" deja exactamente dos; el filtro "Puzzle" con un texto que no casa muestra "NINGÚN JUEGO COINCIDE CON LA BÚSQUEDA".
+- [x] Cada tarjeta de la biblioteca navega a `/juego/[id]` del juego correspondiente.
+- [x] En la ficha, "MEJOR: …" y la tabla lateral coinciden con `board()` para ese juego.
+- [x] Con créditos > 0, "JUGAR AHORA" navega a `/jugar/[id]` y el contador de créditos baja en 1.
+- [x] Con créditos en 0, "JUGAR AHORA" muestra "INSERTA UNA MONEDA" y no cambia de ruta.
+- [x] En la sala de juego, "PAUSA" muestra el overlay "EN PAUSA" y cambia su etiqueta a "SEGUIR".
+- [x] "SIMULAR FIN DE PARTIDA" abre el modal con una puntuación final numérica.
+- [x] En el modal, "GUARDAR PUNTUACIÓN" oculta el botón y muestra "PUNTUACIÓN GUARDADA" con efecto de tecleo.
+- [x] Tras guardar, la puntuación aparece en `/salon-fama` (pestaña de ese juego) y, si su `name` coincide con la sesión, con el badge "TU MEJOR MARCA".
+- [x] La puntuación guardada persiste tras recargar la página (sigue en `localStorage` bajo `arcadevault.scores.v1`).
+- [x] "JUGAR DE NUEVO" en el modal consume un crédito; si no hay créditos, no reinicia y muestra el aviso.
+- [x] En `/auth`, enviar el formulario con usuario "neonkid" deja "NEONKID" y el avatar "N" en la nav y redirige a `/`.
+- [x] "Jugar como invitado" redirige a `/` y la nav sigue mostrando "INICIAR SESIÓN" (sesión de invitado, sin nombre).
+- [x] "Salir" en la nav limpia el nombre de usuario.
+- [x] Los créditos y la sesión vuelven a su estado inicial (3 créditos, sin usuario) tras recargar la página.
+- [x] Ninguna página lee `localStorage`, `window` o `matchMedia` durante el render en servidor.
 
 ---
 
