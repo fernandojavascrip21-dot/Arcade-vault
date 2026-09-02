@@ -7,68 +7,71 @@
 </head>
 <body>
 <x-dc>
-<main style="position: relative; z-index: 1; max-width: 1020px; margin: 0 auto; padding: 34px 18px 80px; font-family: 'Courier Prime', ui-monospace, monospace; animation: av-fade .25s ease both;">
-  <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; padding: 16px 20px; border: 1px solid rgba(0,245,255,.3); background: rgba(8,10,16,.92);">
-    <div style="display: flex; flex-wrap: wrap; gap: 26px;">
-      <div style="display: grid; gap: 6px;">
-        <span style="font-size: 10px; letter-spacing: 2px; color: #6f7d88; white-space: nowrap;">PUNTUACIÓN</span>
-        <span style="font-family: 'Press Start 2P', monospace; font-size: 15px; color: #f5ff00; text-shadow: 0 0 12px rgba(245,255,0,.5);">{{ scoreText }}</span>
+<helmet>
+<link href="styles.css" rel="stylesheet" />
+</helmet>
+<main class="avpl-main">
+  <div class="avpl-hud">
+    <div class="avpl-stats">
+      <div class="avpl-stat">
+        <span class="avpl-stat-label">PUNTUACIÓN</span>
+        <span class="avpl-stat-value avpl-stat-value--yellow">{{ scoreText }}</span>
       </div>
-      <div style="display: grid; gap: 6px;">
-        <span style="font-size: 10px; letter-spacing: 2px; color: #6f7d88;">VIDAS</span>
-        <span style="font-family: 'Press Start 2P', monospace; font-size: 15px; color: #ff006e;">{{ livesText }}</span>
+      <div class="avpl-stat">
+        <span class="avpl-stat-label">VIDAS</span>
+        <span class="avpl-stat-value avpl-stat-value--pink">{{ livesText }}</span>
       </div>
-      <div style="display: grid; gap: 6px;">
-        <span style="font-size: 10px; letter-spacing: 2px; color: #6f7d88;">NIVEL</span>
-        <span style="font-family: 'Press Start 2P', monospace; font-size: 15px; color: #00f5ff;">{{ levelText }}</span>
+      <div class="avpl-stat">
+        <span class="avpl-stat-label">NIVEL</span>
+        <span class="avpl-stat-value avpl-stat-value--cyan">{{ levelText }}</span>
       </div>
-      <div style="display: grid; gap: 6px;">
-        <span style="font-size: 10px; letter-spacing: 2px; color: #6f7d88;">JUGADOR</span>
-        <span style="font-size: 14px; color: #cdd8de;">{{ playerName }}</span>
+      <div class="avpl-stat">
+        <span class="avpl-stat-label">JUGADOR</span>
+        <span class="avpl-stat-player">{{ playerName }}</span>
       </div>
     </div>
-    <div style="display: flex; gap: 10px;">
-      <div onClick="{{ togglePause }}" style="font-family: 'Press Start 2P', monospace; font-size: 10px; white-space: nowrap; padding: 13px 16px; border: 1px solid rgba(245,255,0,.5); color: #f5ff00; cursor: pointer;" style-hover="background: rgba(245,255,0,.12);" style-active="transform: scale(.96);">{{ pauseLabel }}</div>
-      <div onClick="{{ exit }}" style="font-family: 'Press Start 2P', monospace; font-size: 10px; white-space: nowrap; padding: 13px 16px; border: 1px solid rgba(255,0,110,.5); color: #ff006e; cursor: pointer;" style-hover="background: rgba(255,0,110,.14);" style-active="transform: scale(.96);">SALIR</div>
+    <div class="avpl-actions">
+      <div onClick="{{ togglePause }}" class="avpl-btn avpl-btn--pause">{{ pauseLabel }}</div>
+      <div onClick="{{ exit }}" class="avpl-btn avpl-btn--exit">SALIR</div>
     </div>
   </div>
 
-  <div style="position: relative; margin-top: 24px; padding: 22px; border-radius: 26px; background: linear-gradient(180deg, #1a1c24, #0d0e13); border: 1px solid rgba(0,245,255,.22); box-shadow: 0 0 60px rgba(0,245,255,.16), inset 0 2px 0 rgba(255,255,255,.06), 0 30px 60px rgba(0,0,0,.7);">
-    <div style="position: relative; border-radius: 18px; overflow: hidden; background: #04040a; box-shadow: inset 0 0 70px rgba(0,245,255,.14), inset 0 0 22px rgba(0,0,0,.9);">
-      <canvas ref="{{ canvasRef }}" style="display: block; width: 100%; height: auto; transform: perspective(900px) scale(1.005); filter: saturate(1.15) contrast(1.05);"></canvas>
-      <div style="position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.55) 100%);"></div>
-      <div style="position: absolute; inset: 0; pointer-events: none; opacity: .35; background: repeating-linear-gradient(to bottom, rgba(0,0,0,.5) 0 1px, rgba(0,0,0,0) 1px 3px);"></div>
+  <div class="avpl-cabinet">
+    <div class="avpl-screen">
+      <canvas ref="{{ canvasRef }}" class="avpl-canvas"></canvas>
+      <div class="avpl-vignette"></div>
+      <div class="avpl-scan"></div>
       <sc-if value="{{ paused }}" hint-placeholder-val="{{ false }}">
-        <div style="position: absolute; inset: 0; display: grid; place-items: center; background: rgba(4,4,10,.78);">
-          <div style="font-family: 'Press Start 2P', monospace; font-size: 20px; color: #f5ff00; letter-spacing: 2px; text-shadow: 0 0 20px rgba(245,255,0,.6);">EN PAUSA</div>
+        <div class="avpl-pause">
+          <div class="avpl-pause-text">EN PAUSA</div>
         </div>
       </sc-if>
     </div>
-    <div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; margin-top: 16px; font-size: 11px; letter-spacing: 2px; color: #46525e;">
+    <div class="avpl-hint">
       <span>MUEVE CON EL RATÓN O ← →</span>
       <span>ARCADE VAULT CRT-19</span>
     </div>
   </div>
-  <p style="margin: 18px 2px 0; font-size: 12px; line-height: 1.7; color: #46525e;">// Contenedor de juego aislado: aquí se monta el canvas o un iframe sandbox con archivos HTML externos.</p>
+  <p class="avpl-note">// Contenedor de juego aislado: aquí se monta el canvas o un iframe sandbox con archivos HTML externos.</p>
 
   <sc-if value="{{ gameOver }}" hint-placeholder-val="{{ false }}">
-    <div style="position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; padding: 20px; background: rgba(4,4,9,.86); backdrop-filter: blur(4px); animation: av-fade .25s ease both;">
-      <div style="width: 100%; max-width: 460px; border: 1px solid #ff006e; background: #0c0a12; box-shadow: 0 0 60px rgba(255,0,110,.4); padding: 34px 28px; display: grid; gap: 20px; justify-items: center; text-align: center;">
-        <div style="font-family: 'Press Start 2P', monospace; font-size: 20px; color: #ff006e; letter-spacing: 1px; text-shadow: 0 0 18px rgba(255,0,110,.7);">FIN DEL JUEGO</div>
-        <div style="font-size: 12px; letter-spacing: 3px; color: #6f7d88;">PUNTUACIÓN FINAL</div>
-        <div style="font-family: 'Press Start 2P', monospace; font-size: 34px; color: #f5ff00; text-shadow: 0 0 22px rgba(245,255,0,.55);">{{ scoreText }}</div>
+    <div class="avpl-over">
+      <div class="avpl-over-card">
+        <div class="avpl-over-title">FIN DEL JUEGO</div>
+        <div class="avpl-over-label">PUNTUACIÓN FINAL</div>
+        <div class="avpl-over-score">{{ scoreText }}</div>
         <sc-if value="{{ notSaved }}" hint-placeholder-val="{{ true }}">
-          <div onClick="{{ saveScore }}" style="width: 100%; text-align: center; font-family: 'Press Start 2P', monospace; font-size: 11px; white-space: nowrap; padding: 16px; border: 1px solid #00f5ff; color: #00f5ff; cursor: pointer; background: rgba(0,245,255,.07);" style-hover="background: #00f5ff; color: #0a0a0f;" style-active="transform: scale(.96);">GUARDAR PUNTUACIÓN</div>
+          <div onClick="{{ saveScore }}" class="avpl-save-btn">GUARDAR PUNTUACIÓN</div>
         </sc-if>
         <sc-if value="{{ saveMsg }}" hint-placeholder-val="{{ false }}">
-          <div style="font-family: 'Press Start 2P', monospace; font-size: 11px; color: #00f5ff; letter-spacing: 1px;">{{ saveMsg }}<span style="animation: av-caret 1s step-end infinite;">_</span></div>
+          <div class="avpl-save-msg">{{ saveMsg }}<span class="avpl-caret">_</span></div>
         </sc-if>
         <sc-if value="{{ isGuest }}" hint-placeholder-val="{{ false }}">
-          <div style="font-size: 11px; line-height: 1.6; color: #6f7d88;">Modo invitado: la puntuación se guarda solo en este dispositivo.</div>
+          <div class="avpl-guest-note">Modo invitado: la puntuación se guarda solo en este dispositivo.</div>
         </sc-if>
-        <div style="display: grid; gap: 10px; width: 100%; margin-top: 4px;">
-          <div onClick="{{ replay }}" style="text-align: center; font-family: 'Press Start 2P', monospace; font-size: 10px; white-space: nowrap; padding: 15px; border: 1px solid rgba(245,255,0,.5); color: #f5ff00; cursor: pointer;" style-hover="background: rgba(245,255,0,.12);" style-active="transform: scale(.96);">JUGAR DE NUEVO</div>
-          <div onClick="{{ exit }}" style="text-align: center; font-family: 'Press Start 2P', monospace; font-size: 10px; white-space: nowrap; padding: 15px; border: 1px solid rgba(255,255,255,.2); color: #8b98a3; cursor: pointer;" style-hover="border-color: #ff006e; color: #ff006e;" style-active="transform: scale(.96);">VOLVER AL VAULT</div>
+        <div class="avpl-over-actions">
+          <div onClick="{{ replay }}" class="avpl-replay">JUGAR DE NUEVO</div>
+          <div onClick="{{ exit }}" class="avpl-over-exit">VOLVER AL VAULT</div>
         </div>
       </div>
     </div>

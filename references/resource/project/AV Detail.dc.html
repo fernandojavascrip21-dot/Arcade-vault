@@ -7,38 +7,41 @@
 </head>
 <body>
 <x-dc>
-<main style="position: relative; z-index: 1; max-width: 1160px; margin: 0 auto; padding: 48px 22px 90px; font-family: 'Courier Prime', ui-monospace, monospace; animation: av-fade .28s ease both;">
-  <div onClick="{{ back }}" style="display: inline-block; font-size: 12px; letter-spacing: 2px; color: #6f7d88; cursor: pointer; margin-bottom: 26px; text-transform: uppercase;" style-hover="color: #00f5ff;">&lt;&lt; Volver al Vault</div>
-  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 32px; align-items: start;">
-    <section style="display: grid; gap: 22px;">
-      <div style="position: relative; border-radius: 18px; padding: 14px; background: linear-gradient(180deg, #1a1c24, #0d0e13); border: 1px solid rgba(0,245,255,.24); box-shadow: 0 0 44px rgba(0,245,255,.14), inset 0 2px 0 rgba(255,255,255,.06);">
-        <div style="position: relative; border-radius: 12px; overflow: hidden; background: #04040a; box-shadow: inset 0 0 50px rgba(0,245,255,.12);">
-          <canvas ref="{{ previewRef }}" style="display: block; width: 100%; height: auto;"></canvas>
-          <div style="position: absolute; inset: 0; pointer-events: none; opacity: .3; background: repeating-linear-gradient(to bottom, rgba(0,0,0,.5) 0 1px, rgba(0,0,0,0) 1px 3px);"></div>
-          <div style="position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.5) 100%);"></div>
-          <div style="position: absolute; top: 10px; left: 12px; font-family: 'Press Start 2P', monospace; font-size: 8px; white-space: nowrap; padding: 6px 8px; background: rgba(0,0,0,.55); color: #00f5ff; letter-spacing: 1px;">PREVISUALIZACIÓN</div>
+<helmet>
+<link href="styles.css" rel="stylesheet" />
+</helmet>
+<main class="avde-main">
+  <div onClick="{{ back }}" class="avde-back">&lt;&lt; Volver al Vault</div>
+  <div class="avde-grid">
+    <section class="avde-col">
+      <div class="avde-cab">
+        <div class="avde-screen">
+          <canvas ref="{{ previewRef }}" class="avde-canvas"></canvas>
+          <div class="avde-scan"></div>
+          <div class="avde-vignette"></div>
+          <div class="avde-badge">PREVISUALIZACIÓN</div>
         </div>
       </div>
-      <h1 style="margin: 0; font-family: 'Press Start 2P', monospace; font-size: clamp(22px, 4vw, 38px); line-height: 1.35; color: #00f5ff; text-shadow: 0 0 14px rgba(0,245,255,.7), 0 0 46px rgba(0,245,255,.3);">{{ title }}</h1>
-      <div style="display: flex; flex-wrap: wrap; gap: 10px;">
-        <span style="display: inline-block; white-space: nowrap; font-family: 'Press Start 2P', monospace; font-size: 9px; padding: 8px 10px; border: 1px solid rgba(255,0,110,.5); color: #ff006e;">{{ category }}</span>
-        <span style="display: inline-block; white-space: nowrap; font-family: 'Press Start 2P', monospace; font-size: 9px; padding: 8px 10px; border: 1px solid rgba(245,255,0,.5); color: #f5ff00;">MEJOR: {{ best }}</span>
+      <h1 class="avde-title">{{ title }}</h1>
+      <div class="avde-tags">
+        <span class="avde-tag avde-tag--pink">{{ category }}</span>
+        <span class="avde-tag avde-tag--yellow">MEJOR: {{ best }}</span>
       </div>
-      <p style="margin: 0; font-size: 16px; line-height: 1.75; color: #9aa7b2; max-width: 56ch; text-wrap: pretty;">{{ long }}</p>
-      <div style="display: flex; flex-wrap: wrap; gap: 14px; margin-top: 6px;">
-        <div onClick="{{ play }}" style="font-family: 'Press Start 2P', monospace; font-size: 13px; white-space: nowrap; padding: 20px 30px; border: 1px solid #00f5ff; color: #00f5ff; cursor: pointer; background: rgba(0,245,255,.08); animation: av-pulse 1.8s ease-in-out infinite;" style-hover="color: #0a0a0f; background: #00f5ff;" style-active="transform: scale(.96);">JUGAR AHORA</div>
-        <div onClick="{{ back }}" style="font-family: 'Press Start 2P', monospace; font-size: 13px; white-space: nowrap; padding: 20px 30px; border: 1px solid rgba(255,255,255,.22); color: #8b98a3; cursor: pointer;" style-hover="border-color: #ff006e; color: #ff006e;" style-active="transform: scale(.96);">VOLVER AL VAULT</div>
+      <p class="avde-desc">{{ long }}</p>
+      <div class="avde-actions">
+        <div onClick="{{ play }}" class="avde-play">JUGAR AHORA</div>
+        <div onClick="{{ back }}" class="avde-back-btn">VOLVER AL VAULT</div>
       </div>
     </section>
 
-    <aside style="border: 1px solid rgba(255,0,110,.3); background: rgba(12,10,18,.9); box-shadow: 0 0 34px rgba(255,0,110,.14);">
-      <div style="padding: 18px 20px; border-bottom: 1px solid rgba(255,0,110,.25); font-family: 'Press Start 2P', monospace; font-size: 11px; color: #ff006e; letter-spacing: 1px;">MEJORES PUNTUACIONES</div>
-      <div style="padding: 10px 8px 16px;">
+    <aside class="avde-board">
+      <div class="avde-board-head">MEJORES PUNTUACIONES</div>
+      <div class="avde-board-body">
         <sc-for list="{{ scores }}" as="s" hint-placeholder-count="10">
-          <div style="display: grid; grid-template-columns: 34px 1fr auto; align-items: center; gap: 12px; padding: 11px 12px; border-bottom: 1px solid rgba(255,255,255,.05); animation: av-row .45s ease both; animation-delay: {{ s.delay }};">
-            <span style="font-family: 'Press Start 2P', monospace; font-size: 10px; color: {{ s.rankColor }};">{{ s.rank }}</span>
-            <span style="font-size: 14px; color: #cdd8de; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ s.name }}</span>
-            <span style="font-family: 'Press Start 2P', monospace; font-size: 10px; color: #f5ff00;">{{ s.score }}</span>
+          <div class="avde-row" style="animation-delay: {{ s.delay }};">
+            <span class="avde-rank" style="color: {{ s.rankColor }};">{{ s.rank }}</span>
+            <span class="avde-name">{{ s.name }}</span>
+            <span class="avde-score">{{ s.score }}</span>
           </div>
         </sc-for>
       </div>

@@ -7,36 +7,39 @@
 </head>
 <body>
 <x-dc>
-<main style="position: relative; z-index: 1; min-height: 76vh; display: grid; place-items: center; padding: 50px 20px 80px; font-family: 'Courier Prime', ui-monospace, monospace; animation: av-fade .28s ease both;">
-  <div style="width: 100%; max-width: 430px; border: 1px solid rgba(0,245,255,.3); background: rgba(10,11,18,.95); box-shadow: 0 0 60px rgba(0,245,255,.16); padding: 34px 28px; display: grid; gap: 22px;">
-    <div style="text-align: center; font-family: 'Press Start 2P', monospace; font-size: 16px; color: #00f5ff; letter-spacing: 1px; animation: av-flicker 5s infinite;">ARCADE<span style="color: #ff006e;">VAULT</span></div>
-    <div style="display: grid; grid-template-columns: 1fr 1fr; border: 1px solid rgba(255,255,255,.12);">
-      <div onClick="{{ tabLogin }}" style="padding: 14px 8px; text-align: center; font-family: 'Press Start 2P', monospace; font-size: 9px; cursor: pointer; color: {{ loginColor }}; background: {{ loginBg }};">INICIAR SESIÓN</div>
-      <div onClick="{{ tabRegister }}" style="padding: 14px 8px; text-align: center; font-family: 'Press Start 2P', monospace; font-size: 9px; cursor: pointer; color: {{ registerColor }}; background: {{ registerBg }};">CREAR CUENTA</div>
+<helmet>
+<link href="styles.css" rel="stylesheet" />
+</helmet>
+<main class="avau-main">
+  <div class="avau-card">
+    <div class="avau-brand">ARCADE<span class="avau-brand-vault">VAULT</span></div>
+    <div class="avau-tabs">
+      <div onClick="{{ tabLogin }}" class="avau-tab" style="color: {{ loginColor }}; background: {{ loginBg }};">INICIAR SESIÓN</div>
+      <div onClick="{{ tabRegister }}" class="avau-tab" style="color: {{ registerColor }}; background: {{ registerBg }};">CREAR CUENTA</div>
     </div>
-    <div style="display: grid; gap: 16px;">
-      <label style="display: grid; gap: 8px; font-size: 12px; letter-spacing: 2px; color: #8b98a3; text-transform: uppercase;">Usuario
-        <input value="{{ user }}" onChange="{{ onUser }}" placeholder="jugador_01" style="padding: 14px; background: rgba(0,245,255,.04); border: 1px solid rgba(0,245,255,.3); color: #e6f2f5; font-family: 'Courier Prime', monospace; font-size: 15px;" style-focus="border-color: #00f5ff; box-shadow: 0 0 20px rgba(0,245,255,.4);" />
+    <div class="avau-fields">
+      <label class="avau-label">Usuario
+        <input value="{{ user }}" onChange="{{ onUser }}" placeholder="jugador_01" class="avau-input" />
       </label>
       <sc-if value="{{ registering }}" hint-placeholder-val="{{ false }}">
-        <label style="display: grid; gap: 8px; font-size: 12px; letter-spacing: 2px; color: #8b98a3; text-transform: uppercase;">Correo electrónico
-          <input placeholder="tu@correo.com" style="padding: 14px; background: rgba(0,245,255,.04); border: 1px solid rgba(0,245,255,.3); color: #e6f2f5; font-family: 'Courier Prime', monospace; font-size: 15px;" style-focus="border-color: #00f5ff; box-shadow: 0 0 20px rgba(0,245,255,.4);" />
+        <label class="avau-label">Correo electrónico
+          <input placeholder="tu@correo.com" class="avau-input" />
         </label>
       </sc-if>
-      <label style="display: grid; gap: 8px; font-size: 12px; letter-spacing: 2px; color: #8b98a3; text-transform: uppercase;">Contraseña
-        <input type="password" placeholder="••••••••" style="padding: 14px; background: rgba(0,245,255,.04); border: 1px solid rgba(0,245,255,.3); color: #e6f2f5; font-family: 'Courier Prime', monospace; font-size: 15px;" style-focus="border-color: #00f5ff; box-shadow: 0 0 20px rgba(0,245,255,.4);" />
+      <label class="avau-label">Contraseña
+        <input type="password" placeholder="••••••••" class="avau-input" />
       </label>
     </div>
-    <div onClick="{{ submit }}" style="text-align: center; font-family: 'Press Start 2P', monospace; font-size: 11px; white-space: nowrap; padding: 17px; border: 1px solid #00f5ff; color: #0a0a0f; background: #00f5ff; cursor: pointer;" style-hover="box-shadow: 0 0 30px rgba(0,245,255,.6);" style-active="transform: scale(.96);">{{ action }}</div>
-    <div onClick="{{ guest }}" style="text-align: center; font-size: 13px; letter-spacing: 2px; color: #f5ff00; cursor: pointer; text-transform: uppercase;" style-hover="text-shadow: 0 0 14px rgba(245,255,0,.7);">Jugar como invitado</div>
-    <div style="display: flex; align-items: center; gap: 12px; color: #333c45; font-size: 11px; letter-spacing: 2px;">
-      <div style="flex: 1; height: 1px; background: rgba(255,255,255,.1);"></div><span style="white-space: nowrap;">O CONTINÚA CON</span><div style="flex: 1; height: 1px; background: rgba(255,255,255,.1);"></div>
+    <div onClick="{{ submit }}" class="avau-submit">{{ action }}</div>
+    <div onClick="{{ guest }}" class="avau-guest">Jugar como invitado</div>
+    <div class="avau-divider">
+      <div class="avau-divider-line"></div><span class="avau-divider-text">O CONTINÚA CON</span><div class="avau-divider-line"></div>
     </div>
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-      <div onClick="{{ submit }}" style="text-align: center; padding: 14px; border: 1px solid rgba(255,255,255,.16); color: #cdd8de; font-size: 13px; letter-spacing: 1px; cursor: pointer;" style-hover="border-color: #00f5ff; color: #00f5ff;" style-active="transform: scale(.96);">Google</div>
-      <div onClick="{{ submit }}" style="text-align: center; padding: 14px; border: 1px solid rgba(255,255,255,.16); color: #cdd8de; font-size: 13px; letter-spacing: 1px; cursor: pointer;" style-hover="border-color: #00f5ff; color: #00f5ff;" style-active="transform: scale(.96);">GitHub</div>
+    <div class="avau-oauth">
+      <div onClick="{{ submit }}" class="avau-oauth-btn">Google</div>
+      <div onClick="{{ submit }}" class="avau-oauth-btn">GitHub</div>
     </div>
-    <p style="margin: 0; font-size: 11px; line-height: 1.7; color: #3b454e;">// Demo local. Aquí conectaría el backend real (REST o Supabase) para sesiones y puntuaciones sincronizadas.</p>
+    <p class="avau-note">// Demo local. Aquí conectaría el backend real (REST o Supabase) para sesiones y puntuaciones sincronizadas.</p>
   </div>
 </main>
 
