@@ -34,7 +34,7 @@ export function SalaJuego({ game }: { game: Game }) {
   const router = useRouter();
   const { spendCredit } = useCredits();
   const { saveScore } = useScores();
-  const { user, isGuest } = useSession();
+  const { user } = useSession();
 
   const [score, setScore] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -178,7 +178,7 @@ export function SalaJuego({ game }: { game: Game }) {
               </div>
             ) : null}
 
-            {isGuest ? (
+            {!user ? (
               <div className="text-[11px] leading-relaxed text-[#6f7d88]">
                 Modo invitado: la puntuación se guarda solo en este dispositivo.
               </div>
