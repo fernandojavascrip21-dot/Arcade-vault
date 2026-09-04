@@ -114,9 +114,9 @@ Estas conviven con `components/game-cover.tsx` (las carátulas SVG pixel-art que
 
 ## 5 — Criterios de aceptación
 
-- [ ] `/games` muestra el mismo contenido y comportamiento que tenía `/` antes de este spec (buscador, filtro por categoría, tarjetas, enlace a la ficha de cada juego).
-- [ ] `/` muestra la nueva Home con sus seis secciones: hero, "¿Por qué Arcade Vault?", "Juegos disponibles ahora", estadísticas, actividad en vivo y precios, más el CTA final.
-- [ ] La nav (escritorio y panel móvil) muestra "Inicio" y "Biblioteca"; ningún enlace "Acerca de" aparece en ningún sitio.
+- [x] `/games` muestra el mismo contenido y comportamiento que tenía `/` antes de este spec (buscador, filtro por categoría, tarjetas, enlace a la ficha de cada juego).
+- [x] `/` muestra la nueva Home con sus seis secciones: hero, "¿Por qué Arcade Vault?", "Juegos disponibles ahora", estadísticas, actividad en vivo y precios, más el CTA final.
+- [x] La nav (escritorio y panel móvil) muestra "Inicio" y "Biblioteca"; ningún enlace "Acerca de" aparece en ningún sitio.
 - [ ] "Inicio" se resalta solo en `/`; "Biblioteca" se resalta en `/games`, `/juego/[id]` y `/jugar/[id]`.
 - [ ] "EXPLORAR JUEGOS", "VER TODOS LOS JUEGOS →" e "INSERTAR MONEDA →" navegan a `/games`.
 - [ ] "CREAR CUENTA" y "EMPEZAR GRATIS →" navegan a `/auth`; "VER SALÓN →" navega a `/salon-fama`.
