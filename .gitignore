@@ -1,5 +1,5 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-.playwright-mcp/
+.playwright-screenshots/
 # dependencies
 /node_modules
 /.pnp
@@ -41,4 +41,4 @@ yarn-error.log*
 next-env.d.ts
 
 # Playwright MCP output
-.playwright-mcp/
+.playwright-screenshots/
