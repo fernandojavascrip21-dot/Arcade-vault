@@ -4,8 +4,8 @@
 // local del navegador (localStorage) y lo combina con la semilla. Cuando haya
 // backend real, la lectura/escritura pasará a hablar con la API.
 
-import { SEED } from "@/app/data";
-import type { BoardRow, ScoreEntry } from "@/lib/types";
+import { GAMES, SEED } from "@/app/data";
+import type { BoardRow, Game, ScoreEntry } from "@/lib/types";
 
 export const SCORES_KEY = "arcadevault.scores.v1";
 
@@ -68,6 +68,20 @@ export function board(stored: StoredScores, gameId: string): BoardRow[] {
 export function best(stored: StoredScores, gameId: string): string {
   const top = board(stored, gameId)[0];
   return top ? top.score.toLocaleString("es-ES") : "—";
+}
+
+// Mejor fila de cada juego, en el orden de GAMES. Para la Home ("Últimas puntuaciones").
+export function bestPerGame(
+  stored: StoredScores,
+): { game: Game; row: BoardRow | undefined }[] {
+  return GAMES.map((game) => ({ game, row: board(stored, game.id)[0] }));
+}
+
+// Top N (por defecto 5) combinando el board() de todos los juegos. Para la Home ("Top jugadores").
+export function topPlayersGlobal(stored: StoredScores, limit = 5): BoardRow[] {
+  return GAMES.flatMap((game) => board(stored, game.id))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit);
 }
 
 // Color de rango: oro / plata / bronce / gris.

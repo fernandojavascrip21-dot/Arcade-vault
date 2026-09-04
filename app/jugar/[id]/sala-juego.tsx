@@ -51,7 +51,7 @@ export function SalaJuego({ game }: { game: Game }) {
   );
 
   const playerName = user ?? "INVITADO";
-  const exit = () => router.push("/");
+  const exit = () => router.push("/games");
 
   // Sin motor de juego: simula el final de una partida con una puntuación
   // pseudoaleatoria para poder recorrer el flujo de guardado.
