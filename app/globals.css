@@ -51,13 +51,15 @@ body {
   font-family: var(--font-courier-prime), ui-monospace, "Courier New", monospace;
 }
 
-a {
-  color: var(--cian);
-  text-decoration: none;
-}
+@layer base {
+  a {
+    color: var(--cian);
+    text-decoration: none;
+  }
 
-a:hover {
-  color: var(--amarillo);
+  a:hover {
+    color: var(--amarillo);
+  }
 }
 
 input::placeholder {
