@@ -13,7 +13,7 @@ const stripes: CSSProperties = {
 export function GameCard({ game, best }: { game: Game; best: string }) {
   return (
     <Link
-      href={`/juego/${game.id}`}
+      href={`/game/${game.id}`}
       className="group grid grid-rows-[auto_1fr] border border-cian/25 bg-[linear-gradient(180deg,rgba(16,18,28,.95),rgba(9,9,14,.95))] transition duration-200 hover:-translate-y-2 hover:border-cian hover:shadow-[0_0_30px_rgba(0,245,255,.4),0_24px_50px_rgba(0,0,0,.6)]"
     >
       <div

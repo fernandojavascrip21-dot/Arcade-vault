@@ -361,7 +361,7 @@ export default function HomePage() {
           {GAMES.map((g) => (
             <Link
               key={g.id}
-              href={`/juego/${g.id}`}
+              href={`/game/${g.id}`}
               className="group border border-white/10 bg-[#0f0f18] transition-transform hover:-translate-y-1 hover:border-cian"
             >
               <div className={`cover-${g.id} relative aspect-square overflow-hidden`} />
@@ -449,7 +449,7 @@ export default function HomePage() {
                 ▸ TOP JUGADORES
               </div>
               <Link
-                href="/salon-fama"
+                href="/hall-of-fame"
                 className="whitespace-nowrap text-[10px] uppercase tracking-[2px] text-[#8a8fb5] transition-colors hover:text-cian"
               >
                 VER SALÓN →

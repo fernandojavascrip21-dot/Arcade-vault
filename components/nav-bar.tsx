@@ -40,10 +40,10 @@ export function NavBar() {
   const creditsText = String(credits).padStart(2, "0");
   const closeMenu = () => setMenuOpen(false);
   const isHome = pathname === "/";
-  const isBiblioteca =
+  const isGames =
     pathname === "/games" ||
-    pathname.startsWith("/juego/") ||
-    pathname.startsWith("/jugar/");
+    pathname.startsWith("/game/") ||
+    pathname.startsWith("/play/");
 
   return (
     <>
@@ -79,10 +79,10 @@ export function NavBar() {
             <NavLink href="/" active={isHome}>
               Inicio
             </NavLink>
-            <NavLink href="/games" active={isBiblioteca}>
+            <NavLink href="/games" active={isGames}>
               Biblioteca
             </NavLink>
-            <NavLink href="/salon-fama" active={pathname === "/salon-fama"}>
+            <NavLink href="/hall-of-fame" active={pathname === "/hall-of-fame"}>
               Salón de la Fama
             </NavLink>
 
@@ -166,7 +166,7 @@ export function NavBar() {
               Biblioteca
             </Link>
             <Link
-              href="/salon-fama"
+              href="/hall-of-fame"
               onClick={closeMenu}
               className="font-display text-xs text-cian"
             >
