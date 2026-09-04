@@ -364,7 +364,7 @@ export default function HomePage() {
               href={`/juego/${g.id}`}
               className="group border border-white/10 bg-[#0f0f18] transition-transform hover:-translate-y-1 hover:border-cian"
             >
-              <div className={`cover-${g.id} aspect-square`} />
+              <div className={`cover-${g.id} relative aspect-square overflow-hidden`} />
               <div className="p-2.5">
                 <div className="truncate font-display text-[10px] tracking-wide text-[#e6e9ff]">
                   {g.title}

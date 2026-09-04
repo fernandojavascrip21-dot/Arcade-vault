@@ -35,6 +35,7 @@
   --animate-row: av-row 0.5s ease both;
   --animate-fade: av-fade 0.28s ease both;
   --animate-caret: av-caret 1s step-end infinite;
+  --animate-float: av-float 6s ease-in-out infinite;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -139,4 +140,157 @@ input:focus {
   50% {
     opacity: 0;
   }
+}
+
+@keyframes av-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-2deg);
+  }
+  50% {
+    transform: translateY(-14px) rotate(2deg);
+  }
+}
+
+/* ===== HOME — carátulas decorativas de "Juegos disponibles ahora" =====
+   Portadas de references/resource/home-about/styles.css (.cover-bricks,
+   .cover-tetro, .cover-snake, .cover-invaders, .cover-rocas, .cover-glot),
+   renombradas por el id real de cada juego en app/data.ts. */
+
+.cover-rompemuros {
+  background:
+    repeating-linear-gradient(
+        90deg,
+        var(--magenta) 0 32px,
+        #ffae00 32px 64px,
+        var(--cian) 64px 96px,
+        #00ff88 96px 128px
+      )
+      0 0/100% 32px,
+    #15151f;
+}
+.cover-rompemuros::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0 32px,
+    rgba(0, 0, 0, 0.4) 32px 33px
+  );
+}
+
+.cover-serpiente {
+  background: linear-gradient(135deg, #003a2a, #0a0a18);
+}
+.cover-serpiente::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+      circle at 70% 50%,
+      var(--magenta) 0 6px,
+      transparent 7px
+    ),
+    linear-gradient(90deg, #00ff88 0 40px, transparent 40px) 20% 50% / 200px
+      12px no-repeat,
+    linear-gradient(90deg, #00ff88 0 12px, transparent 12px)
+      calc(20% + 40px) calc(50% - 12px) / 12px 12px no-repeat,
+    linear-gradient(90deg, #00ff88 0 12px, transparent 12px)
+      calc(20% + 28px) calc(50% - 12px) / 12px 12px no-repeat;
+  filter: drop-shadow(0 0 6px rgba(0, 255, 136, 0.6));
+}
+
+.cover-invasores {
+  background: linear-gradient(180deg, #001a3a, #0a0a18);
+}
+.cover-invasores::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 20% 30%, #00ff88 0 5px, transparent 6px),
+    radial-gradient(circle at 40% 30%, #00ff88 0 5px, transparent 6px),
+    radial-gradient(circle at 60% 30%, #00ff88 0 5px, transparent 6px),
+    radial-gradient(circle at 80% 30%, #00ff88 0 5px, transparent 6px),
+    radial-gradient(circle at 20% 50%, var(--magenta) 0 5px, transparent 6px),
+    radial-gradient(circle at 40% 50%, var(--magenta) 0 5px, transparent 6px),
+    radial-gradient(circle at 60% 50%, var(--magenta) 0 5px, transparent 6px),
+    radial-gradient(circle at 80% 50%, var(--magenta) 0 5px, transparent 6px),
+    radial-gradient(circle at 50% 80%, var(--cian) 0 8px, transparent 9px);
+  filter: drop-shadow(0 0 6px rgba(0, 255, 136, 0.6));
+}
+
+.cover-asteroides {
+  background: radial-gradient(circle at 50% 50%, #0a0a30, #000);
+}
+.cover-asteroides::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 22% 30%, #888 0 18px, transparent 19px),
+    radial-gradient(circle at 75% 60%, #aaa 0 26px, transparent 27px),
+    radial-gradient(circle at 50% 80%, #777 0 14px, transparent 15px),
+    radial-gradient(circle at 88% 22%, var(--cian) 0 2px, transparent 3px),
+    radial-gradient(circle at 12% 70%, var(--cian) 0 2px, transparent 3px),
+    radial-gradient(circle at 60% 20%, var(--cian) 0 2px, transparent 3px);
+}
+.cover-asteroides::before {
+  content: "▲";
+  position: absolute;
+  left: 48%;
+  top: 44%;
+  color: var(--amarillo);
+  font-size: 22px;
+  text-shadow: 0 0 8px var(--amarillo);
+}
+
+.cover-bloques {
+  background: radial-gradient(circle at 50% 100%, #2a004a, #0a0a18);
+}
+.cover-bloques::after {
+  content: "";
+  position: absolute;
+  inset: 20% 30% 0 30%;
+  background: linear-gradient(var(--cian), var(--cian)) 0 0/25% 33%,
+    linear-gradient(var(--magenta), var(--magenta)) 25% 0/25% 33%,
+    linear-gradient(var(--amarillo), var(--amarillo)) 50% 33%/25% 33%,
+    linear-gradient(#00ff88, #00ff88) 25% 66%/25% 33%,
+    linear-gradient(#ff7700, #ff7700) 50% 66%/25% 33%,
+    linear-gradient(#aa00ff, #aa00ff) 75% 33%/25% 33%;
+  background-repeat: no-repeat;
+  filter: drop-shadow(0 0 8px rgba(0, 245, 255, 0.4));
+  image-rendering: pixelated;
+}
+
+.cover-laberinto {
+  background: radial-gradient(circle at 50% 50%, #1a002a, #0a0a18);
+}
+.cover-laberinto::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 30% 50%, var(--amarillo) 0 38px, transparent 39px),
+    radial-gradient(circle at 70% 50%, var(--magenta) 0 6px, transparent 7px),
+    radial-gradient(circle at 82% 50%, var(--cian) 0 6px, transparent 7px);
+  clip-path: polygon(
+    0 0,
+    30% 0,
+    30% 50%,
+    100% 30%,
+    100% 70%,
+    30% 50%,
+    30% 100%,
+    0 100%
+  );
+  filter: drop-shadow(0 0 8px rgba(245, 255, 0, 0.5));
+}
+.cover-laberinto::before {
+  content: "•••";
+  position: absolute;
+  left: 55%;
+  top: 47%;
+  color: var(--cian);
+  letter-spacing: 6px;
+  font-size: 18px;
+  text-shadow: 0 0 6px var(--cian);
 }
