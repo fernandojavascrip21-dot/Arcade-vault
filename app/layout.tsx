@@ -4,6 +4,10 @@ import { Providers } from "@/contexts/providers";
 import { SiteChrome } from "@/components/site-chrome";
 import "./globals.css";
 
+// Fuentes del prototipo (references/resource/project/styles.css):
+// "Press Start 2P" para titulares/HUD, "Courier Prime" para el cuerpo.
+// next/font las auto-hospeda; se exponen como variables CSS y las consume
+// globals.css vía --font-press-start / --font-courier-prime.
 const pressStart = Press_Start_2P({
   weight: "400",
   subsets: ["latin"],

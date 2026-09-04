@@ -35,6 +35,10 @@ npx next typegen # regenerate .next/types when route/layout prop types drift
 There is no test runner and no typecheck script configured. Type errors surface via `npm run build`
 (or `npx tsc --noEmit`). If you add a test runner, document the single-test invocation here.
 
+## Skills
+Usa simepre el /frontend-design para diseñar las interfazes de ususarios
+
+
 ## Architecture
 
 - **App Router only**, all under `app/`. `app/layout.tsx` is the root layout (loads Geist fonts via

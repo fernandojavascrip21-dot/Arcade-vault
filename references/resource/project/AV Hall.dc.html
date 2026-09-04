@@ -7,36 +7,39 @@
 </head>
 <body>
 <x-dc>
-<main style="position: relative; z-index: 1; max-width: 1080px; margin: 0 auto; padding: 54px 22px 90px; font-family: 'Courier Prime', ui-monospace, monospace; animation: av-fade .28s ease both;">
-  <h1 style="margin: 0 0 12px; text-align: center; font-family: 'Press Start 2P', monospace; font-size: clamp(20px, 4.4vw, 40px); line-height: 1.4; color: #f5ff00; text-shadow: 0 0 16px rgba(245,255,0,.55), 0 0 50px rgba(245,255,0,.25);">SALÓN DE LA FAMA</h1>
-  <p style="margin: 0 0 34px; text-align: center; font-size: 13px; letter-spacing: 3px; color: #6f7d88; text-transform: uppercase;">Las diez mejores marcas de cada máquina</p>
+<helmet>
+<link href="styles.css" rel="stylesheet" />
+</helmet>
+<main class="avha-main">
+  <h1 class="avha-title">SALÓN DE LA FAMA</h1>
+  <p class="avha-sub">Las diez mejores marcas de cada máquina</p>
 
-  <div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 30px;">
+  <div class="avha-tabs">
     <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="6">
-      <div onClick="{{ t.select }}" style="padding: 12px 14px; font-family: 'Press Start 2P', monospace; font-size: 9px; white-space: nowrap; cursor: pointer; border: 1px solid {{ t.border }}; color: {{ t.color }}; background: {{ t.bg }};" style-hover="border-color: #f5ff00; color: #f5ff00;" style-active="transform: scale(.96);">{{ t.title }}</div>
+      <div onClick="{{ t.select }}" class="avha-tab" style="border-color: {{ t.border }}; color: {{ t.color }}; background: {{ t.bg }};">{{ t.title }}</div>
     </sc-for>
   </div>
 
-  <div style="border: 1px solid rgba(0,245,255,.25); background: rgba(9,10,16,.92); box-shadow: 0 0 44px rgba(0,245,255,.12); overflow-x: auto;">
-    <div style="min-width: 560px;">
-      <div style="display: grid; grid-template-columns: 78px 1fr 130px 118px; gap: 10px; padding: 16px 20px; border-bottom: 1px solid rgba(0,245,255,.22); font-size: 10px; letter-spacing: 2px; color: #6f7d88;">
-        <span>RANGO</span><span>JUGADOR</span><span style="text-align: right;">PUNTUACIÓN</span><span style="text-align: right;">FECHA</span>
+  <div class="avha-table-wrap">
+    <div class="avha-table">
+      <div class="avha-head">
+        <span>RANGO</span><span>JUGADOR</span><span class="avha-r">PUNTUACIÓN</span><span class="avha-r">FECHA</span>
       </div>
       <sc-for list="{{ rows }}" as="r" hint-placeholder-count="10">
-        <div style="display: grid; grid-template-columns: 78px 1fr 130px 118px; gap: 10px; align-items: center; padding: 15px 20px; border-bottom: 1px solid rgba(255,255,255,.05); background: {{ r.rowBg }}; animation: av-row .5s ease both; animation-delay: {{ r.delay }};">
-          <span style="font-family: 'Press Start 2P', monospace; font-size: 12px; color: {{ r.rankColor }}; text-shadow: {{ r.rankGlow }};">{{ r.rank }}</span>
-          <span style="font-size: 15px; color: #dbe5ea; display: flex; align-items: center; gap: 10px; overflow: hidden;">{{ r.name }}
+        <div class="avha-row" style="background: {{ r.rowBg }}; animation-delay: {{ r.delay }};">
+          <span class="avha-rank" style="color: {{ r.rankColor }}; text-shadow: {{ r.rankGlow }};">{{ r.rank }}</span>
+          <span class="avha-name">{{ r.name }}
             <sc-if value="{{ r.isYou }}" hint-placeholder-val="{{ false }}">
-              <span style="font-family: 'Press Start 2P', monospace; font-size: 8px; padding: 5px 7px; border: 1px solid #ff006e; color: #ff006e; white-space: nowrap;">TU MEJOR MARCA</span>
+              <span class="avha-you">TU MEJOR MARCA</span>
             </sc-if>
           </span>
-          <span style="text-align: right; font-family: 'Press Start 2P', monospace; font-size: 11px; color: #f5ff00;">{{ r.score }}</span>
-          <span style="text-align: right; font-size: 13px; color: #6f7d88;">{{ r.date }}</span>
+          <span class="avha-score">{{ r.score }}</span>
+          <span class="avha-date">{{ r.date }}</span>
         </div>
       </sc-for>
     </div>
   </div>
-  <p style="margin: 20px 2px 0; font-size: 12px; color: #3b454e;">// Puntuaciones de invitado en localStorage. Las cuentas autenticadas leerían el ranking global desde la API.</p>
+  <p class="avha-note">// Puntuaciones de invitado en localStorage. Las cuentas autenticadas leerían el ranking global desde la API.</p>
 </main>
 
 </x-dc>
