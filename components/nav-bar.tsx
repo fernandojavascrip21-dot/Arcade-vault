@@ -39,6 +39,11 @@ export function NavBar() {
 
   const creditsText = String(credits).padStart(2, "0");
   const closeMenu = () => setMenuOpen(false);
+  const isHome = pathname === "/";
+  const isBiblioteca =
+    pathname === "/games" ||
+    pathname.startsWith("/juego/") ||
+    pathname.startsWith("/jugar/");
 
   return (
     <>
@@ -71,7 +76,10 @@ export function NavBar() {
               </button>
             </div>
 
-            <NavLink href="/" active={pathname === "/"}>
+            <NavLink href="/" active={isHome}>
+              Inicio
+            </NavLink>
+            <NavLink href="/games" active={isBiblioteca}>
               Biblioteca
             </NavLink>
             <NavLink href="/salon-fama" active={pathname === "/salon-fama"}>
@@ -145,6 +153,13 @@ export function NavBar() {
             </div>
             <Link
               href="/"
+              onClick={closeMenu}
+              className="font-display text-xs text-cian"
+            >
+              Inicio
+            </Link>
+            <Link
+              href="/games"
               onClick={closeMenu}
               className="font-display text-xs text-cian"
             >
