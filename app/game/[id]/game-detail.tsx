@@ -11,7 +11,7 @@ import { useScores } from "@/contexts/scores-context";
 import { best } from "@/lib/scores";
 import type { Game } from "@/lib/types";
 
-export function FichaJuego({ game }: { game: Game }) {
+export function GameDetail({ game }: { game: Game }) {
   const router = useRouter();
   const { spendCredit } = useCredits();
   const { stored } = useScores();
@@ -19,7 +19,7 @@ export function FichaJuego({ game }: { game: Game }) {
   // Consume un crédito; solo entra a la sala si había crédito. El aviso
   // ("INSERTA UNA MONEDA") lo muestra el contexto de créditos.
   const play = () => {
-    if (spendCredit()) router.push(`/jugar/${game.id}`);
+    if (spendCredit()) router.push(`/play/${game.id}`);
   };
 
   return (

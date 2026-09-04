@@ -2,12 +2,12 @@ import { notFound } from "next/navigation";
 
 import { byId } from "@/app/data";
 
-import { FichaJuego } from "./ficha-juego";
+import { GameDetail } from "./game-detail";
 
-export default async function FichaPage({ params }: PageProps<"/juego/[id]">) {
+export default async function GamePage({ params }: PageProps<"/game/[id]">) {
   const { id } = await params;
   const game = byId(id);
   if (!game) notFound();
 
-  return <FichaJuego game={game} />;
+  return <GameDetail game={game} />;
 }
