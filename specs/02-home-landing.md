@@ -1,6 +1,6 @@
 # SPEC 02 — Home / landing page de Arcade Vault
 
-> **Status:** Aceptado
+> **Status:** Implementado
 > **Depends on:** SPEC 01
 > **Date:** 2026-09-04
 > **Objective:** Convertir `/` en la pantalla de inicio (landing) de Arcade Vault, inspirada en `references/resource/home-about/home.jsx` (sin portar la pantalla "Acerca de"), moviendo la Biblioteca actual de `/` a `/games`.
@@ -118,18 +118,18 @@ Estas conviven con `components/game-cover.tsx` (las carátulas SVG pixel-art que
 - [x] `/` muestra la nueva Home con sus seis secciones: hero, "¿Por qué Arcade Vault?", "Juegos disponibles ahora", estadísticas, actividad en vivo y precios, más el CTA final.
 - [x] La nav (escritorio y panel móvil) muestra "Inicio" y "Biblioteca"; ningún enlace "Acerca de" aparece en ningún sitio.
 - [x] "Inicio" se resalta solo en `/`; "Biblioteca" se resalta en `/games`, `/juego/[id]` y `/jugar/[id]`.
-- [ ] "EXPLORAR JUEGOS", "VER TODOS LOS JUEGOS →" e "INSERTAR MONEDA →" navegan a `/games`.
-- [ ] "CREAR CUENTA" y "EMPEZAR GRATIS →" navegan a `/auth`; "VER SALÓN →" navega a `/salon-fama`.
-- [ ] Las seis mini-tarjetas de "Juegos disponibles ahora" (una por juego de `GAMES`) navegan cada una a `/juego/[id]` de su juego y muestran carátulas visualmente distintas entre sí.
-- [ ] La sección "Estadísticas" muestra el conteo real de juegos (`GAMES.length`, hoy 6), nunca un número inventado como "12+".
-- [ ] "Últimas puntuaciones" muestra exactamente 6 filas (una por juego) con la mejor marca real de cada uno y su fecha; no aparece ningún texto de "hace X minutos".
-- [ ] "Top jugadores" muestra las 5 puntuaciones más altas combinando los 6 juegos, sin la coletilla "HOY".
-- [ ] Guardar una puntuación nueva que supere alguna de las mostradas (flujo del spec 01) y volver a `/` actualiza el ticker y, si corresponde, el top 5.
-- [ ] En la ficha de un juego, "VOLVER AL VAULT" navega a `/games`; en la sala de juego, "SALIR" navega a `/games`.
-- [ ] En `/auth`, iniciar sesión o "jugar como invitado" siguen navegando a `/` (ahora la Home, comportamiento intencional).
-- [ ] Las secciones con animación de aparición (`useReveal`) se muestran de inmediato si ya están en el viewport al cargar, y aparecen con la transición al hacer scroll hasta ellas en otro caso.
-- [ ] `npm run build` y `npm run lint` terminan sin errores ni warnings nuevos.
-- [ ] Ninguna página lee `localStorage`, `window` o dispara `IntersectionObserver` durante el render en servidor.
+- [x] "EXPLORAR JUEGOS", "VER TODOS LOS JUEGOS →" e "INSERTAR MONEDA →" navegan a `/games`.
+- [x] "CREAR CUENTA" y "EMPEZAR GRATIS →" navegan a `/auth`; "VER SALÓN →" navega a `/salon-fama`.
+- [x] Las seis mini-tarjetas de "Juegos disponibles ahora" (una por juego de `GAMES`) navegan cada una a `/juego/[id]` de su juego y muestran carátulas visualmente distintas entre sí.
+- [x] La sección "Estadísticas" muestra el conteo real de juegos (`GAMES.length`, hoy 6), nunca un número inventado como "12+".
+- [x] "Últimas puntuaciones" muestra exactamente 6 filas (una por juego) con la mejor marca real de cada uno y su fecha; no aparece ningún texto de "hace X minutos".
+- [x] "Top jugadores" muestra las 5 puntuaciones más altas combinando los 6 juegos, sin la coletilla "HOY".
+- [x] Guardar una puntuación nueva que supere alguna de las mostradas (flujo del spec 01) y volver a `/` actualiza el ticker y, si corresponde, el top 5.
+- [x] En la ficha de un juego, "VOLVER AL VAULT" navega a `/games`; en la sala de juego, "SALIR" navega a `/games`.
+- [x] En `/auth`, iniciar sesión o "jugar como invitado" siguen navegando a `/` (ahora la Home, comportamiento intencional).
+- [x] Las secciones con animación de aparición (`useReveal`) se muestran de inmediato si ya están en el viewport al cargar, y aparecen con la transición al hacer scroll hasta ellas en otro caso.
+- [x] `npm run build` y `npm run lint` terminan sin errores ni warnings nuevos.
+- [x] Ninguna página lee `localStorage`, `window` o dispara `IntersectionObserver` durante el render en servidor.
 
 ---
 
