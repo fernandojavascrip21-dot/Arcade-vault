@@ -1,6 +1,6 @@
 # SPEC 04 — Página About y envío de correo con Resend
 
-> **Status:** Aprovado
+> **Status:** Implementado
 > **Depends on:** SPEC 02, SPEC 03
 > **Date:** 2026-09-07
 > **Objective:** Crear la ruta `/about` portando exactamente la maqueta `references/resource/home-about/about.jsx` (hero + contacto), y conectar su formulario a un endpoint propio que envía el mensaje por correo real usando Resend.
@@ -90,7 +90,7 @@ No hay estado persistente entre sesiones: el formulario es efímero (estado de R
 - [x] Si `POST /api/contact` falla (key inválida, error de Resend, o error de red), se muestra un mensaje de error visible sin perder lo que el usuario había escrito, y el formulario queda listo para reintentar.
 - [x] `app/api/contact/route.ts` valida que `name`, `email` y `msg` no estén vacíos antes de llamar a Resend, y nunca deja una excepción sin capturar (siempre responde JSON con `ok`).
 - [x] El NavBar (escritorio y menú móvil) muestra "Acerca de" enlazando a `/about`, resaltado como activo solo en esa ruta.
-- [ ] `.env.example` existe, está commiteado, documenta `RESEND_API_KEY` y `CONTACT_TO_EMAIL` con claves vacías, y no contiene ningún valor real (ni la key, ni la dirección de correo real). El archivo existe con claves vacías, pero **aún no está commiteado** (ver nota).
+- [x] `.env.example` existe, está commiteado, documenta `RESEND_API_KEY` y `CONTACT_TO_EMAIL` con claves vacías, y no contiene ningún valor real (ni la key, ni la dirección de correo real).
 - [x] `RESEND_API_KEY` no aparece en ningún archivo o componente que se ejecute en el cliente (`"use client"`); solo se lee dentro de `app/api/contact/route.ts`.
 - [x] `npm run build` y `npm run lint` terminan sin errores ni warnings nuevos.
 
