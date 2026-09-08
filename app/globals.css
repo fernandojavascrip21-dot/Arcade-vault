@@ -36,6 +36,7 @@
   --animate-fade: av-fade 0.28s ease both;
   --animate-caret: av-caret 1s step-end infinite;
   --animate-float: av-float 6s ease-in-out infinite;
+  --animate-shake: av-shake 0.4s;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -149,6 +150,25 @@ input:focus {
   }
   50% {
     transform: translateY(-14px) rotate(2deg);
+  }
+}
+
+@keyframes av-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-6px);
+  }
+  40% {
+    transform: translateX(6px);
+  }
+  60% {
+    transform: translateX(-4px);
+  }
+  80% {
+    transform: translateX(4px);
   }
 }
 
