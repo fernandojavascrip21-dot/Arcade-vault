@@ -82,17 +82,19 @@ No hay estado persistente entre sesiones: el formulario es efímero (estado de R
 
 ## 5 — Criterios de aceptación
 
-- [ ] `/about` muestra el hero "Acerca de" con misión y los 3 highlights con sus iconos, igual que `about.jsx`.
-- [ ] La sección de contacto muestra la intro (kicker, título, subtítulo, 3 tips) y el formulario con los mismos labels y placeholders que la maqueta (Nombre, Correo electrónico, Mensaje).
-- [ ] Enviar el formulario con algún campo vacío dispara la animación de shake y no envía ninguna petición de red.
-- [ ] Enviar el formulario con los tres campos completos deshabilita el botón y muestra "ENVIANDO..." mientras la petición está en curso.
-- [ ] Con la `RESEND_API_KEY` real configurada en `.env.local`, enviar el formulario completo hace que llegue un correo a `luisbboy211@gmail.com` con el nombre, correo y mensaje escritos, y la UI muestra el bloque `terminal-success` con el nombre en mayúsculas, igual que la maqueta; "ENVIAR OTRO MENSAJE" limpia el formulario.
-- [ ] Si `POST /api/contact` falla (key inválida, error de Resend, o error de red), se muestra un mensaje de error visible sin perder lo que el usuario había escrito, y el formulario queda listo para reintentar.
-- [ ] `app/api/contact/route.ts` valida que `name`, `email` y `msg` no estén vacíos antes de llamar a Resend, y nunca deja una excepción sin capturar (siempre responde JSON con `ok`).
-- [ ] El NavBar (escritorio y menú móvil) muestra "Acerca de" enlazando a `/about`, resaltado como activo solo en esa ruta.
-- [ ] `.env.example` existe, está commiteado, documenta `RESEND_API_KEY` y `CONTACT_TO_EMAIL` con claves vacías, y no contiene ningún valor real (ni la key, ni `luisbboy211@gmail.com`).
-- [ ] `RESEND_API_KEY` no aparece en ningún archivo o componente que se ejecute en el cliente (`"use client"`); solo se lee dentro de `app/api/contact/route.ts`.
-- [ ] `npm run build` y `npm run lint` terminan sin errores ni warnings nuevos.
+- [x] `/about` muestra el hero "Acerca de" con misión y los 3 highlights con sus iconos, igual que `about.jsx`.
+- [x] La sección de contacto muestra la intro (kicker, título, subtítulo, 3 tips) y el formulario con los mismos labels y placeholders que la maqueta (Nombre, Correo electrónico, Mensaje).
+- [x] Enviar el formulario con algún campo vacío dispara la animación de shake y no envía ninguna petición de red.
+- [x] Enviar el formulario con los tres campos completos deshabilita el botón y muestra "ENVIANDO..." mientras la petición está en curso.
+- [x] Con la `RESEND_API_KEY` real configurada en `.env.local`, enviar el formulario completo hace que llegue un correo a `fernandojavascrip21@gmail.com` (dirección real corregida durante la implementación — ver nota) con el nombre, correo y mensaje escritos, y la UI muestra el bloque `terminal-success` con el nombre en mayúsculas, igual que la maqueta; "ENVIAR OTRO MENSAJE" limpia el formulario.
+- [x] Si `POST /api/contact` falla (key inválida, error de Resend, o error de red), se muestra un mensaje de error visible sin perder lo que el usuario había escrito, y el formulario queda listo para reintentar.
+- [x] `app/api/contact/route.ts` valida que `name`, `email` y `msg` no estén vacíos antes de llamar a Resend, y nunca deja una excepción sin capturar (siempre responde JSON con `ok`).
+- [x] El NavBar (escritorio y menú móvil) muestra "Acerca de" enlazando a `/about`, resaltado como activo solo en esa ruta.
+- [ ] `.env.example` existe, está commiteado, documenta `RESEND_API_KEY` y `CONTACT_TO_EMAIL` con claves vacías, y no contiene ningún valor real (ni la key, ni la dirección de correo real). El archivo existe con claves vacías, pero **aún no está commiteado** (ver nota).
+- [x] `RESEND_API_KEY` no aparece en ningún archivo o componente que se ejecute en el cliente (`"use client"`); solo se lee dentro de `app/api/contact/route.ts`.
+- [x] `npm run build` y `npm run lint` terminan sin errores ni warnings nuevos.
+
+> **Nota de implementación (2026-09-07):** el sandbox de Resend solo entrega al correo con el que se creó la cuenta (`fernandojavascrip21@gmail.com`), distinto de los dos valores que este spec mencionaba en distintas secciones (`luisbboy211@gmail.com` en la 2/5, `fernandodance2121@gmail.com` en la 6/7). Se usó `fernandojavascrip21@gmail.com` en `.env.local`, confirmado end-to-end. `.env.example` no se pudo commitear en el primer intento porque el `.gitignore` del repo (`.env*`) lo bloqueaba sin excepción propia; se añadió `!.env.example` junto al `!.env.template` ya existente.
 
 ---
 
