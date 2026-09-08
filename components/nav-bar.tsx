@@ -85,6 +85,9 @@ export function NavBar() {
             <NavLink href="/hall-of-fame" active={pathname === "/hall-of-fame"}>
               Salón de la Fama
             </NavLink>
+            <NavLink href="/about" active={pathname === "/about"}>
+              Acerca de
+            </NavLink>
 
             {user ? (
               <div className="flex items-center gap-2.5">
@@ -171,6 +174,13 @@ export function NavBar() {
               className="font-display text-xs text-cian"
             >
               Salón de la Fama
+            </Link>
+            <Link
+              href="/about"
+              onClick={closeMenu}
+              className="font-display text-xs text-cian"
+            >
+              Acerca de
             </Link>
             <Link
               href="/auth"
