@@ -30,7 +30,7 @@ function HudStat({
   );
 }
 
-export function SalaJuego({ game }: { game: Game }) {
+export function PlayRoom({ game }: { game: Game }) {
   const router = useRouter();
   const { spendCredit } = useCredits();
   const { saveScore } = useScores();

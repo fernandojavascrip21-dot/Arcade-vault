@@ -9,7 +9,7 @@ import { board, rankColor } from "@/lib/scores";
 
 const COLS = "grid-cols-[78px_1fr_130px_118px]";
 
-export function SalonFama({ initialGame }: { initialGame: string }) {
+export function HallOfFame({ initialGame }: { initialGame: string }) {
   const [tab, setTab] = useState(initialGame);
   const { stored } = useScores();
   const { user } = useSession();

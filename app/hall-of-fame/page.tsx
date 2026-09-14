@@ -1,13 +1,13 @@
 import { byId, GAMES } from "@/app/data";
 
-import { SalonFama } from "./salon-fama";
+import { HallOfFame } from "./hall-of-fame";
 
-export default async function SalonFamaPage({
+export default async function HallOfFamePage({
   searchParams,
-}: PageProps<"/salon-fama">) {
+}: PageProps<"/hall-of-fame">) {
   const { game } = await searchParams;
   const initial =
     typeof game === "string" && byId(game) ? game : GAMES[0].id;
 
-  return <SalonFama initialGame={initial} />;
+  return <HallOfFame initialGame={initial} />;
 }

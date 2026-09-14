@@ -2,12 +2,12 @@ import { notFound } from "next/navigation";
 
 import { byId } from "@/app/data";
 
-import { SalaJuego } from "./sala-juego";
+import { GameDetail } from "./game-detail";
 
-export default async function SalaPage({ params }: PageProps<"/jugar/[id]">) {
+export default async function GamePage({ params }: PageProps<"/game/[id]">) {
   const { id } = await params;
   const game = byId(id);
   if (!game) notFound();
 
-  return <SalaJuego game={game} />;
+  return <GameDetail game={game} />;
 }
