@@ -594,6 +594,8 @@ export function createAsteroidsEngine(
     },
     restart() {
       initGame();
+      draw();
+      lastTime = null;
     },
   };
 }
