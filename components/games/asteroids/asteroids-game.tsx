@@ -72,7 +72,7 @@ export const AsteroidsGame = forwardRef<
       ref={canvasRef}
       width={ASTEROIDS_WIDTH}
       height={ASTEROIDS_HEIGHT}
-      className="h-full w-full object-contain"
+      className="h-full w-full bg-black object-contain"
     />
   );
 });
