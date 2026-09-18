@@ -7,14 +7,19 @@ import { CrtFrame } from "@/components/crt-frame";
 import { GameCover } from "@/components/game-cover";
 import { ScoreBoard } from "@/components/score-board";
 import { useCredits } from "@/contexts/credits-context";
-import { useScores } from "@/contexts/scores-context";
-import { best } from "@/lib/scores";
-import type { Game } from "@/lib/types";
+import type { BoardRow, Game } from "@/lib/types";
 
-export function GameDetail({ game }: { game: Game }) {
+export function GameDetail({
+  game,
+  best,
+  boardRows,
+}: {
+  game: Game;
+  best: string;
+  boardRows: BoardRow[];
+}) {
   const router = useRouter();
   const { spendCredit } = useCredits();
-  const { stored } = useScores();
 
   // Consume un crédito; solo entra a la sala si había crédito. El aviso
   // ("INSERTA UNA MONEDA") lo muestra el contexto de créditos.
@@ -44,7 +49,7 @@ export function GameDetail({ game }: { game: Game }) {
               {game.category}
             </span>
             <span className="whitespace-nowrap border border-amarillo/50 px-2.5 py-2 font-display text-[9px] text-amarillo">
-              MEJOR: {best(stored, game.id)}
+              MEJOR: {best}
             </span>
           </div>
 
@@ -69,7 +74,7 @@ export function GameDetail({ game }: { game: Game }) {
           </div>
         </section>
 
-        <ScoreBoard gameId={game.id} />
+        <ScoreBoard rows={boardRows} />
       </div>
     </main>
   );
