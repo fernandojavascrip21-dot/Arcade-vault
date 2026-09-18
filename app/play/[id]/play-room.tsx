@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
+import { saveScoreAction } from "@/app/play/[id]/actions";
 import { CrtFrame } from "@/components/crt-frame";
 import {
   AsteroidsGame,
@@ -10,7 +11,6 @@ import {
 } from "@/components/games/asteroids/asteroids-game";
 import type { AsteroidsState } from "@/components/games/asteroids/engine";
 import { useCredits } from "@/contexts/credits-context";
-import { useScores } from "@/contexts/scores-context";
 import { useSession } from "@/contexts/session-context";
 import type { Game } from "@/lib/types";
 
@@ -38,7 +38,6 @@ function HudStat({
 export function PlayRoom({ game }: { game: Game }) {
   const router = useRouter();
   const { spendCredit } = useCredits();
-  const { saveScore } = useScores();
   const { user } = useSession();
 
   const [score, setScore] = useState(0);
@@ -46,7 +45,9 @@ export function PlayRoom({ game }: { game: Game }) {
   const [level, setLevel] = useState(1);
   const [paused, setPaused] = useState(false);
   const [over, setOver] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [saveMsg, setSaveMsg] = useState("");
 
   const isAsteroids = game.id === "asteroides";
@@ -82,8 +83,17 @@ export function PlayRoom({ game }: { game: Game }) {
     setOver(true);
   };
 
-  const handleSave = () => {
-    saveScore(game.id, score);
+  const handleSave = async () => {
+    setSaving(true);
+    setSaveError(null);
+    const result = await saveScoreAction(game.id, playerName, score);
+    setSaving(false);
+
+    if (!result.ok) {
+      setSaveError(result.error);
+      return;
+    }
+
     setSaved(true);
     setSaveMsg("");
     let i = 0;
@@ -96,6 +106,7 @@ export function PlayRoom({ game }: { game: Game }) {
         typerRef.current = null;
       }
     }, 55);
+    router.refresh();
   };
 
   const replay = () => {
@@ -105,6 +116,7 @@ export function PlayRoom({ game }: { game: Game }) {
     setOver(false);
     setPaused(false);
     setSaved(false);
+    setSaveError(null);
     setSaveMsg("");
     if (isAsteroids) gameRef.current?.restart();
   };
@@ -215,22 +227,23 @@ export function PlayRoom({ game }: { game: Game }) {
               <button
                 type="button"
                 onClick={handleSave}
-                className="w-full whitespace-nowrap border border-cian bg-cian/5 p-4 font-display text-[11px] text-cian transition-colors hover:bg-cian hover:text-[#0a0a0f] active:scale-95"
+                disabled={saving}
+                className="w-full whitespace-nowrap border border-cian bg-cian/5 p-4 font-display text-[11px] text-cian transition-colors hover:bg-cian hover:text-[#0a0a0f] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                GUARDAR PUNTUACIÓN
+                {saving ? "GUARDANDO..." : "GUARDAR PUNTUACIÓN"}
               </button>
+            ) : null}
+
+            {saveError ? (
+              <div className="text-[11px] leading-relaxed text-magenta">
+                {saveError}
+              </div>
             ) : null}
 
             {saveMsg ? (
               <div className="font-display text-[11px] tracking-wider text-cian">
                 {saveMsg}
                 <span className="animate-caret">_</span>
-              </div>
-            ) : null}
-
-            {!user ? (
-              <div className="text-[11px] leading-relaxed text-[#6f7d88]">
-                Modo invitado: la puntuación se guarda solo en este dispositivo.
               </div>
             ) : null}
 

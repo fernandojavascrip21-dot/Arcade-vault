@@ -43,7 +43,6 @@ function toBoardRow(row: ScoreRow): BoardRow {
     name: row.player_name,
     score: row.score,
     date: formatDate(row.created_at),
-    mine: false,
   };
 }
 
