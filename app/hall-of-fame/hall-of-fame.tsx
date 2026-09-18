@@ -2,20 +2,26 @@
 
 import { useState } from "react";
 
-import { GAMES } from "@/app/data";
-import { useScores } from "@/contexts/scores-context";
 import { useSession } from "@/contexts/session-context";
-import { board, rankColor } from "@/lib/scores";
+import { rankColor } from "@/lib/scores";
+import type { BoardRow, Game } from "@/lib/types";
 
 const COLS = "grid-cols-[78px_1fr_130px_118px]";
 
-export function HallOfFame({ initialGame }: { initialGame: string }) {
+export function HallOfFame({
+  games,
+  boards,
+  initialGame,
+}: {
+  games: Game[];
+  boards: Record<string, BoardRow[]>;
+  initialGame: string;
+}) {
   const [tab, setTab] = useState(initialGame);
-  const { stored } = useScores();
   const { user } = useSession();
 
   const me = user ?? "INVITADO";
-  const rows = board(stored, tab);
+  const rows = boards[tab] ?? [];
 
   return (
     <main className="relative z-10 mx-auto w-full max-w-[1080px] flex-1 animate-fade px-[22px] pb-[90px] pt-[54px]">
@@ -27,7 +33,7 @@ export function HallOfFame({ initialGame }: { initialGame: string }) {
       </p>
 
       <div className="mb-8 flex flex-wrap justify-center gap-2.5">
-        {GAMES.map((g) => {
+        {games.map((g) => {
           const on = tab === g.id;
           return (
             <button
@@ -58,7 +64,7 @@ export function HallOfFame({ initialGame }: { initialGame: string }) {
           </div>
 
           {rows.map((r, i) => {
-            const isYou = r.mine && r.name === me;
+            const isYou = r.name === me;
             const bg = isYou
               ? "bg-magenta/10"
               : i < 3
@@ -97,7 +103,9 @@ export function HallOfFame({ initialGame }: { initialGame: string }) {
       </div>
 
       <p className="mt-5 text-xs text-[#3b454e]">
-        {"// Puntuaciones de invitado en localStorage. Las cuentas autenticadas leerían el ranking global desde la API."}
+        {
+          "// Ranking global compartido: toda puntuación guardada, de invitado o no, se lee desde la misma tabla."
+        }
       </p>
     </main>
   );
