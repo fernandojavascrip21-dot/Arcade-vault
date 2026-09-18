@@ -4,6 +4,11 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { CrtFrame } from "@/components/crt-frame";
+import {
+  AsteroidsGame,
+  type AsteroidsGameHandle,
+} from "@/components/games/asteroids/asteroids-game";
+import type { AsteroidsState } from "@/components/games/asteroids/engine";
 import { useCredits } from "@/contexts/credits-context";
 import { useScores } from "@/contexts/scores-context";
 import { useSession } from "@/contexts/session-context";
@@ -37,11 +42,15 @@ export function PlayRoom({ game }: { game: Game }) {
   const { user } = useSession();
 
   const [score, setScore] = useState(0);
+  const [lives, setLives] = useState(3);
+  const [level, setLevel] = useState(1);
   const [paused, setPaused] = useState(false);
   const [over, setOver] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saveMsg, setSaveMsg] = useState("");
 
+  const isAsteroids = game.id === "asteroides";
+  const gameRef = useRef<AsteroidsGameHandle>(null);
   const typerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   useEffect(
     () => () => {
@@ -57,6 +66,18 @@ export function PlayRoom({ game }: { game: Game }) {
   // pseudoaleatoria para poder recorrer el flujo de guardado.
   const simulateGameOver = () => {
     setScore(Math.floor(500 + Math.random() * 40000));
+    setPaused(false);
+    setOver(true);
+  };
+
+  const handleAsteroidsStateChange = (state: AsteroidsState) => {
+    setScore(state.score);
+    setLives(state.lives);
+    setLevel(state.level);
+  };
+
+  const handleAsteroidsGameOver = (finalScore: number) => {
+    setScore(finalScore);
     setPaused(false);
     setOver(true);
   };
@@ -85,6 +106,7 @@ export function PlayRoom({ game }: { game: Game }) {
     setPaused(false);
     setSaved(false);
     setSaveMsg("");
+    if (isAsteroids) gameRef.current?.restart();
   };
 
   return (
@@ -96,8 +118,16 @@ export function PlayRoom({ game }: { game: Game }) {
             value={score.toLocaleString("es-ES")}
             className="text-amarillo [text-shadow:0_0_12px_rgba(245,255,0,.5)]"
           />
-          <HudStat label="VIDAS" value="♥♥♥" className="text-magenta" />
-          <HudStat label="NIVEL" value="01" className="text-cian" />
+          <HudStat
+            label="VIDAS"
+            value={"♥".repeat(lives)}
+            className="text-magenta"
+          />
+          <HudStat
+            label="NIVEL"
+            value={level.toString().padStart(2, "0")}
+            className="text-cian"
+          />
           <div className="grid gap-1.5">
             <span className="text-[10px] tracking-[2px] text-[#6f7d88]">
               JUGADOR
@@ -123,7 +153,21 @@ export function PlayRoom({ game }: { game: Game }) {
         </div>
       </div>
 
-      <CrtFrame background={game.thumb} label="" className="mt-6">
+      <CrtFrame
+        background={isAsteroids ? "#000" : game.thumb}
+        label=""
+        className="mt-6"
+        art={
+          isAsteroids ? (
+            <AsteroidsGame
+              ref={gameRef}
+              paused={paused}
+              onStateChange={handleAsteroidsStateChange}
+              onGameOver={handleAsteroidsGameOver}
+            />
+          ) : undefined
+        }
+      >
         {paused ? (
           <div className="grid h-full place-items-center bg-[rgba(4,4,10,.78)]">
             <div className="font-display text-xl tracking-[2px] text-amarillo [text-shadow:0_0_20px_rgba(245,255,0,.6)]">
@@ -134,19 +178,25 @@ export function PlayRoom({ game }: { game: Game }) {
       </CrtFrame>
 
       <div className="mt-4 flex flex-wrap justify-between gap-2.5 text-[11px] tracking-[2px] text-[#46525e]">
-        <span>MUEVE CON EL RATÓN O ← →</span>
+        <span>
+          {isAsteroids
+            ? "← → ROTAR · ↑ IMPULSO · ESPACIO DISPARAR · B BOMBA NOVA"
+            : "MUEVE CON EL RATÓN O ← →"}
+        </span>
         <span>ARCADE VAULT CRT-19</span>
       </div>
 
-      <div className="mt-6 flex justify-center">
-        <button
-          type="button"
-          onClick={simulateGameOver}
-          className="whitespace-nowrap border border-cian/50 bg-cian/5 px-6 py-4 font-display text-[10px] tracking-wider text-cian transition-colors hover:bg-cian/15 active:scale-95"
-        >
-          SIMULAR FIN DE PARTIDA
-        </button>
-      </div>
+      {!isAsteroids ? (
+        <div className="mt-6 flex justify-center">
+          <button
+            type="button"
+            onClick={simulateGameOver}
+            className="whitespace-nowrap border border-cian/50 bg-cian/5 px-6 py-4 font-display text-[10px] tracking-wider text-cian transition-colors hover:bg-cian/15 active:scale-95"
+          >
+            SIMULAR FIN DE PARTIDA
+          </button>
+        </div>
+      ) : null}
 
       {over ? (
         <div className="fixed inset-0 z-[70] grid animate-fade place-items-center bg-[rgba(4,4,9,.86)] p-5 backdrop-blur-sm">

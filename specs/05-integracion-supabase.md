@@ -1,6 +1,6 @@
 # SPEC 05 — Integración base de Supabase
 
-> **Status:** Aprovado
+> **Status:** Implementado
 > **Depends on:** SPEC 01
 > **Date:** 2026-09-14
 > **Objective:** Conectar el proyecto a Supabase instalando el SDK y creando el cliente de navegador y el de servidor, sin middleware ni cambios a la autenticación simulada ni a ninguna otra funcionalidad existente.
