@@ -1,6 +1,6 @@
 # SPEC 07 — Catálogo de juegos y leaderboard en Supabase
 
-> **Status:** Aprovado
+> **Status:** Implementado
 > **Depends on:** SPEC 05
 > **Date:** 2026-09-18
 > **Objective:** Migrar el catálogo de juegos y las puntuaciones (leaderboard) de datos simulados en código/`localStorage` a dos tablas reales de Supabase (`games` y `scores`), leídas desde Server Components y escritas con una Server Action, sin tocar la autenticación simulada.

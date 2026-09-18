@@ -1,6 +1,6 @@
 # SPEC 06 — Motor real del juego Asteroides
 
-> **Status:** Aceptado
+> **Status:** Implementado
 > **Depends on:** SPEC 01
 > **Date:** 2026-09-15
 > **Objective:** Portar el motor real de `references/started-games/02-asteroids/game.js` a un componente React/Canvas e integrarlo en `/play/asteroides`, reemplazando ahí el simulador de `PlayRoom` (HUD, pausa, guardado de puntuación y créditos), sin tocar el resto de los juegos del catálogo.
