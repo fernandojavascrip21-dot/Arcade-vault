@@ -1,6 +1,7 @@
 // Tipos de dominio de la maqueta. Portados de av-data.js / av-scores.js.
 
-export type CategoryLabel = "Todos" | "Acción" | "Clásico" | "Espacio" | "Puzzle";
+export type CategoryLabel =
+  "Todos" | "Acción" | "Clásico" | "Espacio" | "Puzzle";
 
 export interface Game {
   id: string; // "rompemuros", "serpiente", ...
@@ -18,6 +19,4 @@ export interface ScoreEntry {
 }
 
 // Fila ya resuelta para pintar rankings.
-export interface BoardRow extends ScoreEntry {
-  mine: boolean; // procede de localStorage (partida local)
-}
+export type BoardRow = ScoreEntry;

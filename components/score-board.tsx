@@ -1,14 +1,9 @@
-"use client";
+import { rankColor } from "@/lib/scores";
+import type { BoardRow } from "@/lib/types";
 
-import { useScores } from "@/contexts/scores-context";
-import { board, rankColor } from "@/lib/scores";
-
-// Panel compacto de mejores marcas (aside de la ficha). Lee las puntuaciones
-// del contexto y combina semilla + partidas locales vía `board`.
-export function ScoreBoard({ gameId }: { gameId: string }) {
-  const { stored } = useScores();
-  const rows = board(stored, gameId);
-
+// Panel compacto de mejores marcas (aside de la ficha). Recibe las filas ya
+// resueltas por el Server Component de la página.
+export function ScoreBoard({ rows }: { rows: BoardRow[] }) {
   return (
     <aside className="border border-magenta/30 bg-[rgba(12,10,18,.9)] shadow-[0_0_34px_rgba(255,0,110,.14)]">
       <div className="border-b border-magenta/25 px-5 py-[18px] font-display text-[11px] tracking-wider text-magenta">

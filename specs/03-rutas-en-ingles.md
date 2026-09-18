@@ -1,6 +1,6 @@
 # SPEC 03 — Rutas en inglés
 
-> **Status:** Aprovado
+> **Status:** Implementado
 > **Depends on:** SPEC 01, SPEC 02
 > **Date:** 2026-09-04
 > **Objective:** Renombrar las rutas `/juego/[id]`, `/jugar/[id]` y `/salon-fama` (y sus archivos/componentes internos) a sus equivalentes en inglés `/game/[id]`, `/play/[id]` y `/hall-of-fame`, sin dejar redirects de las URLs viejas.
