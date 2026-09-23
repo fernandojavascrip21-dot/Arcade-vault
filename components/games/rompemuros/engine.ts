@@ -820,7 +820,7 @@ export function createRompemurosEngine(
 
     if (!paused) {
       updatePaddle();
-      updateBall();
+      if (screen !== "level-complete") updateBall();
       updateParticles(dt);
 
       if (screen === "level-complete") {
