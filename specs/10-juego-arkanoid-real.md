@@ -1,6 +1,6 @@
 # SPEC 10 — Motor real del juego Arkanoid (Rompemuros)
 
-> **Status:** Aprovado
+> **Status:** Implementado
 > **Depends on:** SPEC 01, SPEC 06, SPEC 07
 > **Date:** 2026-09-22
 > **Objective:** Portar el motor real de `references/started-games/04-arkanoid/` (pala, pelota, ladrillos, partículas, 5 niveles y selección de dificultad) a un componente React/Canvas e integrarlo en `/play/rompemuros`, reemplazando ahí el simulador de `PlayRoom`, reutilizando tal cual la fila `rompemuros` ya existente en la tabla `games` de Supabase.
