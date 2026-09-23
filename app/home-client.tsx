@@ -572,7 +572,7 @@ export function HomeClient({
 
       {/* FINAL CTA */}
       <Reveal className="mx-auto max-w-[900px] px-[22px] py-24 text-center">
-        <h2 className="bg-gradient-to-b from-white to-amarillo bg-clip-text font-display text-[clamp(22px,4vw,40px)] tracking-wider text-transparent drop-shadow-[0_0_12px_rgba(245,255,0,.4)]">
+        <h2 className="bg-gradient-to-b from-foreground to-amarillo bg-clip-text font-display text-[clamp(22px,4vw,40px)] tracking-wider text-transparent drop-shadow-[0_0_12px_rgba(245,255,0,.4)]">
           ¿LISTO PARA JUGAR?
         </h2>
         <Link

@@ -170,7 +170,7 @@ export default function AboutPage() {
         <div className="mb-[18px] font-display text-[11px] uppercase tracking-[3px] text-amarillo [text-shadow:0_0_10px_rgba(245,255,0,.5)]">
           ▸ ACERCA DE
         </div>
-        <h1 className="bg-gradient-to-b from-white to-cian bg-clip-text font-display text-[clamp(26px,5vw,52px)] tracking-wider text-transparent drop-shadow-[0_0_14px_rgba(0,245,255,.4)]">
+        <h1 className="bg-gradient-to-b from-foreground to-cian bg-clip-text font-display text-[clamp(26px,5vw,52px)] tracking-wider text-transparent drop-shadow-[0_0_14px_rgba(0,245,255,.4)]">
           ACERCA DE ARCADE VAULT
         </h1>
         <p className="mx-auto mt-7 max-w-[720px] text-[15px] leading-[1.8] tracking-wide text-texto-tenue">

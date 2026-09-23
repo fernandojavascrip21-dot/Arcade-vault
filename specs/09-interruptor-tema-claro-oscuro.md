@@ -1,6 +1,6 @@
 # SPEC 09 — Interruptor de tema claro/oscuro
 
-> **Status:** Aprovado
+> **Status:** Implementado
 > **Depends on:** SPEC 01
 > **Date:** 2026-09-22
 > **Objective:** Agregar un interruptor de tema claro/oscuro global en la barra de navegación, con persistencia en `localStorage` y arranque según la preferencia del sistema, que retematice el "chrome" de todo el sitio (nav, fondos, tarjetas, carátulas del catálogo, texto) vía variables CSS en `app/globals.css`, sin modificar los canvas de los motores de juego ni los efectos CRT fijos de `CrtFrame`.
