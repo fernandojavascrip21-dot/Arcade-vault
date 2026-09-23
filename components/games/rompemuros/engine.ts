@@ -11,10 +11,18 @@ const BRICK_MARGIN_TOP = 60;
 const PARTICLE_COUNT = 7;
 const PARTICLE_MIN_SIZE = 6;
 const PARTICLE_MAX_SIZE = 10;
-const PARTICLE_SPEED_MIN = 2;
-const PARTICLE_SPEED_MAX = 5;
+const PARTICLE_SPEED_MIN = 10;
+const PARTICLE_SPEED_MAX = 14;
 const PARTICLE_GRAVITY = 0.15;
 const PARTICLE_LIFETIME = 600;
+
+const FRAME_MS = 1000 / 60;
+const MAX_FRAME_STEP = 2;
+
+const SOUND_BOUNCE_URL = "/games/rompemuros/ball-bounce.mp3";
+const SOUND_BREAK_URL = "/games/rompemuros/break-sound.mp3";
+
+const MUTE_RECT = { x: 636, y: 12, w: 40, h: 32 };
 
 const LEVEL_TRANSITION_DURATION = 1500;
 const LEVEL_BALL_SPEED_STEP = 0.5;
@@ -31,9 +39,9 @@ const DIFFICULTIES: Record<
   Difficulty,
   { label: string; ballSpeed: number; scoreMultiplier: number }
 > = {
-  easy: { label: "FÁCIL", ballSpeed: 5, scoreMultiplier: 1 },
-  medium: { label: "MEDIO", ballSpeed: 6, scoreMultiplier: 1 },
-  hard: { label: "DIFÍCIL", ballSpeed: 8, scoreMultiplier: 1.5 },
+  easy: { label: "FÁCIL", ballSpeed: 8.5, scoreMultiplier: 1 },
+  medium: { label: "MEDIO", ballSpeed: 9.5, scoreMultiplier: 1 },
+  hard: { label: "DIFÍCIL", ballSpeed: 11, scoreMultiplier: 1.5 },
 };
 
 const DIFFICULTY_OPTION_ORDER: Difficulty[] = ["easy", "medium", "hard"];
@@ -346,6 +354,7 @@ export function createRompemurosEngine(
   let score = 0;
   let lives = INITIAL_LIVES;
   let paused = false;
+  let muted = false;
   let finished = false;
   const paddle = {
     x: PADDLE_START_X,
@@ -367,6 +376,15 @@ export function createRompemurosEngine(
   let particles: Particle[] = [];
 
   const keys: Record<string, boolean> = {};
+
+  const bounceSound = new Audio(SOUND_BOUNCE_URL);
+  const breakSound = new Audio(SOUND_BREAK_URL);
+
+  function playSound(sound: HTMLAudioElement) {
+    if (muted) return;
+    sound.currentTime = 0;
+    sound.play().catch(() => {});
+  }
 
   let spritesheet: HTMLImageElement | null = null;
   let stopped = false;
@@ -510,6 +528,7 @@ export function createRompemurosEngine(
       score += Math.round(
         brick.points * DIFFICULTIES[difficulty].scoreMultiplier,
       );
+      playSound(breakSound);
       spawnParticles(brick);
 
       const overlapX = ball.radius - Math.abs(dx);
@@ -534,33 +553,36 @@ export function createRompemurosEngine(
     }
   }
 
-  function updatePaddle() {
-    if (keys.ArrowLeft || keys.KeyA) paddle.x -= paddle.speed;
-    if (keys.ArrowRight || keys.KeyD) paddle.x += paddle.speed;
+  function updatePaddle(step: number) {
+    if (keys.ArrowLeft || keys.KeyA) paddle.x -= paddle.speed * step;
+    if (keys.ArrowRight || keys.KeyD) paddle.x += paddle.speed * step;
     paddle.x = clamp(paddle.x, 0, GAME_WIDTH - paddle.w);
   }
 
-  function updateBall() {
+  function updateBall(step: number) {
     if (ball.attached) {
       ball.x = paddle.x + paddle.w / 2;
       ball.y = paddle.y - ball.radius * 2;
       return;
     }
 
-    ball.x += ball.vx;
-    ball.y += ball.vy;
+    ball.x += ball.vx * step;
+    ball.y += ball.vy * step;
 
     if (ball.x - ball.radius <= 0) {
       ball.x = ball.radius;
       ball.vx = Math.abs(ball.vx);
+      playSound(bounceSound);
     } else if (ball.x + ball.radius >= GAME_WIDTH) {
       ball.x = GAME_WIDTH - ball.radius;
       ball.vx = -Math.abs(ball.vx);
+      playSound(bounceSound);
     }
 
     if (ball.y - ball.radius <= 0) {
       ball.y = ball.radius;
       ball.vy = Math.abs(ball.vy);
+      playSound(bounceSound);
     }
 
     const hitsPaddle =
@@ -579,6 +601,7 @@ export function createRompemurosEngine(
       ball.vx = ball.speed * Math.sin(angle);
       ball.vy = -ball.speed * Math.cos(angle);
       ball.y = paddle.y - ball.radius;
+      playSound(bounceSound);
     }
 
     checkBrickCollision();
@@ -589,12 +612,12 @@ export function createRompemurosEngine(
     }
   }
 
-  function updateParticles(dt: number) {
+  function updateParticles(dt: number, step: number) {
     for (let i = particles.length - 1; i >= 0; i--) {
       const particle = particles[i];
-      particle.vy += PARTICLE_GRAVITY;
-      particle.x += particle.vx;
-      particle.y += particle.vy;
+      particle.vy += PARTICLE_GRAVITY * step;
+      particle.x += particle.vx * step;
+      particle.y += particle.vy * step;
       particle.elapsed += dt;
       if (particle.elapsed >= PARTICLE_LIFETIME) {
         particles.splice(i, 1);
@@ -648,11 +671,27 @@ export function createRompemurosEngine(
   const HUD_LIFE_RADIUS = 8;
   const HUD_LIFE_GAP = 24;
 
+  function drawMuteButton() {
+    ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
+    ctx.fillRect(MUTE_RECT.x, MUTE_RECT.y, MUTE_RECT.w, MUTE_RECT.h);
+    ctx.fillStyle = "#fff";
+    ctx.textAlign = "center";
+    ctx.font = "20px sans-serif";
+    ctx.fillText(
+      muted ? "🔇" : "🔊",
+      MUTE_RECT.x + MUTE_RECT.w / 2,
+      MUTE_RECT.y + MUTE_RECT.h / 2 + 7,
+    );
+    ctx.textAlign = "left";
+  }
+
   function drawHUD() {
     ctx.fillStyle = "#fff";
     ctx.textAlign = "left";
     ctx.font = "bold 22px sans-serif";
     ctx.fillText(`Score: ${score}`, 12, 36);
+
+    drawMuteButton();
 
     const startX = GAME_WIDTH - 12 - HUD_LIFE_RADIUS;
     for (let i = 0; i < lives; i++) {
@@ -801,7 +840,18 @@ export function createRompemurosEngine(
   }
 
   function handleClick(e: MouseEvent) {
-    if (paused || finished) return;
+    if (finished) return;
+    const pointer = pointerToCanvas(e);
+    if (
+      pointer.x >= MUTE_RECT.x &&
+      pointer.x <= MUTE_RECT.x + MUTE_RECT.w &&
+      pointer.y >= MUTE_RECT.y &&
+      pointer.y <= MUTE_RECT.y + MUTE_RECT.h
+    ) {
+      muted = !muted;
+      return;
+    }
+    if (paused) return;
     if (screen === "difficulty") {
       const { x, y } = pointerToCanvas(e);
       const option = getDifficultyOptionRects().find(
@@ -817,11 +867,12 @@ export function createRompemurosEngine(
     rafId = null;
     const dt = lastTimestamp === null ? 0 : ts - lastTimestamp;
     lastTimestamp = ts;
+    const step = Math.min(dt / FRAME_MS, MAX_FRAME_STEP);
 
     if (!paused) {
-      updatePaddle();
-      if (screen !== "level-complete") updateBall();
-      updateParticles(dt);
+      updatePaddle(step);
+      if (screen !== "level-complete") updateBall(step);
+      updateParticles(dt, step);
 
       if (screen === "level-complete") {
         levelTransitionElapsed += dt;

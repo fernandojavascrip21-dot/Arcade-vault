@@ -30,8 +30,9 @@ Como ya existe una fila de catálogo que encaja con esta mecánica, este spec no
   - La física y el loop de `game.js`: movimiento de pala (teclado + mouse), pelota pegada/lanzada, rebotes contra paredes y pala (con ángulo según punto de impacto, ±60°), colisión AABB-círculo contra ladrillos, partículas al romper un ladrillo (7 fragmentos, gravedad, 600ms de vida), puntuación (`points × scoreMultiplier` de la dificultad), pérdida de vida al caer la pelota, selección de dificultad (Fácil/Medio/Difícil: velocidad base y multiplicador de puntos), progresión de los 5 niveles con incremento de velocidad (`+0.5` por nivel completado), y el estado de victoria al vaciar el nivel 5. Mecánica sin cambios respecto al original.
   - El renderizado con spritesheet de `assets/spritesheet.js`: pala, pelota y ladrillos (por color) se dibujan recortando `assets/spritesheet-breakout.png`, igual que el original — no se redibujan como formas planas.
   - Diferencias deliberadas respecto al original (ver decisiones en sección 6):
-    - **Sin sonido.** No se portan `ball-bounce.mp3`/`break-sound.mp3` ni el botón de silencio HTML. Ningún otro juego portado tiene audio; se evita el primer asset de sonido del catálogo y la política de autoplay del navegador.
-    - **Sin `document`/`window` globales fuera de la factoría.** Todo listener (teclado, mouse, click) se agrega sobre el `canvas` inyectado o sobre él mismo en `start()`, y se quita en `stop()` — igual que exige el contrato de Asteroides/Bloques. El botón de mute HTML (`#mute-btn`) no se porta (ver punto anterior).
+    - **Con sonido (ampliación posterior a la aprobación inicial).** Se portan `ball-bounce.mp3` (rebote en paredes/techo y pala) y `break-sound.mp3` (ladrillo roto), copiados a `public/games/rompemuros/`. El botón de silencio HTML (`#mute-btn`) se reemplaza por un ícono 🔊/🔇 dibujado dentro del canvas (arriba, junto a las vidas) con su propio click. `play()` se llama con `.catch(() => {})` por la política de autoplay del navegador. El estado de silencio es interno del motor y no forma parte de `RompemurosState`.
+    - **Velocidad independiente de la frecuencia de pantalla (ampliación posterior).** El original mueve pelota y pala una cantidad fija por frame, así que en monitores de 120/144 Hz el juego corre el doble de rápido. El motor escala el movimiento por el tiempo real transcurrido (`dt / (1000/60)`, con tope para evitar saltos tras pausas o cambios de pestaña), de modo que las velocidades equivalen a px por frame a 60 fps en cualquier monitor. La velocidad base baja: FÁCIL 4.5, MEDIO 5.5, DIFÍCIL 7 (antes 5/6/8; primer ajuste a 3.5/4.5/6 resultó demasiado lento en FÁCIL); el incremento por nivel completado sigue siendo +0.5.
+    - **Sin `document`/`window` globales fuera de la factoría.** Todo listener (teclado, mouse, click) se agrega sobre el `canvas` inyectado o sobre él mismo en `start()`, y se quita en `stop()` — igual que exige el contrato de Asteroides/Bloques. El botón de mute HTML (`#mute-btn`) se reemplaza por un ícono dentro del canvas (ver punto de sonido).
     - **Pantalla de selección de dificultad**: se mantiene dentro del canvas tal cual el original — `start()` arranca en la pantalla `'difficulty'`; se elige con `1`/`2`/`3` o click, igual que `game.js`.
     - **Pantalla `'start'`** (pelota pegada a la pala, esperando lanzamiento con Espacio o click) y la **transición `'level-complete'`** (1.5s mostrando "Nivel X completado" antes de avanzar) se mantienen dentro del canvas tal cual el original — son pantallas intermedias del propio flujo de juego, no compiten con el modal de React.
     - **Pantalla `'gameover'` (overlay + tecla `R` para reiniciar) se desactiva por completo**, igual que Asteroides/Bloques: al perder la tercera vida el motor no dibuja ningún overlay de "GAME OVER" ni escucha `R` — llama `onGameOver(finalScore)` una sola vez y queda congelado hasta que algo externo llame `restart()`.
@@ -54,7 +55,7 @@ Como ya existe una fila de catálogo que encaja con esta mecánica, este spec no
 
 **Out of scope (para specs futuros):**
 
-- Sonido (`ball-bounce.mp3`, `break-sound.mp3`) y el botón de silencio. Ningún otro juego de la plataforma tiene audio.
+- Música de fondo, volumen ajustable, o persistir la preferencia de silencio entre sesiones.
 - Controles táctiles/móviles.
 - Cambiar la economía de créditos (`CreditsProvider`/`spendCredit`/`insertCoin`).
 - Cambiar el título/categoría/descripción/thumb de la fila `rompemuros` del catálogo.
@@ -145,7 +146,9 @@ No hay persistencia nueva: la puntuación final se guarda exactamente igual que 
 - [ ] El botón "SIMULAR FIN DE PARTIDA" no aparece en `/play/rompemuros`, pero sigue apareciendo sin cambios en cualquier otro `/play/[id]` que aún no tenga motor real.
 - [ ] Ningún otro juego del catálogo (`/play/asteroides`, `/play/bloques`, etc.) cambia de comportamiento o apariencia respecto a antes de este spec.
 - [ ] La fila `rompemuros` en la tabla `games` de Supabase no cambia (mismo título/categoría/descripción/thumb que antes de este spec).
-- [ ] No se reproduce ningún sonido ni aparece ningún botón de silencio.
+- [ ] Rebotar la pelota contra paredes/techo/pala reproduce `ball-bounce.mp3`, y romper un ladrillo reproduce `break-sound.mp3`.
+- [ ] El ícono 🔊/🔇 dibujado en el canvas alterna el silencio al hacer click, sin lanzar la pelota ni mover la pala.
+- [ ] La velocidad de la pelota es la misma a 60 y a 120 Hz, y arranca en FÁCIL 4.5, MEDIO 5.5, DIFÍCIL 7, subiendo +0.5 por nivel completado.
 - [ ] Salir de `/play/rompemuros` (botón "SALIR" o navegación) detiene el loop del juego y quita los listeners de teclado/mouse.
 - [ ] `npm run build` y `npm run lint` terminan sin errores ni warnings nuevos.
 
@@ -156,7 +159,9 @@ No hay persistencia nueva: la puntuación final se guarda exactamente igual que 
 - **Sí:** reutilizar tal cual la fila `rompemuros` ya existente en `games` (id, categoría "Acción", descripción y thumb sin cambios) en vez de crear una fila `arkanoid` nueva. Motivo: decisión explícita del usuario — la descripción ya presente coincide exactamente con la mecánica de Arkanoid/Breakout, igual que ocurrió con `bloques`/Tetris en el spec 08; este spec no requiere ninguna migración de catálogo.
 - **Sí:** usar `rompemuros` (el id real del catálogo) como slug de carpeta y de contrato (`createRompemurosEngine`, `RompemurosState`, `components/games/rompemuros/`) en vez de `arkanoid` (el nombre de la carpeta de referencia). Motivo: decisión explícita del usuario — mismo criterio que sentó el spec 08 con `bloques` en vez de `tetris`: el slug sigue al catálogo, no al nombre de la referencia.
 - **Sí:** importar el spritesheet PNG (`assets/spritesheet-breakout.png`) tal cual a `public/games/rompemuros/` y portar la lógica de recorte de sprites, en vez de redibujar pala/pelota/ladrillos con formas planas de canvas. Motivo: decisión explícita del usuario — prioriza la fidelidad visual con el original; es el primer asset de imagen del catálogo de juegos portados, precedente que no existía hasta ahora.
-- **No:** portar el sonido (`ball-bounce.mp3`, `break-sound.mp3`) ni el botón de silencio HTML. Motivo: decisión explícita del usuario — ningún otro juego portado tiene audio; evita el primer asset de audio del catálogo, la política de autoplay del navegador, y un botón HTML que no tiene dónde vivir dentro del contrato de un único `<canvas>` por juego.
+- **Sí (revisada):** portar el sonido con el ícono de silencio dibujado en el canvas. Antes se había decidido omitirlo (ningún otro juego tiene audio); el usuario lo pidió tras probar el juego. Se descartaron el sonido sin control de silencio y un botón de silencio en `PlayRoom` (tocaría `play-room.tsx` y rompería el contrato de un único canvas).
+- **Sí:** normalizar el movimiento por tiempo y bajar la velocidad base a 4.5/5.5/7. Motivo: el usuario reportó la pelota demasiado rápida en FÁCIL; el original va por frame y se acelera en monitores de alta frecuencia. Se descartaron solo normalizar (podía seguir rápido) y solo bajar valores (no arregla la diferencia entre monitores).
+- **Sí:** durante la transición "Nivel X completado" la pelota no se mueve (en el original seguía moviéndose y podía caer, dejando el juego sin ladrillos y trabado). Desviación deliberada del original.
 - **Sí:** portar el control por mouse (mover la pala, lanzar/elegir dificultad con click) además del teclado, a diferencia del criterio "solo teclado" que Asteroides y Bloques dejaron explícito. Motivo: decisión explícita del usuario — el listener va sobre el mismo `canvas` inyectado sin requerir DOM adicional, así que no hay costo arquitectónico en portarlo tal cual el original.
 - **Sí:** mantener la pantalla de selección de dificultad dentro del canvas (arranca ahí en `start()`), en vez de moverla a botones externos de React antes de montar el juego. Motivo: decisión explícita del usuario — es fiel al original y no requiere ningún cambio en `PlayRoom` antes de crear el componente del juego.
 - **Sí:** mantener dentro del canvas las pantallas `'start'` (pelota pegada esperando lanzamiento) y `'level-complete'` (transición de 1.5s entre niveles) tal cual el original. Motivo: son pantallas intermedias del propio flujo de juego, no estados finales que compitan con el modal "FIN DEL JUEGO" de React — no aplica el mismo criterio de corte que a `'gameover'`/`'win'`.
@@ -185,7 +190,7 @@ No hay persistencia nueva: la puntuación final se guarda exactamente igual que 
 
 ## Lo que **no** entra en este spec
 
-- Sonido (`ball-bounce.mp3`, `break-sound.mp3`) y el botón de silencio.
+- Música de fondo, volumen ajustable y persistencia de la preferencia de silencio.
 - Controles táctiles/móviles.
 - Cambios a la economía de créditos.
 - Cambios al título/categoría/descripción/thumb de la fila `rompemuros` del catálogo.
