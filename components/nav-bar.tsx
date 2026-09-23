@@ -1,12 +1,30 @@
 "use client";
 
+import { Moon, Sun } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
 
 import { useCredits } from "@/contexts/credits-context";
 import { useSession } from "@/contexts/session-context";
+import { useTheme } from "@/contexts/theme-context";
 import { useMediaQuery } from "@/lib/use-media-query";
+
+function ThemeToggleButton({ className = "" }: { className?: string }) {
+  const { theme, toggleTheme } = useTheme();
+  const isDark = theme === "dark";
+
+  return (
+    <button
+      type="button"
+      onClick={toggleTheme}
+      aria-label={isDark ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+      className={`grid place-items-center border border-cian/40 p-2.5 text-cian transition-colors hover:bg-cian/15 active:scale-95 ${className}`}
+    >
+      {isDark ? <Sun size={16} /> : <Moon size={16} />}
+    </button>
+  );
+}
 
 function NavLink({
   href,
@@ -76,6 +94,8 @@ export function NavBar() {
               </button>
             </div>
 
+            <ThemeToggleButton />
+
             <NavLink href="/" active={isHome}>
               Inicio
             </NavLink>
@@ -128,6 +148,7 @@ export function NavBar() {
                 {creditsText}
               </span>
             </button>
+            <ThemeToggleButton />
             <button
               type="button"
               onClick={() => setMenuOpen(true)}
@@ -153,6 +174,12 @@ export function NavBar() {
           >
             <div className="font-display text-[10px] tracking-wider text-[#46525e]">
               MENÚ
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] uppercase tracking-wider text-[#6f7d88]">
+                Tema
+              </span>
+              <ThemeToggleButton />
             </div>
             <Link
               href="/"
