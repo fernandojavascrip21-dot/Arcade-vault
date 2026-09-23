@@ -14,7 +14,7 @@ export function GameCard({ game, best }: { game: Game; best: string }) {
   return (
     <Link
       href={`/game/${game.id}`}
-      className="group grid grid-rows-[auto_1fr] border border-cian/25 bg-[linear-gradient(180deg,rgba(16,18,28,.95),rgba(9,9,14,.95))] transition duration-200 hover:-translate-y-2 hover:border-cian hover:shadow-[0_0_30px_rgba(0,245,255,.4),0_24px_50px_rgba(0,0,0,.6)]"
+      className="group grid grid-rows-[auto_1fr] border border-cian/25 bg-background/95 transition duration-200 hover:-translate-y-2 hover:border-cian hover:shadow-[0_0_30px_rgba(0,245,255,.4),0_24px_50px_rgba(0,0,0,.6)]"
     >
       <div
         className="relative aspect-[16/10] overflow-hidden border-b border-cian/20"
@@ -24,18 +24,18 @@ export function GameCard({ game, best }: { game: Game; best: string }) {
           <GameCover id={game.id} />
         </div>
         <div className="absolute inset-0" style={stripes} />
-        <div className="absolute left-2.5 top-2.5 whitespace-nowrap bg-black/60 px-2 py-1.5 font-display text-[8px] tracking-wider text-amarillo">
+        <div className="absolute left-2.5 top-2.5 whitespace-nowrap bg-background/75 px-2 py-1.5 font-display text-[8px] tracking-wider text-amarillo">
           {game.category}
         </div>
       </div>
 
       <div className="grid content-start gap-3.5 p-5">
-        <h3 className="font-display text-sm leading-normal text-[#e9f6f9]">
+        <h3 className="font-display text-sm leading-normal text-foreground">
           {game.title}
         </h3>
-        <p className="text-sm leading-normal text-[#8b98a3]">{game.desc}</p>
+        <p className="text-sm leading-normal text-texto-tenue">{game.desc}</p>
         <div className="flex items-center justify-between gap-2.5 border border-dashed border-amarillo/35 bg-amarillo/5 px-2.5 py-2">
-          <span className="whitespace-nowrap text-[10px] uppercase tracking-[2px] text-[#b9bf6a]">
+          <span className="whitespace-nowrap text-[10px] uppercase tracking-[2px] text-amarillo/70">
             Mejor puntuación
           </span>
           <span className="whitespace-nowrap font-display text-[11px] text-amarillo">

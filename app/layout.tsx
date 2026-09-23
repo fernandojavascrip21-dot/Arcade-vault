@@ -28,12 +28,22 @@ export const metadata: Metadata = {
     "Plataforma para jugar online y competir por la mayor puntuación.",
 };
 
+// Script anti-flash (spec 09): fija data-theme en <html> antes de hidratar,
+// leyendo la elección guardada o, en su ausencia, prefers-color-scheme del
+// sistema. Ver node_modules/next/dist/docs/01-app/02-guides/preventing-flash-before-hydration.md.
+const THEME_INIT_SCRIPT = `(function(){try{var k="arcadevault.theme.v1";var s=localStorage.getItem(k);var t=(s==="light"||s==="dark")?s:(window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark");document.documentElement.dataset.theme=t}catch(e){}})()`;
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="es"
+      data-theme="dark"
+      suppressHydrationWarning
       className={`${pressStart.variable} ${courierPrime.variable} h-full antialiased`}
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
       <body className="min-h-full flex flex-col">
         <Providers>
           <SiteChrome>{children}</SiteChrome>

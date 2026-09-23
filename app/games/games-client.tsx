@@ -49,7 +49,7 @@ export function GamesClient({
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Buscar juego por nombre..."
             aria-label="Buscar juego por nombre"
-            className="min-w-0 flex-1 basis-[260px] border border-cian/35 bg-cian/5 px-[18px] py-[15px] text-[15px] tracking-wide text-[#e6f2f5] focus:border-cian focus:shadow-[0_0_22px_rgba(0,245,255,.45)]"
+            className="min-w-0 flex-1 basis-[260px] border border-cian/35 bg-cian/5 px-[18px] py-[15px] text-[15px] tracking-wide text-foreground focus:border-cian focus:shadow-[0_0_22px_rgba(0,245,255,.45)]"
           />
         </div>
 
@@ -64,8 +64,8 @@ export function GamesClient({
                 aria-pressed={on}
                 className={`whitespace-nowrap border px-3.5 py-2 text-xs uppercase tracking-[2px] transition-colors hover:border-amarillo hover:text-amarillo ${
                   on
-                    ? "border-cian bg-white/5 text-cian"
-                    : "border-white/15 text-[#8b98a3]"
+                    ? "border-cian bg-foreground/5 text-cian"
+                    : "border-foreground/15 text-texto-tenue"
                 }`}
               >
                 {c}
@@ -82,7 +82,7 @@ export function GamesClient({
       </div>
 
       {filtered.length === 0 ? (
-        <div className="mt-10 text-center text-sm uppercase tracking-[2px] text-[#6f7d88]">
+        <div className="mt-10 text-center text-sm uppercase tracking-[2px] text-texto-tenue">
           NINGÚN JUEGO COINCIDE CON LA BÚSQUEDA
         </div>
       ) : null}

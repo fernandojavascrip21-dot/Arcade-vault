@@ -12,7 +12,7 @@ const btnPrimary =
 const btnSecondary =
   "inline-flex items-center justify-center whitespace-nowrap border border-magenta bg-magenta/5 px-[30px] py-5 font-display text-[13px] tracking-wider text-magenta transition-colors hover:bg-magenta/20 active:scale-95";
 const btnGhost =
-  "inline-flex items-center justify-center whitespace-nowrap border border-white/20 px-6 py-4 font-display text-[11px] tracking-wider text-[#8b98a3] transition-colors hover:border-cian hover:text-cian active:scale-95";
+  "inline-flex items-center justify-center whitespace-nowrap border border-foreground/20 px-6 py-4 font-display text-[11px] tracking-wider text-texto-tenue transition-colors hover:border-cian hover:text-cian active:scale-95";
 
 // Envuelve una sección con la animación de aparición al hacer scroll.
 function Reveal({
@@ -42,7 +42,7 @@ function SectionHead({ kicker, title }: { kicker: string; title: string }) {
       <div className="whitespace-nowrap font-display text-[11px] tracking-[3px] text-magenta [text-shadow:0_0_10px_rgba(255,0,110,.6)]">
         {kicker}
       </div>
-      <h2 className="font-display text-[clamp(18px,2.8vw,28px)] tracking-wider text-[#e6e9ff]">
+      <h2 className="font-display text-[clamp(18px,2.8vw,28px)] tracking-wider text-foreground">
         {title}
       </h2>
       <div className="h-px flex-1 bg-gradient-to-r from-cian/30 to-transparent" />
@@ -145,7 +145,7 @@ function FloatingSilhouettes() {
           <rect x="0" y="4" width="20" height="12" />
           <rect x="2" y="16" width="16" height="2" />
           <rect x="6" y="18" width="8" height="2" />
-          <rect x="8" y="4" width="4" height="12" fill="#0a0a0f" />
+          <rect x="8" y="4" width="4" height="12" fill="var(--background)" />
         </g>
       </svg>
       <svg
@@ -173,10 +173,10 @@ function FloatingSilhouettes() {
           <rect x="8" y="2" width="8" height="6" />
           <rect x="2" y="8" width="20" height="8" />
           <rect x="8" y="16" width="8" height="6" />
-          <rect x="11" y="6" width="2" height="2" fill="#0a0a0f" />
-          <rect x="11" y="16" width="2" height="2" fill="#0a0a0f" />
-          <rect x="4" y="11" width="2" height="2" fill="#0a0a0f" />
-          <rect x="18" y="11" width="2" height="2" fill="#0a0a0f" />
+          <rect x="11" y="6" width="2" height="2" fill="var(--background)" />
+          <rect x="11" y="16" width="2" height="2" fill="var(--background)" />
+          <rect x="4" y="11" width="2" height="2" fill="var(--background)" />
+          <rect x="18" y="11" width="2" height="2" fill="var(--background)" />
         </g>
       </svg>
     </div>
@@ -254,7 +254,7 @@ function FeatureIcon({ kind }: { kind: FeatureKind }) {
         <rect x="5" y="5" width="6" height="6" />
         <rect x="4" y="11" width="2" height="2" />
         <rect x="10" y="11" width="2" height="2" />
-        <rect x="7" y="6" width="2" height="2" fill="#0a0a0f" />
+        <rect x="7" y="6" width="2" height="2" fill="var(--background)" />
         <rect x="6" y="13" width="1" height="2" />
         <rect x="9" y="13" width="1" height="2" />
       </g>
@@ -316,7 +316,7 @@ export function HomeClient({
             <span className="animate-caret">_</span>
           </div>
           <h1 className="flex flex-col gap-2 font-display text-[clamp(30px,7vw,80px)] leading-[1.1] tracking-wider">
-            <span className="text-white drop-shadow-[0_0_14px_rgba(255,255,255,.35)]">
+            <span className="text-foreground drop-shadow-[0_0_14px_rgba(255,255,255,.35)]">
               EL ARCADE
             </span>
             <span className="bg-gradient-to-b from-cian to-[#4dd0e1] bg-clip-text text-transparent drop-shadow-[0_0_14px_rgba(0,245,255,.4)]">
@@ -326,7 +326,7 @@ export function HomeClient({
               DE VUELTA
             </span>
           </h1>
-          <p className="mx-auto mt-7 max-w-[640px] text-[15px] leading-[1.7] tracking-wide text-[#8a8fb5]">
+          <p className="mx-auto mt-7 max-w-[640px] text-[15px] leading-[1.7] tracking-wide text-texto-tenue">
             Juega los mejores clásicos directamente en tu navegador.
             <br />
             Sin descargas. Sin costo. Solo diversión.
@@ -340,7 +340,7 @@ export function HomeClient({
             </Link>
           </div>
         </div>
-        <div className="absolute bottom-6 left-1/2 flex -translate-x-1/2 flex-col items-center gap-2 font-display text-[9px] tracking-[3px] text-[#4a4f70]">
+        <div className="absolute bottom-6 left-1/2 flex -translate-x-1/2 flex-col items-center gap-2 font-display text-[9px] tracking-[3px] text-texto-debil">
           <span>DESLIZA</span>
           <span className="animate-bounce text-cian">▼</span>
         </div>
@@ -353,13 +353,13 @@ export function HomeClient({
           {FEATURES.map((f) => (
             <div
               key={f.title}
-              className={`flex flex-col gap-3.5 border border-white/10 bg-gradient-to-b from-[rgba(16,18,28,.9)] to-[rgba(9,9,14,.9)] p-6 transition-transform hover:-translate-y-1.5 ${f.color}`}
+              className={`flex flex-col gap-3.5 border border-foreground/10 bg-background/90 p-6 transition-transform hover:-translate-y-1.5 ${f.color}`}
             >
               <FeatureIcon kind={f.icon} />
               <div className="font-display text-xs tracking-wider drop-shadow-[0_0_8px_currentColor]">
                 {f.title}
               </div>
-              <div className="text-[13px] leading-[1.6] text-[#8a8fb5]">
+              <div className="text-[13px] leading-[1.6] text-texto-tenue">
                 {f.desc}
               </div>
             </div>
@@ -375,16 +375,16 @@ export function HomeClient({
             <Link
               key={g.id}
               href={`/game/${g.id}`}
-              className="group border border-white/10 bg-[#0f0f18] transition-transform hover:-translate-y-1 hover:border-cian"
+              className="group border border-foreground/10 bg-background transition-transform hover:-translate-y-1 hover:border-cian"
             >
               <div
                 className={`cover-${g.id} relative aspect-square overflow-hidden`}
               />
               <div className="p-2.5">
-                <div className="truncate font-display text-[10px] tracking-wide text-[#e6e9ff]">
+                <div className="truncate font-display text-[10px] tracking-wide text-foreground">
                   {g.title}
                 </div>
-                <div className="mt-1 truncate text-[10px] tracking-[2px] text-[#4a4f70]">
+                <div className="mt-1 truncate text-[10px] tracking-[2px] text-texto-debil">
                   {g.category}
                 </div>
               </div>
@@ -399,7 +399,7 @@ export function HomeClient({
       </Reveal>
 
       {/* STATS */}
-      <Reveal className="border-y border-cian/20 bg-gradient-to-b from-[#06060a] to-[#0c0c14] px-[22px] py-14">
+      <Reveal className="border-y border-cian/20 bg-background px-[22px] py-14">
         <div className="mx-auto grid max-w-[1200px] grid-cols-1 gap-8 sm:grid-cols-3">
           {[
             { n: String(games.length), u: "JUEGOS", s: "Y CONTANDO" },
@@ -415,10 +415,10 @@ export function HomeClient({
               <div className="font-display text-[clamp(30px,5vw,52px)] text-amarillo [text-shadow:0_0_16px_rgba(245,255,0,.4)]">
                 {st.n}
               </div>
-              <div className="font-display text-[13px] tracking-[3px] text-[#e6e9ff]">
+              <div className="font-display text-[13px] tracking-[3px] text-foreground">
                 {st.u}
               </div>
-              <div className="text-[11px] uppercase tracking-[2px] text-[#4a4f70]">
+              <div className="text-[11px] uppercase tracking-[2px] text-texto-debil">
                 {st.s}
               </div>
             </div>
@@ -430,7 +430,7 @@ export function HomeClient({
       <Reveal className="mx-auto max-w-[1240px] px-[22px] py-16">
         <SectionHead kicker="// 03" title="ACTIVIDAD EN VIVO" />
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <div className="border border-cian/25 bg-[rgba(12,14,20,.9)]">
+          <div className="border border-cian/25 bg-background/90">
             <div className="border-b border-cian/20 px-5 py-[18px] font-display text-[11px] tracking-wider text-cian">
               ▸ ÚLTIMAS PUNTUACIONES
             </div>
@@ -438,19 +438,19 @@ export function HomeClient({
               {ticker.map(({ game, row }, i) => (
                 <div
                   key={game.id}
-                  className="grid animate-row grid-cols-[1fr_auto] items-center gap-2 border-b border-white/5 px-3 py-3 sm:grid-cols-[100px_1fr_auto_auto]"
+                  className="grid animate-row grid-cols-[1fr_auto] items-center gap-2 border-b border-foreground/5 px-3 py-3 sm:grid-cols-[100px_1fr_auto_auto]"
                   style={{ animationDelay: `${i * 60}ms` }}
                 >
                   <span className="truncate font-display text-[10px] text-amarillo">
                     {row.name}
                   </span>
-                  <span className="hidden truncate text-[12px] text-[#8a8fb5] sm:block">
+                  <span className="hidden truncate text-[12px] text-texto-tenue sm:block">
                     ▸ {game.title}
                   </span>
                   <span className="whitespace-nowrap font-display text-[11px] text-cian">
                     {row.score.toLocaleString("es-ES")}
                   </span>
-                  <span className="hidden whitespace-nowrap text-[10px] text-[#4a4f70] sm:block">
+                  <span className="hidden whitespace-nowrap text-[10px] text-texto-debil sm:block">
                     {row.date}
                   </span>
                 </div>
@@ -458,14 +458,14 @@ export function HomeClient({
             </div>
           </div>
 
-          <div className="border border-magenta/25 bg-[rgba(12,10,18,.9)]">
+          <div className="border border-magenta/25 bg-background/90">
             <div className="flex items-center justify-between border-b border-magenta/20 px-5 py-[18px]">
               <div className="font-display text-[11px] tracking-wider text-magenta">
                 ▸ TOP JUGADORES
               </div>
               <Link
                 href="/hall-of-fame"
-                className="whitespace-nowrap text-[10px] uppercase tracking-[2px] text-[#8a8fb5] transition-colors hover:text-cian"
+                className="whitespace-nowrap text-[10px] uppercase tracking-[2px] text-texto-tenue transition-colors hover:text-cian"
               >
                 VER SALÓN →
               </Link>
@@ -483,13 +483,13 @@ export function HomeClient({
                   >
                     #{String(i + 1).padStart(2, "0")}
                   </span>
-                  <span className="h-1.5 overflow-hidden bg-white/5">
+                  <span className="h-1.5 overflow-hidden bg-foreground/5">
                     <span
                       className="block h-full bg-cian/60"
                       style={{ width: `${(row.score / topScore) * 100}%` }}
                     />
                   </span>
-                  <span className="whitespace-nowrap font-display text-[11px] text-[#e6e9ff]">
+                  <span className="whitespace-nowrap font-display text-[11px] text-foreground">
                     {row.score.toLocaleString("es-ES")}
                   </span>
                 </div>
@@ -503,25 +503,25 @@ export function HomeClient({
       <Reveal className="mx-auto max-w-[1240px] px-[22px] py-16">
         <SectionHead kicker="// 04" title="PRECIOS" />
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_1fr]">
-          <div className="relative border border-cian bg-[rgba(12,14,20,.9)] p-8 shadow-[0_0_30px_rgba(0,245,255,.18)]">
-            <div className="font-display text-[10px] tracking-[3px] text-[#4a4f70]">
+          <div className="relative border border-cian bg-background/90 p-8 shadow-[0_0_30px_rgba(0,245,255,.18)]">
+            <div className="font-display text-[10px] tracking-[3px] text-texto-debil">
               PLAN ÚNICO
             </div>
-            <div className="mt-1.5 font-display text-base tracking-wider text-[#e6e9ff]">
+            <div className="mt-1.5 font-display text-base tracking-wider text-foreground">
               JUGADOR VAULT
             </div>
             <div className="mt-5 flex items-end gap-2">
               <span className="font-display text-[40px] text-amarillo [text-shadow:0_0_16px_rgba(245,255,0,.4)]">
                 $0
               </span>
-              <span className="mb-1.5 text-xs uppercase tracking-[2px] text-[#4a4f70]">
+              <span className="mb-1.5 text-xs uppercase tracking-[2px] text-texto-debil">
                 / siempre
               </span>
             </div>
-            <div className="mt-3 text-[11px] uppercase tracking-[2px] text-[#8a8fb5]">
+            <div className="mt-3 text-[11px] uppercase tracking-[2px] text-texto-tenue">
               Sin trucos · sin letra pequeña
             </div>
-            <ul className="mt-6 grid gap-2.5 text-sm text-[#cdd8de]">
+            <ul className="mt-6 grid gap-2.5 text-sm text-foreground">
               <li>✔ Acceso a todos los juegos</li>
               <li>✔ Ranking global y salón de la fama</li>
               <li>✔ Sin anuncios entre partidas</li>
@@ -532,36 +532,36 @@ export function HomeClient({
             <Link href="/auth" className={`${btnPrimary} mt-7 w-full`}>
               EMPEZAR GRATIS →
             </Link>
-            <div className="mt-3 text-center text-[11px] text-[#4a4f70]">
+            <div className="mt-3 text-center text-[11px] text-texto-debil">
               No pedimos tarjeta. Nunca lo haremos.
             </div>
           </div>
 
           <div className="grid gap-5">
             <div>
-              <div className="font-display text-xs tracking-wider text-[#e6e9ff]">
+              <div className="font-display text-xs tracking-wider text-foreground">
                 ¿REALMENTE ES GRATIS?
               </div>
-              <p className="mt-2 text-sm leading-[1.7] text-[#8a8fb5]">
+              <p className="mt-2 text-sm leading-[1.7] text-texto-tenue">
                 Sí. Arcade Vault es un proyecto sin fines de lucro hecho por
                 amor a los clásicos. No hay versión &quot;premium&quot;
                 escondida.
               </p>
             </div>
             <div>
-              <div className="font-display text-xs tracking-wider text-[#e6e9ff]">
+              <div className="font-display text-xs tracking-wider text-foreground">
                 ¿NECESITO CREAR CUENTA?
               </div>
-              <p className="mt-2 text-sm leading-[1.7] text-[#8a8fb5]">
+              <p className="mt-2 text-sm leading-[1.7] text-texto-tenue">
                 No. Puedes jugar como invitado. Si quieres guardar tu puntuación
                 y aparecer en el ranking, regístrate en 10 segundos.
               </p>
             </div>
             <div>
-              <div className="font-display text-xs tracking-wider text-[#e6e9ff]">
+              <div className="font-display text-xs tracking-wider text-foreground">
                 ¿CÓMO SOBREVIVEN SIN COBRAR?
               </div>
-              <p className="mt-2 text-sm leading-[1.7] text-[#8a8fb5]">
+              <p className="mt-2 text-sm leading-[1.7] text-texto-tenue">
                 Es un proyecto comunitario. Si te gusta, compártelo. Esa es toda
                 la moneda que aceptamos.
               </p>
@@ -572,7 +572,7 @@ export function HomeClient({
 
       {/* FINAL CTA */}
       <Reveal className="mx-auto max-w-[900px] px-[22px] py-24 text-center">
-        <h2 className="bg-gradient-to-b from-white to-amarillo bg-clip-text font-display text-[clamp(22px,4vw,40px)] tracking-wider text-transparent drop-shadow-[0_0_12px_rgba(245,255,0,.4)]">
+        <h2 className="bg-gradient-to-b from-foreground to-amarillo bg-clip-text font-display text-[clamp(22px,4vw,40px)] tracking-wider text-transparent drop-shadow-[0_0_12px_rgba(245,255,0,.4)]">
           ¿LISTO PARA JUGAR?
         </h2>
         <Link
@@ -581,7 +581,7 @@ export function HomeClient({
         >
           INSERTAR MONEDA →
         </Link>
-        <div className="mt-7 text-[13px] tracking-wide text-[#8a8fb5]">
+        <div className="mt-7 text-[13px] tracking-wide text-texto-tenue">
           Gratis. Sin registro obligatorio. Empieza en segundos.
         </div>
       </Reveal>

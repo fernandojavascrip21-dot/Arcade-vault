@@ -31,7 +31,7 @@ export function GameDetail({
     <main className="relative z-10 mx-auto w-full max-w-[1160px] flex-1 animate-fade px-[22px] pb-[90px] pt-12">
       <Link
         href="/games"
-        className="mb-6 inline-block text-xs uppercase tracking-[2px] text-[#6f7d88] transition-colors hover:text-cian"
+        className="mb-6 inline-block text-xs uppercase tracking-[2px] text-texto-tenue transition-colors hover:text-cian"
       >
         &lt;&lt; Volver al Vault
       </Link>
@@ -53,7 +53,7 @@ export function GameDetail({
             </span>
           </div>
 
-          <p className="max-w-[56ch] text-pretty text-base leading-[1.75] text-[#9aa7b2]">
+          <p className="max-w-[56ch] text-pretty text-base leading-[1.75] text-texto-tenue">
             {game.long}
           </p>
 
@@ -67,7 +67,7 @@ export function GameDetail({
             </button>
             <Link
               href="/games"
-              className="whitespace-nowrap border border-white/20 px-[30px] py-5 font-display text-[13px] text-[#8b98a3] transition-colors hover:border-magenta hover:text-magenta active:scale-95"
+              className="whitespace-nowrap border border-foreground/20 px-[30px] py-5 font-display text-[13px] text-texto-tenue transition-colors hover:border-magenta hover:text-magenta active:scale-95"
             >
               VOLVER AL VAULT
             </Link>

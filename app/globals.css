@@ -12,6 +12,31 @@
   --texto-tenue: #6f7d88;
   --texto-debil: #46525e;
   --linea: rgba(0, 245, 255, 0.28);
+
+  /* Colores de rango (spec 09: usados por lib/scores.ts::rankColor, que
+     antes devolvía hex fijos). El oro reutiliza --amarillo; plata/bronce
+     tienen su propio token porque no hay acento equivalente ya definido;
+     el gris por defecto (4.º puesto en adelante) ya funciona en ambos
+     fondos, así que no se sobrescribe en el tema claro. */
+  --rango-plata: #cfd8dc;
+  --rango-bronce: #ff8a00;
+  --rango-gris: #4f5b64;
+}
+
+/* Interruptor de tema (spec 09): qué ícono se ve lo decide el atributo
+   data-theme por CSS, no el estado de React — el valor inicial de React
+   (contexts/theme-context.tsx) es "dark" tanto en servidor como en la
+   primera hidratación (para no desincronizarse), así que si el ícono
+   dependiera de ese estado, el primer pintado del cliente podría no
+   coincidir con lo que el servidor mandó y React marcaría un mismatch de
+   hidratación. Con ambos íconos siempre en el DOM y visibilidad resuelta
+   por el atributo (que el script anti-flash de app/layout.tsx ya dejó
+   correcto antes de pintar), no hay nada que hidratar mal. */
+[data-theme="light"] .theme-toggle-sun {
+  display: none;
+}
+[data-theme="dark"] .theme-toggle-moon {
+  display: none;
 }
 
 @theme inline {
@@ -39,12 +64,24 @@
   --animate-shake: av-shake 0.4s;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    /* La maqueta es de estética oscura única: se mantiene la paleta arcade. */
-    --background: #0a0a0f;
-    --foreground: #cdd8de;
-  }
+/* Tema claro (spec 09): activado por [data-theme="light"] en <html>, fijado
+   por contexts/theme-context.tsx. --background/--foreground/--cian/
+   --texto-tenue/--texto-debil/--linea vienen tal cual de la paleta clara de
+   references/started-games/03-tetris/style.css. --magenta/--amarillo no
+   tienen equivalente ahí (ese original es de un solo acento): son versiones
+   oscurecidas/saturadas de los neón actuales, elegidas vía /frontend-design
+   para mantener contraste sobre el nuevo fondo claro. */
+:root[data-theme="light"] {
+  --background: #eef0f7;
+  --foreground: #23243a;
+  --cian: #3b5bdb;
+  --magenta: #c2255c;
+  --amarillo: #a16207;
+  --texto-tenue: #7c7f99;
+  --texto-debil: #5a5c72;
+  --linea: rgba(59, 91, 219, 0.28);
+  --rango-plata: #6b7280;
+  --rango-bronce: #cc6f00;
 }
 
 body {
@@ -313,4 +350,102 @@ input:focus {
   letter-spacing: 6px;
   font-size: 18px;
   text-shadow: 0 0 6px var(--cian);
+}
+
+/* ===== Variantes claras de las carátulas (spec 09) =====
+   Las partes que ya usan var(--cian)/var(--magenta)/var(--amarillo) se
+   adaptan solas al cambiar esos tokens en :root[data-theme="light"]. Lo que
+   sigue solo cubre lo que en modo oscuro está escrito como color literal
+   (bases casi negras, verdes/naranjas/morados sueltos, brillos rgba()) y no
+   respondería por sí solo al cambio de tema. Paleta elegida vía
+   /frontend-design: bases claras con la misma identidad de tono por juego
+   (verde/azul/índigo/violeta), y los literales neón oscurecidos lo
+   necesario para mantener contraste sobre esas bases. */
+
+:root[data-theme="light"] .cover-rompemuros {
+  background:
+    repeating-linear-gradient(
+        90deg,
+        var(--magenta) 0 32px,
+        #d98a00 32px 64px,
+        var(--cian) 64px 96px,
+        #00a865 96px 128px
+      )
+      0 0/100% 32px,
+    #f2f0e8;
+}
+:root[data-theme="light"] .cover-rompemuros::after {
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0 32px,
+    rgba(35, 36, 58, 0.15) 32px 33px
+  );
+}
+
+:root[data-theme="light"] .cover-serpiente {
+  background: linear-gradient(135deg, #eafaf1, #eef0f7);
+}
+:root[data-theme="light"] .cover-serpiente::after {
+  background: radial-gradient(
+      circle at 70% 50%,
+      var(--magenta) 0 6px,
+      transparent 7px
+    ),
+    linear-gradient(90deg, #00a865 0 40px, transparent 40px) 20% 50% / 200px
+      12px no-repeat,
+    linear-gradient(90deg, #00a865 0 12px, transparent 12px)
+      calc(20% + 40px) calc(50% - 12px) / 12px 12px no-repeat,
+    linear-gradient(90deg, #00a865 0 12px, transparent 12px)
+      calc(20% + 28px) calc(50% - 12px) / 12px 12px no-repeat;
+  filter: drop-shadow(0 0 6px rgba(0, 168, 101, 0.45));
+}
+
+:root[data-theme="light"] .cover-invasores {
+  background: linear-gradient(180deg, #e8effa, #eef0f7);
+}
+:root[data-theme="light"] .cover-invasores::after {
+  background: radial-gradient(circle at 20% 30%, #00a865 0 5px, transparent 6px),
+    radial-gradient(circle at 40% 30%, #00a865 0 5px, transparent 6px),
+    radial-gradient(circle at 60% 30%, #00a865 0 5px, transparent 6px),
+    radial-gradient(circle at 80% 30%, #00a865 0 5px, transparent 6px),
+    radial-gradient(circle at 20% 50%, var(--magenta) 0 5px, transparent 6px),
+    radial-gradient(circle at 40% 50%, var(--magenta) 0 5px, transparent 6px),
+    radial-gradient(circle at 60% 50%, var(--magenta) 0 5px, transparent 6px),
+    radial-gradient(circle at 80% 50%, var(--magenta) 0 5px, transparent 6px),
+    radial-gradient(circle at 50% 80%, var(--cian) 0 8px, transparent 9px);
+  filter: drop-shadow(0 0 6px rgba(0, 168, 101, 0.4));
+}
+
+:root[data-theme="light"] .cover-asteroides {
+  background: radial-gradient(circle at 50% 50%, #e6e8f7, #f7f7fb);
+}
+:root[data-theme="light"] .cover-asteroides::after {
+  background: radial-gradient(circle at 22% 30%, #5a5a5a 0 18px, transparent 19px),
+    radial-gradient(circle at 75% 60%, #7a7a7a 0 26px, transparent 27px),
+    radial-gradient(circle at 50% 80%, #4d4d4d 0 14px, transparent 15px),
+    radial-gradient(circle at 88% 22%, var(--cian) 0 2px, transparent 3px),
+    radial-gradient(circle at 12% 70%, var(--cian) 0 2px, transparent 3px),
+    radial-gradient(circle at 60% 20%, var(--cian) 0 2px, transparent 3px);
+}
+
+:root[data-theme="light"] .cover-bloques {
+  background: radial-gradient(circle at 50% 100%, #f3e8fb, #eef0f7);
+}
+:root[data-theme="light"] .cover-bloques::after {
+  background: linear-gradient(var(--cian), var(--cian)) 0 0/25% 33%,
+    linear-gradient(var(--magenta), var(--magenta)) 25% 0/25% 33%,
+    linear-gradient(var(--amarillo), var(--amarillo)) 50% 33%/25% 33%,
+    linear-gradient(#00a865, #00a865) 25% 66%/25% 33%,
+    linear-gradient(#cc5f00, #cc5f00) 50% 66%/25% 33%,
+    linear-gradient(#8800cc, #8800cc) 75% 33%/25% 33%;
+  background-repeat: no-repeat;
+  filter: drop-shadow(0 0 8px rgba(59, 91, 219, 0.35));
+  image-rendering: pixelated;
+}
+
+:root[data-theme="light"] .cover-laberinto {
+  background: radial-gradient(circle at 50% 50%, #f5e8fb, #eef0f7);
+}
+:root[data-theme="light"] .cover-laberinto::after {
+  filter: drop-shadow(0 0 8px rgba(161, 98, 7, 0.4));
 }

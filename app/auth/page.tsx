@@ -6,9 +6,8 @@ import { useState } from "react";
 import { useSession } from "@/contexts/session-context";
 
 const inputCls =
-  "border border-cian/30 bg-cian/5 px-3.5 py-3.5 text-[15px] text-[#e6f2f5] focus:border-cian focus:shadow-[0_0_20px_rgba(0,245,255,.4)]";
-const labelCls =
-  "grid gap-2 text-xs uppercase tracking-[2px] text-[#8b98a3]";
+  "border border-cian/30 bg-cian/5 px-3.5 py-3.5 text-[15px] text-foreground focus:border-cian focus:shadow-[0_0_20px_rgba(0,245,255,.4)]";
+const labelCls = "grid gap-2 text-xs uppercase tracking-[2px] text-texto-tenue";
 
 export default function AuthPage() {
   const router = useRouter();
@@ -33,19 +32,17 @@ export default function AuthPage() {
 
   return (
     <main className="relative z-10 grid flex-1 animate-fade place-items-center px-5 pb-20 pt-12">
-      <div className="grid w-full max-w-[430px] gap-[22px] border border-cian/30 bg-[rgba(10,11,18,.95)] px-7 py-9 shadow-[0_0_60px_rgba(0,245,255,.16)]">
+      <div className="grid w-full max-w-[430px] gap-[22px] border border-cian/30 bg-background/95 px-7 py-9 shadow-[0_0_60px_rgba(0,245,255,.16)]">
         <div className="animate-flicker text-center font-display text-base tracking-wider text-cian">
           ARCADE<span className="text-magenta">VAULT</span>
         </div>
 
-        <div className="grid grid-cols-2 border border-white/12">
+        <div className="grid grid-cols-2 border border-foreground/12">
           <button
             type="button"
             onClick={() => setTab("login")}
             className={`px-2 py-3.5 text-center font-display text-[9px] ${
-              registering
-                ? "text-[#6f7d88]"
-                : "bg-cian/12 text-cian"
+              registering ? "text-texto-tenue" : "bg-cian/12 text-cian"
             }`}
           >
             INICIAR SESIÓN
@@ -54,9 +51,7 @@ export default function AuthPage() {
             type="button"
             onClick={() => setTab("register")}
             className={`px-2 py-3.5 text-center font-display text-[9px] ${
-              registering
-                ? "bg-magenta/12 text-magenta"
-                : "text-[#6f7d88]"
+              registering ? "bg-magenta/12 text-magenta" : "text-texto-tenue"
             }`}
           >
             CREAR CUENTA
@@ -85,7 +80,11 @@ export default function AuthPage() {
           ) : null}
           <label className={labelCls}>
             Contraseña
-            <input type="password" placeholder="••••••••" className={inputCls} />
+            <input
+              type="password"
+              placeholder="••••••••"
+              className={inputCls}
+            />
           </label>
         </div>
 
@@ -105,31 +104,33 @@ export default function AuthPage() {
           Jugar como invitado
         </button>
 
-        <div className="flex items-center gap-3 text-[11px] tracking-[2px] text-[#333c45]">
-          <div className="h-px flex-1 bg-white/10" />
+        <div className="flex items-center gap-3 text-[11px] tracking-[2px] text-texto-debil">
+          <div className="h-px flex-1 bg-foreground/10" />
           <span className="whitespace-nowrap">O CONTINÚA CON</span>
-          <div className="h-px flex-1 bg-white/10" />
+          <div className="h-px flex-1 bg-foreground/10" />
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <button
             type="button"
             onClick={submit}
-            className="border border-white/16 p-3.5 text-center text-[13px] tracking-wide text-[#cdd8de] transition-colors hover:border-cian hover:text-cian active:scale-95"
+            className="border border-foreground/16 p-3.5 text-center text-[13px] tracking-wide text-foreground transition-colors hover:border-cian hover:text-cian active:scale-95"
           >
             Google
           </button>
           <button
             type="button"
             onClick={submit}
-            className="border border-white/16 p-3.5 text-center text-[13px] tracking-wide text-[#cdd8de] transition-colors hover:border-cian hover:text-cian active:scale-95"
+            className="border border-foreground/16 p-3.5 text-center text-[13px] tracking-wide text-foreground transition-colors hover:border-cian hover:text-cian active:scale-95"
           >
             GitHub
           </button>
         </div>
 
-        <p className="text-[11px] leading-relaxed text-[#3b454e]">
-          {"// Demo local. Aquí conectaría el backend real (REST o Supabase) para sesiones y puntuaciones sincronizadas."}
+        <p className="text-[11px] leading-relaxed text-texto-debil">
+          {
+            "// Demo local. Aquí conectaría el backend real (REST o Supabase) para sesiones y puntuaciones sincronizadas."
+          }
         </p>
       </div>
     </main>

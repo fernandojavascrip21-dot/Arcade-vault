@@ -1,12 +1,33 @@
 "use client";
 
+import { Moon, Sun } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
 
 import { useCredits } from "@/contexts/credits-context";
 import { useSession } from "@/contexts/session-context";
+import { useTheme } from "@/contexts/theme-context";
 import { useMediaQuery } from "@/lib/use-media-query";
+
+// El ícono visible lo resuelve el CSS de [data-theme] (ver globals.css), no
+// una condición sobre `theme`: así el primer render del cliente no puede
+// desentonar con lo que mandó el servidor (ver nota en globals.css).
+function ThemeToggleButton({ className = "" }: { className?: string }) {
+  const { toggleTheme } = useTheme();
+
+  return (
+    <button
+      type="button"
+      onClick={toggleTheme}
+      aria-label="Cambiar tema claro/oscuro"
+      className={`grid place-items-center border border-cian/40 p-2.5 text-cian transition-colors hover:bg-cian/15 active:scale-95 ${className}`}
+    >
+      <Sun size={16} className="theme-toggle-sun" />
+      <Moon size={16} className="theme-toggle-moon" />
+    </button>
+  );
+}
 
 function NavLink({
   href,
@@ -47,7 +68,7 @@ export function NavBar() {
 
   return (
     <>
-      <nav className="sticky top-0 z-40 flex items-center justify-between gap-4 border-b border-cian/30 bg-[rgba(8,8,13,.9)] px-[22px] py-3.5 shadow-[0_6px_30px_rgba(0,0,0,.6)] backdrop-blur-md">
+      <nav className="sticky top-0 z-40 flex items-center justify-between gap-4 border-b border-cian/30 bg-background/90 px-[22px] py-3.5 shadow-[0_6px_30px_rgba(0,0,0,.6)] backdrop-blur-md">
         <Link
           href="/"
           className="whitespace-nowrap font-display text-sm tracking-wider text-cian [text-shadow:0_0_10px_rgba(0,245,255,.8)]"
@@ -61,7 +82,7 @@ export function NavBar() {
         {!isNarrow ? (
           <div className="flex flex-wrap items-center justify-end gap-x-[22px] gap-y-3">
             <div className="flex items-center gap-2.5 border border-amarillo/35 bg-amarillo/5 px-2.5 py-2">
-              <span className="whitespace-nowrap text-[10px] tracking-[2px] text-[#b9bf6a]">
+              <span className="whitespace-nowrap text-[10px] tracking-[2px] text-amarillo/70">
                 CRÉDITOS
               </span>
               <span className="font-display text-xs text-amarillo [text-shadow:0_0_12px_rgba(245,255,0,.6)]">
@@ -75,6 +96,8 @@ export function NavBar() {
                 + MONEDA
               </button>
             </div>
+
+            <ThemeToggleButton />
 
             <NavLink href="/" active={isHome}>
               Inicio
@@ -100,7 +123,7 @@ export function NavBar() {
                 <button
                   type="button"
                   onClick={logout}
-                  className="whitespace-nowrap text-[11px] uppercase tracking-wider text-[#6f7d88] transition-colors hover:text-magenta"
+                  className="whitespace-nowrap text-[11px] uppercase tracking-wider text-texto-tenue transition-colors hover:text-magenta"
                 >
                   Salir
                 </button>
@@ -121,13 +144,14 @@ export function NavBar() {
               onClick={insertCoin}
               className="flex items-center gap-2 border border-amarillo/35 bg-amarillo/5 px-2.5 py-[9px] active:scale-95"
             >
-              <span className="text-[9px] tracking-wider text-[#b9bf6a]">
+              <span className="text-[9px] tracking-wider text-amarillo/70">
                 CRÉD.
               </span>
               <span className="font-display text-[11px] text-amarillo">
                 {creditsText}
               </span>
             </button>
+            <ThemeToggleButton />
             <button
               type="button"
               onClick={() => setMenuOpen(true)}
@@ -149,10 +173,16 @@ export function NavBar() {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="absolute inset-y-0 right-0 grid w-[76%] max-w-[320px] animate-fade content-start gap-[22px] border-l border-cian/35 bg-[#0c0c14] px-[22px] py-[26px] shadow-[-10px_0_50px_rgba(0,245,255,.18)]"
+            className="absolute inset-y-0 right-0 grid w-[76%] max-w-[320px] animate-fade content-start gap-[22px] border-l border-cian/35 bg-background px-[22px] py-[26px] shadow-[-10px_0_50px_rgba(0,245,255,.18)]"
           >
-            <div className="font-display text-[10px] tracking-wider text-[#46525e]">
+            <div className="font-display text-[10px] tracking-wider text-texto-debil">
               MENÚ
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] uppercase tracking-wider text-texto-tenue">
+                Tema
+              </span>
+              <ThemeToggleButton />
             </div>
             <Link
               href="/"

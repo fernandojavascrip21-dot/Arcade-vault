@@ -51,14 +51,14 @@ export function SiteChrome({ children }: { children: ReactNode }) {
       <NavBar />
 
       {coinMsg ? (
-        <div className="fixed right-[22px] top-[74px] z-50 animate-fade whitespace-nowrap border border-amarillo bg-[rgba(10,10,15,.94)] px-3.5 py-3 font-display text-[10px] tracking-wider text-amarillo shadow-[0_0_26px_rgba(245,255,0,.4)]">
+        <div className="fixed right-[22px] top-[74px] z-50 animate-fade whitespace-nowrap border border-amarillo bg-background/95 px-3.5 py-3 font-display text-[10px] tracking-wider text-amarillo shadow-[0_0_26px_rgba(245,255,0,.4)]">
           {coinMsg}
         </div>
       ) : null}
 
       <div className="relative z-10 flex flex-1 flex-col">{children}</div>
 
-      <footer className="relative z-10 border-t border-white/5 px-[22px] pb-10 pt-[26px] text-center text-[11px] tracking-[3px] text-[#2f383f]">
+      <footer className="relative z-10 border-t border-foreground/10 px-[22px] pb-10 pt-[26px] text-center text-[11px] tracking-[3px] text-texto-debil">
         ARCADE VAULT · 1986–2026 · INSERTA MONEDA
       </footer>
     </div>
