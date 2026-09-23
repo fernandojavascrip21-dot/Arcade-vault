@@ -10,18 +10,21 @@ import { useSession } from "@/contexts/session-context";
 import { useTheme } from "@/contexts/theme-context";
 import { useMediaQuery } from "@/lib/use-media-query";
 
+// El ícono visible lo resuelve el CSS de [data-theme] (ver globals.css), no
+// una condición sobre `theme`: así el primer render del cliente no puede
+// desentonar con lo que mandó el servidor (ver nota en globals.css).
 function ThemeToggleButton({ className = "" }: { className?: string }) {
-  const { theme, toggleTheme } = useTheme();
-  const isDark = theme === "dark";
+  const { toggleTheme } = useTheme();
 
   return (
     <button
       type="button"
       onClick={toggleTheme}
-      aria-label={isDark ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+      aria-label="Cambiar tema claro/oscuro"
       className={`grid place-items-center border border-cian/40 p-2.5 text-cian transition-colors hover:bg-cian/15 active:scale-95 ${className}`}
     >
-      {isDark ? <Sun size={16} /> : <Moon size={16} />}
+      <Sun size={16} className="theme-toggle-sun" />
+      <Moon size={16} className="theme-toggle-moon" />
     </button>
   );
 }

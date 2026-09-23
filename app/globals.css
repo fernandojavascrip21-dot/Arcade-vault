@@ -23,6 +23,22 @@
   --rango-gris: #4f5b64;
 }
 
+/* Interruptor de tema (spec 09): qué ícono se ve lo decide el atributo
+   data-theme por CSS, no el estado de React — el valor inicial de React
+   (contexts/theme-context.tsx) es "dark" tanto en servidor como en la
+   primera hidratación (para no desincronizarse), así que si el ícono
+   dependiera de ese estado, el primer pintado del cliente podría no
+   coincidir con lo que el servidor mandó y React marcaría un mismatch de
+   hidratación. Con ambos íconos siempre en el DOM y visibilidad resuelta
+   por el atributo (que el script anti-flash de app/layout.tsx ya dejó
+   correcto antes de pintar), no hay nada que hidratar mal. */
+[data-theme="light"] .theme-toggle-sun {
+  display: none;
+}
+[data-theme="dark"] .theme-toggle-moon {
+  display: none;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
