@@ -13,7 +13,7 @@ function Frame({ children }: { children: ReactNode }) {
       style={{ display: "block" }}
       shapeRendering="crispEdges"
     >
-      <rect width="160" height="100" fill="rgba(4,4,10,0.42)" />
+      <rect width="160" height="100" fill="var(--background)" opacity={0.42} />
       {children}
     </svg>
   );
@@ -95,8 +95,8 @@ function Invasores() {
       <rect x={x} y={y + 3} width={12} height={4} />
       <rect x={x + 1} y={y + 7} width={3} height={2} />
       <rect x={x + 8} y={y + 7} width={3} height={2} />
-      <rect x={x + 3} y={y + 4} width={2} height={2} fill="#0a0a0f" />
-      <rect x={x + 7} y={y + 4} width={2} height={2} fill="#0a0a0f" />
+      <rect x={x + 3} y={y + 4} width={2} height={2} fill="var(--background)" />
+      <rect x={x + 7} y={y + 4} width={2} height={2} fill="var(--background)" />
     </g>
   );
   const cols = [12, 40, 68, 96, 124];
@@ -146,7 +146,16 @@ function Asteroides() {
 
 function Bloques() {
   const b = (x: number, y: number, fill: string) => (
-    <rect key={`${x}-${y}`} x={x} y={y} width={11} height={11} fill={fill} stroke="#0a0a0f" strokeWidth={1} />
+    <rect
+      key={`${x}-${y}`}
+      x={x}
+      y={y}
+      width={11}
+      height={11}
+      fill={fill}
+      stroke="var(--background)"
+      strokeWidth={1}
+    />
   );
   return (
     <Frame>
@@ -196,7 +205,11 @@ function Laberinto() {
       {Array.from({ length: 7 }, (_, i) => (
         <circle key={`d${i}`} cx={26 + i * 16} cy={80} r={1.6} fill="#ffd6a5" />
       ))}
-      <path d="M46 78 a7 7 0 1 1 0 -0.1 L46 78 L38 74 Z" fill="#f5ff00" transform="translate(-4 2)" />
+      <path
+        d="M46 78 a7 7 0 1 1 0 -0.1 L46 78 L38 74 Z"
+        fill="#f5ff00"
+        transform="translate(-4 2)"
+      />
       <g transform="translate(96 50)">
         <path
           d="M0 12 V4 a8 8 0 0 1 16 0 V12 l-3 -3 -3 3 -2 -3 -3 3 Z"

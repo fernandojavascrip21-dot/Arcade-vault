@@ -5,7 +5,7 @@ import type { BoardRow } from "@/lib/types";
 // resueltas por el Server Component de la página.
 export function ScoreBoard({ rows }: { rows: BoardRow[] }) {
   return (
-    <aside className="border border-magenta/30 bg-[rgba(12,10,18,.9)] shadow-[0_0_34px_rgba(255,0,110,.14)]">
+    <aside className="border border-magenta/30 bg-background/90 shadow-[0_0_34px_rgba(255,0,110,.14)]">
       <div className="border-b border-magenta/25 px-5 py-[18px] font-display text-[11px] tracking-wider text-magenta">
         MEJORES PUNTUACIONES
       </div>
@@ -13,7 +13,7 @@ export function ScoreBoard({ rows }: { rows: BoardRow[] }) {
         {rows.map((r, i) => (
           <div
             key={`${r.name}-${r.score}-${i}`}
-            className="grid animate-row grid-cols-[34px_1fr_auto] items-center gap-3 border-b border-white/5 px-3 py-[11px]"
+            className="grid animate-row grid-cols-[34px_1fr_auto] items-center gap-3 border-b border-foreground/5 px-3 py-[11px]"
             style={{ animationDelay: `${i * 45}ms` }}
           >
             <span
@@ -22,7 +22,7 @@ export function ScoreBoard({ rows }: { rows: BoardRow[] }) {
             >
               #{i + 1}
             </span>
-            <span className="truncate text-sm text-[#cdd8de]">{r.name}</span>
+            <span className="truncate text-sm text-foreground">{r.name}</span>
             <span className="whitespace-nowrap font-display text-[10px] text-amarillo">
               {r.score.toLocaleString("es-ES")}
             </span>

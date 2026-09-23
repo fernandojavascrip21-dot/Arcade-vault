@@ -12,6 +12,15 @@
   --texto-tenue: #6f7d88;
   --texto-debil: #46525e;
   --linea: rgba(0, 245, 255, 0.28);
+
+  /* Colores de rango (spec 09: usados por lib/scores.ts::rankColor, que
+     antes devolvía hex fijos). El oro reutiliza --amarillo; plata/bronce
+     tienen su propio token porque no hay acento equivalente ya definido;
+     el gris por defecto (4.º puesto en adelante) ya funciona en ambos
+     fondos, así que no se sobrescribe en el tema claro. */
+  --rango-plata: #cfd8dc;
+  --rango-bronce: #ff8a00;
+  --rango-gris: #4f5b64;
 }
 
 @theme inline {
@@ -55,6 +64,8 @@
   --texto-tenue: #7c7f99;
   --texto-debil: #5a5c72;
   --linea: rgba(59, 91, 219, 0.28);
+  --rango-plata: #6b7280;
+  --rango-bronce: #cc6f00;
 }
 
 body {
