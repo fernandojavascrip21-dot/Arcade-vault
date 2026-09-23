@@ -15,6 +15,11 @@ import {
   type BloquesGameHandle,
 } from "@/components/games/bloques/bloques-game";
 import type { BloquesState } from "@/components/games/bloques/engine";
+import type { RompemurosState } from "@/components/games/rompemuros/engine";
+import {
+  RompemurosGame,
+  type RompemurosGameHandle,
+} from "@/components/games/rompemuros/rompemuros-game";
 import { useCredits } from "@/contexts/credits-context";
 import { useSession } from "@/contexts/session-context";
 import type { Game } from "@/lib/types";
@@ -58,8 +63,10 @@ export function PlayRoom({ game }: { game: Game }) {
 
   const isAsteroids = game.id === "asteroides";
   const isBloques = game.id === "bloques";
+  const isRompemuros = game.id === "rompemuros";
   const gameRef = useRef<AsteroidsGameHandle>(null);
   const bloquesGameRef = useRef<BloquesGameHandle>(null);
+  const rompemurosGameRef = useRef<RompemurosGameHandle>(null);
   const typerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   useEffect(
     () => () => {
@@ -98,6 +105,19 @@ export function PlayRoom({ game }: { game: Game }) {
   };
 
   const handleBloquesGameOver = (finalScore: number) => {
+    setScore(finalScore);
+    setPaused(false);
+    setOver(true);
+  };
+
+  const handleRompemurosStateChange = (state: RompemurosState) => {
+    setScore(state.score);
+    setLives(state.lives);
+    setLevel(state.level);
+    setPaused(state.paused);
+  };
+
+  const handleRompemurosGameOver = (finalScore: number) => {
     setScore(finalScore);
     setPaused(false);
     setOver(true);
@@ -144,13 +164,18 @@ export function PlayRoom({ game }: { game: Game }) {
       setLines(0);
       setLevel(1);
     }
+    if (isRompemuros) {
+      rompemurosGameRef.current?.restart();
+      setLives(3);
+      setLevel(1);
+    }
   };
 
   return (
     <main className="relative z-10 mx-auto w-full max-w-[1020px] flex-1 animate-fade px-[18px] pb-20 pt-8">
       <div className="flex flex-wrap items-center justify-between gap-3.5 border border-cian/30 bg-[rgba(8,10,16,.92)] px-5 py-4">
         <div className="flex flex-wrap gap-x-[26px] gap-y-3">
-          {!isBloques ? (
+          {!isBloques && !isRompemuros ? (
             <>
               <HudStat
                 label="PUNTUACIÓN"
@@ -195,7 +220,9 @@ export function PlayRoom({ game }: { game: Game }) {
       </div>
 
       <CrtFrame
-        background={isAsteroids || isBloques ? "#000" : game.thumb}
+        background={
+          isAsteroids || isBloques || isRompemuros ? "#000" : game.thumb
+        }
         label=""
         className="mt-6"
         art={
@@ -212,6 +239,13 @@ export function PlayRoom({ game }: { game: Game }) {
               paused={paused}
               onStateChange={handleBloquesStateChange}
               onGameOver={handleBloquesGameOver}
+            />
+          ) : isRompemuros ? (
+            <RompemurosGame
+              ref={rompemurosGameRef}
+              paused={paused}
+              onStateChange={handleRompemurosStateChange}
+              onGameOver={handleRompemurosGameOver}
             />
           ) : undefined
         }
@@ -231,12 +265,14 @@ export function PlayRoom({ game }: { game: Game }) {
             ? "← → ROTAR · ↑ IMPULSO · ESPACIO DISPARAR · B BOMBA NOVA"
             : isBloques
               ? "← → MOVER · ↑ / X ROTAR · ↓ BAJAR · ESPACIO CAÍDA"
-              : "MUEVE CON EL RATÓN O ← →"}
+              : isRompemuros
+                ? "← → / A D / RATÓN MOVER · ESPACIO / CLIC LANZAR · 1 2 3 DIFICULTAD · ESC / P PAUSA"
+                : "MUEVE CON EL RATÓN O ← →"}
         </span>
         <span>ARCADE VAULT CRT-19</span>
       </div>
 
-      {!isAsteroids && !isBloques ? (
+      {!isAsteroids && !isBloques && !isRompemuros ? (
         <div className="mt-6 flex justify-center">
           <button
             type="button"
