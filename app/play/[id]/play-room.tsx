@@ -10,6 +10,11 @@ import {
   type AsteroidsGameHandle,
 } from "@/components/games/asteroids/asteroids-game";
 import type { AsteroidsState } from "@/components/games/asteroids/engine";
+import {
+  BloquesGame,
+  type BloquesGameHandle,
+} from "@/components/games/bloques/bloques-game";
+import type { BloquesState } from "@/components/games/bloques/engine";
 import { useCredits } from "@/contexts/credits-context";
 import { useSession } from "@/contexts/session-context";
 import type { Game } from "@/lib/types";
@@ -43,6 +48,7 @@ export function PlayRoom({ game }: { game: Game }) {
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(3);
   const [level, setLevel] = useState(1);
+  const [, setLines] = useState(0);
   const [paused, setPaused] = useState(false);
   const [over, setOver] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -51,7 +57,9 @@ export function PlayRoom({ game }: { game: Game }) {
   const [saveMsg, setSaveMsg] = useState("");
 
   const isAsteroids = game.id === "asteroides";
+  const isBloques = game.id === "bloques";
   const gameRef = useRef<AsteroidsGameHandle>(null);
+  const bloquesGameRef = useRef<BloquesGameHandle>(null);
   const typerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   useEffect(
     () => () => {
@@ -78,6 +86,18 @@ export function PlayRoom({ game }: { game: Game }) {
   };
 
   const handleAsteroidsGameOver = (finalScore: number) => {
+    setScore(finalScore);
+    setPaused(false);
+    setOver(true);
+  };
+
+  const handleBloquesStateChange = (state: BloquesState) => {
+    setScore(state.score);
+    setLines(state.lines);
+    setLevel(state.level);
+  };
+
+  const handleBloquesGameOver = (finalScore: number) => {
     setScore(finalScore);
     setPaused(false);
     setOver(true);
@@ -119,27 +139,36 @@ export function PlayRoom({ game }: { game: Game }) {
     setSaveError(null);
     setSaveMsg("");
     if (isAsteroids) gameRef.current?.restart();
+    if (isBloques) {
+      bloquesGameRef.current?.restart();
+      setLines(0);
+      setLevel(1);
+    }
   };
 
   return (
     <main className="relative z-10 mx-auto w-full max-w-[1020px] flex-1 animate-fade px-[18px] pb-20 pt-8">
       <div className="flex flex-wrap items-center justify-between gap-3.5 border border-cian/30 bg-[rgba(8,10,16,.92)] px-5 py-4">
         <div className="flex flex-wrap gap-x-[26px] gap-y-3">
-          <HudStat
-            label="PUNTUACIÓN"
-            value={score.toLocaleString("es-ES")}
-            className="text-amarillo [text-shadow:0_0_12px_rgba(245,255,0,.5)]"
-          />
-          <HudStat
-            label="VIDAS"
-            value={"♥".repeat(lives)}
-            className="text-magenta"
-          />
-          <HudStat
-            label="NIVEL"
-            value={level.toString().padStart(2, "0")}
-            className="text-cian"
-          />
+          {!isBloques ? (
+            <>
+              <HudStat
+                label="PUNTUACIÓN"
+                value={score.toLocaleString("es-ES")}
+                className="text-amarillo [text-shadow:0_0_12px_rgba(245,255,0,.5)]"
+              />
+              <HudStat
+                label="VIDAS"
+                value={"♥".repeat(lives)}
+                className="text-magenta"
+              />
+              <HudStat
+                label="NIVEL"
+                value={level.toString().padStart(2, "0")}
+                className="text-cian"
+              />
+            </>
+          ) : null}
           <div className="grid gap-1.5">
             <span className="text-[10px] tracking-[2px] text-[#6f7d88]">
               JUGADOR
@@ -166,7 +195,7 @@ export function PlayRoom({ game }: { game: Game }) {
       </div>
 
       <CrtFrame
-        background={isAsteroids ? "#000" : game.thumb}
+        background={isAsteroids || isBloques ? "#000" : game.thumb}
         label=""
         className="mt-6"
         art={
@@ -176,6 +205,13 @@ export function PlayRoom({ game }: { game: Game }) {
               paused={paused}
               onStateChange={handleAsteroidsStateChange}
               onGameOver={handleAsteroidsGameOver}
+            />
+          ) : isBloques ? (
+            <BloquesGame
+              ref={bloquesGameRef}
+              paused={paused}
+              onStateChange={handleBloquesStateChange}
+              onGameOver={handleBloquesGameOver}
             />
           ) : undefined
         }
@@ -193,12 +229,14 @@ export function PlayRoom({ game }: { game: Game }) {
         <span>
           {isAsteroids
             ? "← → ROTAR · ↑ IMPULSO · ESPACIO DISPARAR · B BOMBA NOVA"
-            : "MUEVE CON EL RATÓN O ← →"}
+            : isBloques
+              ? "← → MOVER · ↑ / X ROTAR · ↓ BAJAR · ESPACIO CAÍDA"
+              : "MUEVE CON EL RATÓN O ← →"}
         </span>
         <span>ARCADE VAULT CRT-19</span>
       </div>
 
-      {!isAsteroids ? (
+      {!isAsteroids && !isBloques ? (
         <div className="mt-6 flex justify-center">
           <button
             type="button"
