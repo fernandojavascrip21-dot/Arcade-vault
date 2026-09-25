@@ -23,6 +23,39 @@ const COLOR_EYE = "#0b1a10";
 
 type Direction = "up" | "down" | "left" | "right";
 
+const KEY_TO_DIRECTION: Record<string, Direction> = {
+  ArrowUp: "up",
+  ArrowDown: "down",
+  ArrowLeft: "left",
+  ArrowRight: "right",
+  w: "up",
+  s: "down",
+  a: "left",
+  d: "right",
+  W: "up",
+  S: "down",
+  A: "left",
+  D: "right",
+};
+
+const DIRECTION_VECTOR: Record<Direction, Cell> = {
+  up: { x: 0, y: -1 },
+  down: { x: 0, y: 1 },
+  left: { x: -1, y: 0 },
+  right: { x: 1, y: 0 },
+};
+
+const OPPOSITE: Record<Direction, Direction> = {
+  up: "down",
+  down: "up",
+  left: "right",
+  right: "left",
+};
+
+function tickDuration(level: number): number {
+  return Math.max(TICK_MIN_MS, TICK_BASE_MS - (level - 1) * TICK_STEP_MS);
+}
+
 interface Cell {
   x: number;
   y: number;
@@ -96,6 +129,12 @@ export function createSerpienteEngine(
   let score = 0;
   let level = 1;
   let paused = false;
+  let moving = false; // la partida arranca quieta hasta la primera dirección
+  let pendingDirection: Direction | null = null; // un solo giro por tick
+  let accumulator = 0;
+  let lastTime = 0;
+  let rafId = 0;
+  let running = false;
 
   function resetSnake() {
     snake = [];
@@ -103,6 +142,9 @@ export function createSerpienteEngine(
       snake.push({ x: INITIAL_HEAD_X - i, y: INITIAL_ROW });
     }
     direction = "right";
+    moving = false;
+    pendingDirection = null;
+    accumulator = 0;
   }
 
   function emitState() {
@@ -167,18 +209,71 @@ export function createSerpienteEngine(
     drawSnake();
   }
 
+  function step() {
+    if (pendingDirection) {
+      direction = pendingDirection;
+      pendingDirection = null;
+    }
+    const v = DIRECTION_VECTOR[direction];
+    const head = snake[0];
+    snake.unshift({ x: head.x + v.x, y: head.y + v.y });
+    snake.pop();
+  }
+
+  function handleKeyDown(e: KeyboardEvent) {
+    const next = KEY_TO_DIRECTION[e.key];
+    if (!next) return;
+    e.preventDefault();
+    if (paused) return;
+    if (!moving) {
+      // Primera tecla: cualquier dirección salvo la opuesta a la inicial.
+      if (next === OPPOSITE[direction]) return;
+      pendingDirection = next;
+      moving = true;
+      lastTime = performance.now();
+      return;
+    }
+    // Se valida contra la dirección ya aplicada, no contra la última tecla.
+    if (next === direction || next === OPPOSITE[direction]) return;
+    if (!pendingDirection) pendingDirection = next;
+  }
+
+  function loop(now: number) {
+    if (!running) return;
+    const delta = now - lastTime;
+    lastTime = now;
+    if (moving && !paused) {
+      accumulator += delta;
+      const tick = tickDuration(level);
+      while (accumulator >= tick) {
+        accumulator -= tick;
+        step();
+      }
+    }
+    draw();
+    rafId = requestAnimationFrame(loop);
+  }
+
   resetSnake();
 
-  // Referencias a constantes de pasos posteriores (lógica de juego).
-  void [POINTS_PER_FRUIT, FRUITS_PER_LEVEL, TICK_BASE_MS, TICK_STEP_MS];
-  void [TICK_MIN_MS, FRUIT_SPRITE_URL, FRUIT_DRAW_HEIGHT, SPRITE_ATLAS];
+  // Referencias a constantes de pasos posteriores (fruta, puntos, nivel).
+  void [POINTS_PER_FRUIT, FRUITS_PER_LEVEL, FRUIT_SPRITE_URL];
+  void [FRUIT_DRAW_HEIGHT, SPRITE_ATLAS];
 
   return {
     start() {
-      draw();
+      if (running) return;
+      running = true;
+      window.addEventListener("keydown", handleKeyDown);
+      lastTime = performance.now();
       emitState();
+      rafId = requestAnimationFrame(loop);
     },
-    stop() {},
+    stop() {
+      running = false;
+      window.removeEventListener("keydown", handleKeyDown);
+      cancelAnimationFrame(rafId);
+    },
     setPaused(value: boolean) {
       paused = value;
     },
@@ -186,7 +281,6 @@ export function createSerpienteEngine(
       score = 0;
       level = 1;
       resetSnake();
-      draw();
       emitState();
     },
   };
