@@ -135,6 +135,21 @@ export function createSerpienteEngine(
   let lastTime = 0;
   let rafId = 0;
   let running = false;
+  let fruit: { cell: Cell; key: string } | null = null;
+  let fruitsEaten = 0;
+  let lastEmitted: SerpienteState | null = null;
+
+  // El juego no espera a la imagen: hasta que cargue (o si falla) la fruta
+  // se dibuja como círculo de color.
+  const fruitImage = new Image();
+  let fruitImageReady = false;
+  fruitImage.onload = () => {
+    fruitImageReady = true;
+  };
+  fruitImage.onerror = () => {
+    fruitImageReady = false;
+  };
+  fruitImage.src = FRUIT_SPRITE_URL;
 
   function resetSnake() {
     snake = [];
@@ -147,8 +162,44 @@ export function createSerpienteEngine(
     accumulator = 0;
   }
 
+  function spawnFruit() {
+    const occupied = new Set(snake.map((c) => c.y * COLS + c.x));
+    const free: Cell[] = [];
+    for (let y = 0; y < ROWS; y++) {
+      for (let x = 0; x < COLS; x++) {
+        if (!occupied.has(y * COLS + x)) free.push({ x, y });
+      }
+    }
+    if (free.length === 0) {
+      fruit = null;
+      return;
+    }
+    const keys = Object.keys(SPRITE_ATLAS);
+    fruit = {
+      cell: free[Math.floor(Math.random() * free.length)],
+      key: keys[Math.floor(Math.random() * keys.length)],
+    };
+  }
+
   function emitState() {
-    handlers.onStateChange({ score, level, length: snake.length, paused });
+    const next: SerpienteState = {
+      score,
+      level,
+      length: snake.length,
+      paused,
+    };
+    const prev = lastEmitted;
+    if (
+      prev &&
+      prev.score === next.score &&
+      prev.level === next.level &&
+      prev.length === next.length &&
+      prev.paused === next.paused
+    ) {
+      return;
+    }
+    lastEmitted = next;
+    handlers.onStateChange(next);
   }
 
   function drawBoard() {
@@ -197,6 +248,35 @@ export function createSerpienteEngine(
     }
   }
 
+  function drawFruit() {
+    if (!fruit) return;
+    const cx = fruit.cell.x * CELL + CELL / 2;
+    const cy = fruit.cell.y * CELL + CELL / 2;
+    const rect = SPRITE_ATLAS[fruit.key];
+    if (fruitImageReady) {
+      const dh = FRUIT_DRAW_HEIGHT;
+      const dw = dh * (rect.w / rect.h);
+      g.drawImage(
+        fruitImage,
+        rect.x,
+        rect.y,
+        rect.w,
+        rect.h,
+        cx - dw / 2,
+        cy - dh / 2,
+        dw,
+        dh,
+      );
+      return;
+    }
+    let hash = 0;
+    for (const ch of fruit.key) hash = (hash * 31 + ch.charCodeAt(0)) % 360;
+    g.fillStyle = `hsl(${hash}, 80%, 55%)`;
+    g.beginPath();
+    g.arc(cx, cy, FRUIT_DRAW_HEIGHT / 2 - 2, 0, Math.PI * 2);
+    g.fill();
+  }
+
   function drawSnake() {
     for (let i = snake.length - 1; i >= 1; i--) {
       roundedCell(snake[i], COLOR_SNAKE_BODY);
@@ -206,6 +286,7 @@ export function createSerpienteEngine(
 
   function draw() {
     drawBoard();
+    drawFruit();
     drawSnake();
   }
 
@@ -216,8 +297,18 @@ export function createSerpienteEngine(
     }
     const v = DIRECTION_VECTOR[direction];
     const head = snake[0];
-    snake.unshift({ x: head.x + v.x, y: head.y + v.y });
-    snake.pop();
+    const newHead = { x: head.x + v.x, y: head.y + v.y };
+    snake.unshift(newHead);
+    if (fruit && newHead.x === fruit.cell.x && newHead.y === fruit.cell.y) {
+      // Comer: la cola no se retira, la serpiente crece 1 segmento.
+      score += POINTS_PER_FRUIT;
+      fruitsEaten += 1;
+      level = 1 + Math.floor(fruitsEaten / FRUITS_PER_LEVEL);
+      spawnFruit();
+    } else {
+      snake.pop();
+    }
+    emitState();
   }
 
   function handleKeyDown(e: KeyboardEvent) {
@@ -255,10 +346,7 @@ export function createSerpienteEngine(
   }
 
   resetSnake();
-
-  // Referencias a constantes de pasos posteriores (fruta, puntos, nivel).
-  void [POINTS_PER_FRUIT, FRUITS_PER_LEVEL, FRUIT_SPRITE_URL];
-  void [FRUIT_DRAW_HEIGHT, SPRITE_ATLAS];
+  spawnFruit();
 
   return {
     start() {
@@ -280,7 +368,9 @@ export function createSerpienteEngine(
     restart() {
       score = 0;
       level = 1;
+      fruitsEaten = 0;
       resetSnake();
+      spawnFruit();
       emitState();
     },
   };
