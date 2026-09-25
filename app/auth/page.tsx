@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { useSession } from "@/contexts/session-context";
+import { normalizePlayerName } from "@/lib/player-name";
 
 const inputCls =
   "border border-cian/30 bg-cian/5 px-3.5 py-3.5 text-[15px] text-foreground focus:border-cian focus:shadow-[0_0_20px_rgba(0,245,255,.4)]";
@@ -20,7 +21,7 @@ export default function AuthPage() {
   // Demo local: no hay backend. Iniciar sesión, crear cuenta y los botones
   // sociales hacen lo mismo: sesión simulada con el nombre introducido.
   const submit = () => {
-    const name = (user || "JUGADOR_01").toUpperCase().slice(0, 14);
+    const name = normalizePlayerName(user) || "JUGADOR_01";
     login(name);
     router.push("/");
   };
