@@ -135,6 +135,7 @@ export function createSerpienteEngine(
   let lastTime = 0;
   let rafId = 0;
   let running = false;
+  let gameOver = false;
   let fruit: { cell: Cell; key: string } | null = null;
   let fruitsEaten = 0;
   let lastEmitted: SerpienteState | null = null;
@@ -298,8 +299,23 @@ export function createSerpienteEngine(
     const v = DIRECTION_VECTOR[direction];
     const head = snake[0];
     const newHead = { x: head.x + v.x, y: head.y + v.y };
+    const eats =
+      fruit !== null &&
+      newHead.x === fruit.cell.x &&
+      newHead.y === fruit.cell.y;
+
+    const hitsWall =
+      newHead.x < 0 || newHead.x >= COLS || newHead.y < 0 || newHead.y >= ROWS;
+    // Si no come, la cola se retira en este mismo tick: su celda queda libre.
+    const body = eats ? snake : snake.slice(0, -1);
+    const hitsSelf = body.some((c) => c.x === newHead.x && c.y === newHead.y);
+    if (hitsWall || hitsSelf) {
+      endGame();
+      return;
+    }
+
     snake.unshift(newHead);
-    if (fruit && newHead.x === fruit.cell.x && newHead.y === fruit.cell.y) {
+    if (eats) {
       // Comer: la cola no se retira, la serpiente crece 1 segmento.
       score += POINTS_PER_FRUIT;
       fruitsEaten += 1;
@@ -309,13 +325,34 @@ export function createSerpienteEngine(
       snake.pop();
     }
     emitState();
+    // Tablero lleno: la victoria se trata igual que la derrota.
+    if (snake.length === COLS * ROWS) endGame();
+  }
+
+  function endGame() {
+    if (gameOver) return;
+    gameOver = true;
+    moving = false;
+    emitState();
+    handlers.onGameOver(score);
+  }
+
+  function setPausedState(value: boolean) {
+    if (paused === value) return;
+    paused = value;
+    emitState(); // también cuando cambia por Escape/P interno
   }
 
   function handleKeyDown(e: KeyboardEvent) {
+    if (e.key === "Escape" || e.key === "p" || e.key === "P") {
+      e.preventDefault();
+      if (!gameOver) setPausedState(!paused);
+      return;
+    }
     const next = KEY_TO_DIRECTION[e.key];
     if (!next) return;
     e.preventDefault();
-    if (paused) return;
+    if (paused || gameOver) return;
     if (!moving) {
       // Primera tecla: cualquier dirección salvo la opuesta a la inicial.
       if (next === OPPOSITE[direction]) return;
@@ -363,12 +400,14 @@ export function createSerpienteEngine(
       cancelAnimationFrame(rafId);
     },
     setPaused(value: boolean) {
-      paused = value;
+      setPausedState(value);
     },
     restart() {
       score = 0;
       level = 1;
       fruitsEaten = 0;
+      gameOver = false;
+      paused = false;
       resetSnake();
       spawnFruit();
       emitState();
