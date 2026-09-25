@@ -20,6 +20,11 @@ import {
   RompemurosGame,
   type RompemurosGameHandle,
 } from "@/components/games/rompemuros/rompemuros-game";
+import type { SerpienteState } from "@/components/games/serpiente/engine";
+import {
+  SerpienteGame,
+  type SerpienteGameHandle,
+} from "@/components/games/serpiente/serpiente-game";
 import { useCredits } from "@/contexts/credits-context";
 import { useSession } from "@/contexts/session-context";
 import type { Game } from "@/lib/types";
@@ -64,9 +69,11 @@ export function PlayRoom({ game }: { game: Game }) {
   const isAsteroids = game.id === "asteroides";
   const isBloques = game.id === "bloques";
   const isRompemuros = game.id === "rompemuros";
+  const isSerpiente = game.id === "serpiente";
   const gameRef = useRef<AsteroidsGameHandle>(null);
   const bloquesGameRef = useRef<BloquesGameHandle>(null);
   const rompemurosGameRef = useRef<RompemurosGameHandle>(null);
+  const serpienteGameRef = useRef<SerpienteGameHandle>(null);
   const typerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   useEffect(
     () => () => {
@@ -123,6 +130,18 @@ export function PlayRoom({ game }: { game: Game }) {
     setOver(true);
   };
 
+  const handleSerpienteStateChange = (state: SerpienteState) => {
+    setScore(state.score);
+    setLevel(state.level);
+    setPaused(state.paused);
+  };
+
+  const handleSerpienteGameOver = (finalScore: number) => {
+    setScore(finalScore);
+    setPaused(false);
+    setOver(true);
+  };
+
   const handleSave = async () => {
     setSaving(true);
     setSaveError(null);
@@ -169,6 +188,10 @@ export function PlayRoom({ game }: { game: Game }) {
       setLives(3);
       setLevel(1);
     }
+    if (isSerpiente) {
+      serpienteGameRef.current?.restart();
+      setLevel(1);
+    }
   };
 
   return (
@@ -182,11 +205,13 @@ export function PlayRoom({ game }: { game: Game }) {
                 value={score.toLocaleString("es-ES")}
                 className="text-amarillo [text-shadow:0_0_12px_rgba(245,255,0,.5)]"
               />
-              <HudStat
-                label="VIDAS"
-                value={"♥".repeat(lives)}
-                className="text-magenta"
-              />
+              {!isSerpiente ? (
+                <HudStat
+                  label="VIDAS"
+                  value={"♥".repeat(lives)}
+                  className="text-magenta"
+                />
+              ) : null}
               <HudStat
                 label="NIVEL"
                 value={level.toString().padStart(2, "0")}
@@ -221,7 +246,9 @@ export function PlayRoom({ game }: { game: Game }) {
 
       <CrtFrame
         background={
-          isAsteroids || isBloques || isRompemuros ? "#000" : game.thumb
+          isAsteroids || isBloques || isRompemuros || isSerpiente
+            ? "#000"
+            : game.thumb
         }
         label=""
         className="mt-6"
@@ -247,6 +274,13 @@ export function PlayRoom({ game }: { game: Game }) {
               onStateChange={handleRompemurosStateChange}
               onGameOver={handleRompemurosGameOver}
             />
+          ) : isSerpiente ? (
+            <SerpienteGame
+              ref={serpienteGameRef}
+              paused={paused}
+              onStateChange={handleSerpienteStateChange}
+              onGameOver={handleSerpienteGameOver}
+            />
           ) : undefined
         }
       >
@@ -267,12 +301,14 @@ export function PlayRoom({ game }: { game: Game }) {
               ? "← → MOVER · ↑ / X ROTAR · ↓ BAJAR · ESPACIO CAÍDA"
               : isRompemuros
                 ? "← → / A D / RATÓN MOVER · ESPACIO / CLIC LANZAR · 1 2 3 DIFICULTAD · ESC / P PAUSA"
-                : "MUEVE CON EL RATÓN O ← →"}
+                : isSerpiente
+                  ? "← ↑ ↓ → / WASD MOVER · ESC / P PAUSA"
+                  : "MUEVE CON EL RATÓN O ← →"}
         </span>
         <span>ARCADE VAULT CRT-19</span>
       </div>
 
-      {!isAsteroids && !isBloques && !isRompemuros ? (
+      {!isAsteroids && !isBloques && !isRompemuros && !isSerpiente ? (
         <div className="mt-6 flex justify-center">
           <button
             type="button"
