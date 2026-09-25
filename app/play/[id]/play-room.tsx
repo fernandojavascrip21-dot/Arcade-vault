@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { saveScoreAction } from "@/app/play/[id]/actions";
 import { CrtFrame } from "@/components/crt-frame";
+import { GameOverRanking } from "@/components/game-over-ranking";
 import {
   AsteroidsGame,
   type AsteroidsGameHandle,
@@ -73,7 +74,10 @@ export function PlayRoom({ game }: { game: Game }) {
   const [saveMsg, setSaveMsg] = useState("");
   // null = sin tocar: el campo muestra el nombre de la sesión (si lo hay).
   const [nameDraft, setNameDraft] = useState<string | null>(null);
-  const [, setSavedResult] = useState<SavedResult | null>(null);
+  const [savedResult, setSavedResult] = useState<{
+    result: SavedResult;
+    name: string;
+  } | null>(null);
 
   const isAsteroids = game.id === "asteroides";
   const isBloques = game.id === "bloques";
@@ -171,9 +175,12 @@ export function PlayRoom({ game }: { game: Game }) {
 
     if (name !== GUEST_NAME) setName(name);
     setSavedResult({
-      board: result.board,
-      rank: result.rank,
-      total: result.total,
+      result: {
+        board: result.board,
+        rank: result.rank,
+        total: result.total,
+      },
+      name,
     });
     setSaved(true);
     setSaveMsg("");
@@ -345,7 +352,7 @@ export function PlayRoom({ game }: { game: Game }) {
 
       {over ? (
         <div className="fixed inset-0 z-[70] grid animate-fade place-items-center bg-[rgba(4,4,9,.86)] p-5 backdrop-blur-sm">
-          <div className="grid w-full max-w-[460px] justify-items-center gap-5 border border-magenta bg-[#0c0a12] px-7 py-9 text-center shadow-[0_0_60px_rgba(255,0,110,.4)]">
+          <div className="grid max-h-[92vh] w-full max-w-[460px] justify-items-center overflow-y-auto gap-5 border border-magenta bg-[#0c0a12] px-7 py-9 text-center shadow-[0_0_60px_rgba(255,0,110,.4)]">
             <div className="font-display text-xl tracking-wider text-magenta [text-shadow:0_0_18px_rgba(255,0,110,.7)]">
               FIN DEL JUEGO
             </div>
@@ -369,6 +376,10 @@ export function PlayRoom({ game }: { game: Game }) {
                   <input
                     value={nameValue}
                     onChange={(e) => setNameDraft(e.target.value)}
+                    // Los motores escuchan el teclado en window y cancelan sus
+                    // teclas (A, S, D, P...): sin esto el input no las recibe.
+                    onKeyDown={(e) => e.stopPropagation()}
+                    onKeyUp={(e) => e.stopPropagation()}
                     maxLength={NAME_MAX}
                     placeholder="JUGADOR_01"
                     autoComplete="off"
@@ -403,6 +414,14 @@ export function PlayRoom({ game }: { game: Game }) {
               <div className="text-[11px] leading-relaxed text-magenta">
                 {saveError}
               </div>
+            ) : null}
+
+            {savedResult ? (
+              <GameOverRanking
+                result={savedResult.result}
+                name={savedResult.name}
+                score={score}
+              />
             ) : null}
 
             {saveMsg ? (
