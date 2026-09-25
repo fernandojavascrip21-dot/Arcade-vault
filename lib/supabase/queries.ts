@@ -2,7 +2,7 @@
 // Server Components (page.tsx); nunca desde código de cliente.
 
 import { createClient } from "@/lib/supabase/server";
-import type { BoardRow, Game } from "@/lib/types";
+import type { BoardRow, Game, GeneralRow, HistoryRow } from "@/lib/types";
 
 type GameRow = {
   id: string;
@@ -103,4 +103,73 @@ export async function getTopPlayersGlobal(limit = 5): Promise<BoardRow[]> {
     .limit(limit);
   if (error) throw error;
   return (data ?? []).map(toBoardRow);
+}
+
+// Ranking general (spec 12): mejor marca de cada jugador en cada juego (vista
+// player_best_scores) y total = suma de esas marcas, ordenado por total.
+export async function getGeneralBoard(limit = 20): Promise<GeneralRow[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("player_best_scores")
+    .select("player_name, game_id, best_score");
+  if (error) throw error;
+
+  const byPlayer = new Map<string, GeneralRow>();
+  for (const row of data ?? []) {
+    if (row.player_name === null || row.game_id === null) continue;
+    const entry: GeneralRow = byPlayer.get(row.player_name) ?? {
+      name: row.player_name,
+      total: 0,
+      byGame: {},
+    };
+    entry.byGame[row.game_id] = row.best_score ?? 0;
+    entry.total += row.best_score ?? 0;
+    byPlayer.set(row.player_name, entry);
+  }
+
+  return [...byPlayer.values()]
+    .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name))
+    .slice(0, limit);
+}
+
+// Historial personal ("MIS PARTIDAS"): más recientes primero.
+export async function getPlayerHistory(
+  name: string,
+  limit = 100,
+): Promise<HistoryRow[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("scores")
+    .select("game_id, score, created_at")
+    .eq("player_name", name)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data ?? []).map((row) => ({
+    gameId: row.game_id,
+    score: row.score,
+    date: formatDate(row.created_at),
+  }));
+}
+
+// Puesto de una puntuación en un juego: 1 + cuántas son estrictamente mayores.
+export async function getScoreRank(
+  gameId: string,
+  score: number,
+): Promise<{ rank: number; total: number }> {
+  const supabase = await createClient();
+  const [greater, all] = await Promise.all([
+    supabase
+      .from("scores")
+      .select("*", { count: "exact", head: true })
+      .eq("game_id", gameId)
+      .gt("score", score),
+    supabase
+      .from("scores")
+      .select("*", { count: "exact", head: true })
+      .eq("game_id", gameId),
+  ]);
+  if (greater.error) throw greater.error;
+  if (all.error) throw all.error;
+  return { rank: (greater.count ?? 0) + 1, total: all.count ?? 0 };
 }
