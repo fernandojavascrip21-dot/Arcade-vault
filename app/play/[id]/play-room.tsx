@@ -27,7 +27,13 @@ import {
 } from "@/components/games/serpiente/serpiente-game";
 import { useCredits } from "@/contexts/credits-context";
 import { useSession } from "@/contexts/session-context";
-import type { Game } from "@/lib/types";
+import {
+  GUEST_NAME,
+  NAME_MAX,
+  normalizePlayerName,
+  validatePlayerName,
+} from "@/lib/player-name";
+import type { Game, SavedResult } from "@/lib/types";
 
 const SAVED_TEXT = "PUNTUACIÓN GUARDADA";
 
@@ -53,7 +59,7 @@ function HudStat({
 export function PlayRoom({ game }: { game: Game }) {
   const router = useRouter();
   const { spendCredit } = useCredits();
-  const { user } = useSession();
+  const { user, setName } = useSession();
 
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(3);
@@ -65,6 +71,9 @@ export function PlayRoom({ game }: { game: Game }) {
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveMsg, setSaveMsg] = useState("");
+  // null = sin tocar: el campo muestra el nombre de la sesión (si lo hay).
+  const [nameDraft, setNameDraft] = useState<string | null>(null);
+  const [, setSavedResult] = useState<SavedResult | null>(null);
 
   const isAsteroids = game.id === "asteroides";
   const isBloques = game.id === "bloques";
@@ -142,10 +151,17 @@ export function PlayRoom({ game }: { game: Game }) {
     setOver(true);
   };
 
-  const handleSave = async () => {
+  const nameValue = nameDraft ?? user ?? "";
+  const nameNormalized = normalizePlayerName(nameValue);
+  const nameError = nameNormalized
+    ? validatePlayerName(nameNormalized)
+    : "Escribe tu nombre para guardar.";
+  const showNameError = nameDraft !== null && nameDraft !== "" && nameError;
+
+  const handleSave = async (name: string) => {
     setSaving(true);
     setSaveError(null);
-    const result = await saveScoreAction(game.id, playerName, score);
+    const result = await saveScoreAction(game.id, name, score);
     setSaving(false);
 
     if (!result.ok) {
@@ -153,6 +169,12 @@ export function PlayRoom({ game }: { game: Game }) {
       return;
     }
 
+    if (name !== GUEST_NAME) setName(name);
+    setSavedResult({
+      board: result.board,
+      rank: result.rank,
+      total: result.total,
+    });
     setSaved(true);
     setSaveMsg("");
     let i = 0;
@@ -175,6 +197,7 @@ export function PlayRoom({ game }: { game: Game }) {
     setOver(false);
     setPaused(false);
     setSaved(false);
+    setSavedResult(null);
     setSaveError(null);
     setSaveMsg("");
     if (isAsteroids) gameRef.current?.restart();
@@ -334,14 +357,46 @@ export function PlayRoom({ game }: { game: Game }) {
             </div>
 
             {!saved ? (
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={saving}
-                className="w-full whitespace-nowrap border border-cian bg-cian/5 p-4 font-display text-[11px] text-cian transition-colors hover:bg-cian hover:text-[#0a0a0f] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+              <form
+                className="grid w-full gap-3"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (!nameError && !saving) handleSave(nameNormalized);
+                }}
               >
-                {saving ? "GUARDANDO..." : "GUARDAR PUNTUACIÓN"}
-              </button>
+                <label className="grid gap-2 text-left text-[10px] uppercase tracking-[2px] text-[#6f7d88]">
+                  Tu nombre
+                  <input
+                    value={nameValue}
+                    onChange={(e) => setNameDraft(e.target.value)}
+                    maxLength={NAME_MAX}
+                    placeholder="JUGADOR_01"
+                    autoComplete="off"
+                    aria-invalid={showNameError ? true : undefined}
+                    className="border border-cian/30 bg-cian/5 px-3.5 py-3 text-[15px] uppercase text-foreground focus:border-cian focus:shadow-[0_0_20px_rgba(0,245,255,.4)]"
+                  />
+                </label>
+                {showNameError ? (
+                  <div className="text-left text-[11px] leading-relaxed text-magenta">
+                    {nameError}
+                  </div>
+                ) : null}
+                <button
+                  type="submit"
+                  disabled={saving || nameError !== null}
+                  className="w-full whitespace-nowrap border border-cian bg-cian/5 p-4 font-display text-[11px] text-cian transition-colors hover:bg-cian hover:text-[#0a0a0f] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {saving ? "GUARDANDO..." : "GUARDAR PUNTUACIÓN"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSave(GUEST_NAME)}
+                  disabled={saving}
+                  className="whitespace-nowrap font-display text-[9px] text-[#8b98a3] underline-offset-4 transition-colors hover:text-amarillo hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  GUARDAR COMO INVITADO
+                </button>
+              </form>
             ) : null}
 
             {saveError ? (
