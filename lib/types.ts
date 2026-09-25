@@ -20,3 +20,24 @@ export interface ScoreEntry {
 
 // Fila ya resuelta para pintar rankings.
 export type BoardRow = ScoreEntry;
+
+// Ranking general (spec 12): una fila por jugador con su mejor marca por juego.
+export interface GeneralRow {
+  name: string;
+  total: number; // suma de sus mejores marcas
+  byGame: Record<string, number>; // gameId -> mejor marca (ausente = no jugó)
+}
+
+// Partida del historial personal ("MIS PARTIDAS").
+export interface HistoryRow {
+  gameId: string;
+  score: number;
+  date: string; // "DD/MM/AAAA"
+}
+
+// Resultado de guardar una puntuación: dónde quedó el jugador en ese juego.
+export interface SavedResult {
+  board: BoardRow[]; // top 10 del juego
+  rank: number; // 1 + cuántas puntuaciones son estrictamente mayores
+  total: number; // total de partidas guardadas de ese juego
+}
