@@ -3,7 +3,7 @@
 > **Status:** Aprovado
 > **Depends on:** SPEC 01, SPEC 06, SPEC 07, SPEC 10
 > **Date:** 2026-09-23
-> **Objective:** Crear desde cero el motor de Serpiente (rejilla 20×20, frutas del atlas `fruits.png`) como componente React/Canvas e integrarlo en `/play/serpiente`, reemplazando ahí el simulador de `PlayRoom`, reutilizando la fila `serpiente` ya existente en la tabla `games` de Supabase.
+> **Objective:** Crear desde cero el motor de Serpiente (rejilla 32×20, frutas del atlas `fruits.png`) como componente React/Canvas e integrarlo en `/play/serpiente`, reemplazando ahí el simulador de `PlayRoom`, reutilizando la fila `serpiente` ya existente en la tabla `games` de Supabase.
 
 ---
 
@@ -20,12 +20,12 @@ La tabla `games` ya contiene la fila `serpiente` (categoría "Clásico", "Crece 
 **In:**
 
 - Nuevo módulo `components/games/serpiente/engine.ts`: motor completo en un único archivo (mismo criterio que los otros motores), con:
-  - Rejilla de 20×20 celdas de 40 px sobre un canvas cuadrado de 800×800 (1:1, letterbox por `object-contain` dentro de la `CrtFrame`).
+  - Rejilla de 32×20 celdas de 40 px sobre un canvas de 1280×800 (16:10, la misma proporción que la `CrtFrame`, así que el canvas ocupa todo el espacio disponible sin franjas negras; el canvas usa `object-contain` por seguridad).
   - Movimiento por ticks discretos por celda; muerte al chocar con el muro o con el propio cuerpo (una sola vida).
   - Una fruta a la vez en una celda libre aleatoria; al comerla, la serpiente crece 1 segmento y suma 10 puntos.
   - Nivel = `1 + floor(frutasComidas / 5)`; la velocidad aumenta con cada nivel.
   - Controles con flechas y WASD; pausa interna con `Escape` / `P` sincronizada con `PlayRoom`.
-  - Fin de partida único: `onGameOver(finalScore)`, también si la serpiente llena las 400 celdas (victoria tratada igual que derrota, como en el spec 10).
+  - Fin de partida único: `onGameOver(finalScore)`, también si la serpiente llena las 640 celdas (victoria tratada igual que derrota, como en el spec 10).
   - Serpiente dibujada con formas de canvas (segmentos redondeados, cabeza con ojos); frutas dibujadas con el atlas de `fruits.png`.
 - `SPRITE_ATLAS` de `sprites.js` portado como constante local del motor (sin `window`), solo con las coordenadas de las frutas.
 - Copia de `fruits.png` a `public/games/serpiente/fruits.png`.
@@ -47,11 +47,11 @@ La tabla `games` ya contiene la fila `serpiente` (categoría "Clásico", "Crece 
 
 ```ts
 // components/games/serpiente/engine.ts
-export const SERPIENTE_WIDTH = 800;
+export const SERPIENTE_WIDTH = 1280;
 export const SERPIENTE_HEIGHT = 800;
 
 const CELL = 40;
-const COLS = 20; // 800 / 40
+const COLS = 32; // 1280 / 40
 const ROWS = 20; // 800 / 40
 const INITIAL_LENGTH = 3;
 const POINTS_PER_FRUIT = 10;
@@ -138,7 +138,7 @@ Sin cambios en la base de datos: la fila `serpiente` de `public.games` ya existe
 3. Añadir en el motor el bucle RAF con paso fijo por tick, entrada de teclado (flechas/WASD, cola de giro, sin 180°) y movimiento; arranque quieto hasta la primera tecla.
 4. Añadir fruta (celda libre aleatoria, sprite del atlas con carga asíncrona y fallback de círculo), crecimiento, puntuación, nivel y velocidad; emitir `onStateChange` solo cuando cambia.
 5. Añadir colisión con muro y cuerpo, condición de tablero lleno, `onGameOver(finalScore)` una sola vez, `setPaused`, pausa interna `Escape`/`P` (emite `paused` en el estado) y `restart()`.
-6. Crear `components/games/serpiente/serpiente-game.tsx` (mismo patrón que `asteroids-game.tsx`: refs para callbacks, motor montado una vez, `setPaused` en efecto, `restart()` por `useImperativeHandle`, canvas 800×800 con `h-full w-full bg-black object-contain`).
+6. Crear `components/games/serpiente/serpiente-game.tsx` (mismo patrón que `asteroids-game.tsx`: refs para callbacks, motor montado una vez, `setPaused` en efecto, `restart()` por `useImperativeHandle`, canvas 1280×800 con `h-full w-full bg-black object-contain`).
 7. Integrar en `app/play/[id]/play-room.tsx`: `isSerpiente`, `serpienteGameRef`, `handleSerpienteStateChange` (score, level, `setPaused(state.paused)`), `handleSerpienteGameOver`; fondo `#000`; `art`; texto de controles `← ↑ ↓ → / WASD MOVER · ESC / P PAUSA`; ocultar el simulador; mostrar en el HUD externo solo PUNTUACIÓN y NIVEL (sin VIDAS) para este juego; en `replay()` llamar a `restart()` y `setLevel(1)`.
 8. Verificar el flujo completo en `/play/serpiente` (jugar, morir, guardar puntuación, ver el ranking, jugar de nuevo) y ejecutar `npm run lint` y `npm run build`.
 
@@ -146,7 +146,7 @@ Sin cambios en la base de datos: la fila `serpiente` de `public.games` ya existe
 
 ## 5 — Acceptance criteria
 
-- [ ] `/play/serpiente` muestra el canvas del juego en la `CrtFrame` con franjas negras laterales (tablero 1:1 dentro de 16:10) y ya no muestra el botón "SIMULAR FIN DE PARTIDA".
+- [ ] `/play/serpiente` muestra el canvas del juego en la `CrtFrame` ocupando todo el marco (canvas 16:10, sin franjas negras) y ya no muestra el botón "SIMULAR FIN DE PARTIDA".
 - [ ] Al cargar, la serpiente (3 celdas) permanece quieta hasta pulsar una dirección distinta de `←`.
 - [ ] Las flechas y WASD cambian la dirección; pulsar la dirección opuesta a la actual no hace nada.
 - [ ] Comer una fruta suma exactamente 10 puntos y alarga la serpiente 1 segmento.
@@ -167,8 +167,8 @@ Sin cambios en la base de datos: la fila `serpiente` de `public.games` ya existe
 ## 6 — Decisions taken and discarded
 
 - **Sí:** diseñar el motor desde cero (modo "sin carpeta de referencia"). Motivo: solo existen assets, no hay `game.js` que portar.
-- **Sí:** rejilla 20×20 con celdas de 40 px sobre 800×800 (decisión explícita del usuario: tablero más grande). Motivo: tablero cuadrado con más espacio de juego y celdas donde el sprite de fruta se ve bien.
-- **No:** 20×15 sobre 800×600 (4:3), 32×24 de 25 px y 640×400 (16:10). Motivo: el usuario pidió un tablero más grande (800×800); 32×24 hace la fruta muy pequeña.
+- **Sí:** rejilla 32×20 con celdas de 40 px sobre 1280×800 (decisiones explícitas del usuario: tablero de 800 px de alto y canvas que use todo el espacio de la `CrtFrame`). Motivo: 16:10 exacto, sin franjas ni deformación, y celdas donde el sprite de fruta se ve bien.
+- **No:** 20×15 sobre 800×600 (4:3), 20×20 sobre 800×800 (1:1, dejaba franjas negras), 25×16 sobre 1000×640 (no llena del todo), estirar un canvas cuadrado (deforma celdas y frutas), 32×24 de 25 px y 640×400 (16:10). Motivo: el usuario pidió un tablero más grande y que el canvas use todo el espacio; 32×24 hace la fruta muy pequeña.
 - **Sí:** muerte al chocar con muro o cuerpo, una sola vida. Motivo: coincide con el texto largo ya publicado en `games.long` ("Un solo choque contra el muro o contra ti mismo termina la partida").
 - **No:** paredes que envuelven y dificultad elegible. Motivo: contradicen `games.long` y amplían alcance.
 - **Sí:** 10 puntos fijos por fruta; el nivel sube cada 5 frutas y acelera el tick. Motivo: regla simple que alimenta los campos NIVEL y PUNTUACIÓN ya existentes en el HUD.

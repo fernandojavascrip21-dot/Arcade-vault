@@ -20,9 +20,8 @@ interface SerpienteGameProps {
   onGameOver: (finalScore: number) => void;
 }
 
-// Canvas 800x800 (1:1) escalado por CSS con object-contain: encaja dentro de
-// la caja 16:10 de CrtFrame con franjas negras laterales, sin tocar ese
-// componente.
+// Canvas 1280x800 (16:10) escalado por CSS: tiene la misma proporción que la
+// caja de CrtFrame, así que la ocupa entera sin franjas negras ni deformación.
 export const SerpienteGame = forwardRef<
   SerpienteGameHandle,
   SerpienteGameProps

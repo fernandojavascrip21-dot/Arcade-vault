@@ -1,8 +1,8 @@
-export const SERPIENTE_WIDTH = 800;
+export const SERPIENTE_WIDTH = 1280;
 export const SERPIENTE_HEIGHT = 800;
 
 const CELL = 40;
-const COLS = 20; // 800 / 40
+const COLS = 32; // 1280 / 40
 const ROWS = 20; // 800 / 40
 const INITIAL_LENGTH = 3;
 const INITIAL_HEAD_X = 6;
