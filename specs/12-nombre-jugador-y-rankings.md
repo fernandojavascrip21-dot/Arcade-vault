@@ -1,6 +1,6 @@
 # SPEC 12 — Nombre del jugador, historial de partidas y rankings por juego y general
 
-> **Status:** Aprovado
+> **Status:** Implementado
 > **Depends on:** SPEC 01, SPEC 07, SPEC 11
 > **Date:** 2026-09-24
 > **Objective:** Permitir que el jugador escriba (y se le recuerde) su nombre al terminar una partida para guardar su puntuación, mostrarle en "FIN DEL JUEGO" el top 10 del juego que jugó con su posición, y ofrecer en `/hall-of-fame` un ranking general por jugador subdividido por juego y una pestaña "MIS PARTIDAS" con su historial.
