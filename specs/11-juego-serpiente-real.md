@@ -1,6 +1,6 @@
 # SPEC 11 — Motor real del juego Serpiente
 
-> **Status:** Aprovado
+> **Status:** Implementado
 > **Depends on:** SPEC 01, SPEC 06, SPEC 07, SPEC 10
 > **Date:** 2026-09-23
 > **Objective:** Crear desde cero el motor de Serpiente (rejilla 32×20, frutas del atlas `fruits.png`) como componente React/Canvas e integrarlo en `/play/serpiente`, reemplazando ahí el simulador de `PlayRoom`, reutilizando la fila `serpiente` ya existente en la tabla `games` de Supabase.
