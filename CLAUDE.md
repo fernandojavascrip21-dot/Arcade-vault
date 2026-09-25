@@ -7,13 +7,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What this is
 
 **Arcade Vault** — a platform for playing games online and competing for the highest score
-(see `README.md`). This is a fresh `create-next-app` scaffold: almost no application code exists
-yet, so nearly everything is still to be built.
+(see `README.md`). Specs 01–12 are all implemented (`specs/`, status `Implementado`): visual
+screens, landing, English routes, About/contact (Resend), Supabase integration, catalog +
+leaderboards, four playable canvas games, light/dark theme, and player names with rankings.
+UI copy is in Spanish; routes, file names and code identifiers are in English (except game
+ids/slugs, which are Spanish).
 
 Development is **spec-driven**: features are designed with the `/spec` skill and implemented with
 `/spec-impl` (skills from `Klerith/fernando-skills`, installed via
 `npx skills@latest add Klerith/fernando-skills`). Prefer that workflow — write/confirm the spec
-before writing feature code.
+before writing feature code. Specs live in `specs/NN-slug.md` (Draft → Implementado);
+`/spec-impl` creates a `spec-NN-slug` branch (see `specs/.spec-config.yml`, `AutoCreateBranch`)
+and work lands via PR into `main`.
 
 ## Read this first
 
@@ -36,8 +41,28 @@ There is no test runner and no typecheck script configured. Type errors surface 
 (or `npx tsc --noEmit`). If you add a test runner, document the single-test invocation here.
 
 ## Skills
-Usa simepre el /frontend-design para diseñar las interfazes de ususarios
 
+Skills live in `.agents/skills/` and are symlinked from `.claude/skills/`.
+
+- `/spec` — design a feature spec (`specs/NN-slug.md`, state `Draft`). No code.
+- `/spec-impl NN-slug` — implement an approved spec.
+- `/add-game` — project-specific variant of `/spec` for integrating a new game (port from
+  `references/started-games/` or from scratch). Produces the spec only; `/spec-impl` does the work.
+- `/frontend-design` — **always use it when designing user interfaces** (project rule).
+
+## Hooks and MCP
+
+- `.claude/hooks/format-and-lint.sh` (PostToolUse on `Write|Edit`): runs Prettier on `.ts/.tsx/.js/.md`
+  files and `eslint --fix` on code files; unfixable ESLint errors block with exit 2. Don't fight it.
+- `.mcp.json` registers the **Supabase MCP** server (project `mfbnebhnhcbyaniksqav`). Schema changes
+  (new tables, new `games` rows) are applied as migrations through it, never from app code.
+- GitHub workflows `claude.yml` / `claude-code-review.yml` and a PR template live in `.github/`.
+
+## Environment variables
+
+Copy `.env.example`: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (public),
+`RESEND_API_KEY`, `CONTACT_TO_EMAIL` (server-only, used by `app/api/contact/route.ts`),
+`SUPERBASE_DB_PASSWORD`. Never commit real values.
 
 ## Architecture
 
@@ -56,3 +81,59 @@ Usa simepre el /frontend-design para diseñar las interfazes de ususarios
 - **Turbopack** is the default bundler for both dev and build. Adding a `webpack` config to
   `next.config.ts` will break `next build` unless you pass `--webpack`. Turbopack options go at the
   top level of `next.config.ts` (`turbopack: { ... }`), not under `experimental`.
+
+## Routes
+
+`/` (home, `app/home-client.tsx`) · `/games` (catalog + category filter) · `/game/[id]` (detail) ·
+`/play/[id]` (play room) · `/hall-of-fame` (rankings) · `/about` · `/auth` · `POST /api/contact` (Resend).
+Old Spanish routes (`/juego`, `/jugar`, `/salon-fama`) were removed with no redirects (spec 03).
+Pages are Server Components that fetch data and pass it to `*-client.tsx` / client components.
+
+## Data layer (Supabase)
+
+- Tables `games` (catalog) and `scores` (`game_id`, `player_name`, `score`). The catalog and
+  leaderboards are **not** in code anymore; `app/data.ts` only holds the UI category filter.
+- `lib/supabase/server.ts` (`createClient`, `@supabase/ssr`) for server code, `client.ts` for the browser.
+- `lib/supabase/queries.ts` — server-only reads: `getGames`, `getGameById`, `getBoard`,
+  `getBoardsForGames`, `getBestPerGame`, `getTopPlayersGlobal`, `getGeneralBoard`, `getPlayerHistory`,
+  `getScoreRank`. Never import from client code.
+- Server Actions: `saveScoreAction(gameId, playerName, score)` in `app/play/[id]/actions.ts`
+  (validates score/name/game, inserts, returns board + rank) and `getPlayerHistoryAction` in
+  `app/hall-of-fame/actions.ts`. The pipeline is generic by `game_id`: a new game needs only a new
+  `games` row.
+- Domain types in `lib/types.ts`; `lib/scores.ts` has `rankColor` (uses CSS tokens).
+- **Player names** (`lib/player-name.ts`, spec 12): `normalizePlayerName` (trim, collapse spaces,
+  uppercase, max 14) and `validatePlayerName` (3–14 chars, letters/digits/`_`/space; `INVITADO`
+  always valid). Shared by client and server; the **server always re-validates**.
+
+## Client state (`contexts/`, wired in `contexts/providers.tsx`)
+
+`ThemeProvider` → `SessionProvider` → `CreditsProvider`.
+- `theme-context` — `dark`/`light`, persisted in `localStorage` key `arcadevault.theme.v1`; an inline
+  anti-flash script in `app/layout.tsx` sets `data-theme` on `<html>` before hydration. Colors are CSS
+  tokens in `app/globals.css` (`--cian`, `--magenta`, `--amarillo`, `--rango-*`…) redefined for light
+  mode — use tokens, not hard-coded hex, so both themes work.
+- `session-context` — simulated session (no real auth); player name persisted in `localStorage`
+  key `arcade-vault:player-name` via `useSyncExternalStore`, falling back to memory. `playGuest()` = guest.
+- `credits-context` — simulated arcade credits (start 3, max 99), memory only.
+
+## Games
+
+Playable games (id → engine): `asteroides` (Asteroids), `bloques` (Tetris), `rompemuros` (Arkanoid),
+`serpiente` (Snake), under `components/games/<slug>/{engine.ts,<slug>-game.tsx}`.
+- `engine.ts` is framework-free: `create<Name>Engine(canvas, handlers)` → `{ start, stop, setPaused, restart }`,
+  pushes state via `onStateChange`, signals `onGameOver(finalScore)`; owns its RAF loop and key listeners.
+  It does not draw game-over or auto-restart — React does.
+- `<slug>-game.tsx` is a thin `forwardRef` wrapper mounting the engine in a `useEffect` and exposing
+  `restart()`, letterboxed inside `components/crt-frame.tsx` (16:10).
+- `app/play/[id]/play-room.tsx` integrates each game through explicit `game.id === "<slug>"` branches
+  (**not** a generic registry yet) — a new game adds its own branches there. On game over it uses
+  `components/game-over-ranking.tsx` to show rank + score; `hall-of-fame.tsx` shows general ranking,
+  per-game boards and the player's history (“MIS PARTIDAS”).
+- Add a game with `/add-game`. Reference sources: `references/started-games/` (asteroids, tetris,
+  arkanoid), sprites in `references/source-assets/`, original mockups in `references/resource/`.
+
+## Conventions
+
+- Commit messages follow `feat:` / `chore:` / `Refactor` style, one PR per spec (`spec-NN-slug`).
+- Next.js docs to consult first live in `node_modules/next/dist/docs/` (see AGENTS.md).
