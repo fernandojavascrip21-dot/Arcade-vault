@@ -50,6 +50,12 @@ Skills live in `.agents/skills/` and are symlinked from `.claude/skills/`.
   `references/started-games/` or from scratch). Produces the spec only; `/spec-impl` does the work.
 - `/frontend-design` — **always use it when designing user interfaces** (project rule).
 
+Subagents live in `.claude/agents/`:
+
+- `game-planner` (`model: inherit`) — evaluates game suggestions and decides which game fits the
+  platform next; keeps the traffic-light to-do list in `references/games-suggestion-all.md`
+  (done / pending by priority / discarded — no round history). Run it before `/add-game`.
+
 ## Hooks and MCP
 
 - `.claude/hooks/format-and-lint.sh` (PostToolUse on `Write|Edit`): runs Prettier on `.ts/.tsx/.js/.md`
@@ -109,6 +115,7 @@ Pages are Server Components that fetch data and pass it to `*-client.tsx` / clie
 ## Client state (`contexts/`, wired in `contexts/providers.tsx`)
 
 `ThemeProvider` → `SessionProvider` → `CreditsProvider`.
+
 - `theme-context` — `dark`/`light`, persisted in `localStorage` key `arcadevault.theme.v1`; an inline
   anti-flash script in `app/layout.tsx` sets `data-theme` on `<html>` before hydration. Colors are CSS
   tokens in `app/globals.css` (`--cian`, `--magenta`, `--amarillo`, `--rango-*`…) redefined for light
@@ -121,6 +128,7 @@ Pages are Server Components that fetch data and pass it to `*-client.tsx` / clie
 
 Playable games (id → engine): `asteroides` (Asteroids), `bloques` (Tetris), `rompemuros` (Arkanoid),
 `serpiente` (Snake), under `components/games/<slug>/{engine.ts,<slug>-game.tsx}`.
+
 - `engine.ts` is framework-free: `create<Name>Engine(canvas, handlers)` → `{ start, stop, setPaused, restart }`,
   pushes state via `onStateChange`, signals `onGameOver(finalScore)`; owns its RAF loop and key listeners.
   It does not draw game-over or auto-restart — React does.
@@ -130,6 +138,8 @@ Playable games (id → engine): `asteroides` (Asteroids), `bloques` (Tetris), `r
   (**not** a generic registry yet) — a new game adds its own branches there. On game over it uses
   `components/game-over-ranking.tsx` to show rank + score; `hall-of-fame.tsx` shows general ranking,
   per-game boards and the player's history (“MIS PARTIDAS”).
+- Pipeline for a new game: `game-planner` agent (decide which game) → `/add-game` (spec) →
+  `/spec-impl` (code). Games to-do: `references/games-suggestion-all.md`.
 - Add a game with `/add-game`. Reference sources: `references/started-games/` (asteroids, tetris,
   arkanoid), sprites in `references/source-assets/`, original mockups in `references/resource/`.
 
