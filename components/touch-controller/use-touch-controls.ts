@@ -2,8 +2,8 @@
 
 import { useCallback, useSyncExternalStore } from "react";
 
-// Visibilidad del control táctil (spec 13): automático por `(pointer: coarse)`
-// más una preferencia manual "on"/"off" en localStorage. Ambos se leen con
+// Visibilidad del control táctil (spec 13): solo en `(pointer: coarse)`, con
+// una preferencia manual "on"/"off" en localStorage para ocultarlo. Ambos se leen con
 // useSyncExternalStore (snapshot de servidor = oculto) para no desajustar la
 // hidratación, igual que la skin de Bloques en play-room.tsx.
 
@@ -70,7 +70,9 @@ export function useTouchControls() {
     serverPreference,
   );
 
-  const visible = preference === null ? isCoarse : preference === "on";
+  // La preferencia solo cuenta en táctil: en escritorio el panel nunca se
+  // muestra, porque ahí no existe el botón MANDO para quitarlo.
+  const visible = isCoarse && preference !== "off";
 
   const toggle = useCallback(() => {
     writePreference(visible ? "off" : "on");

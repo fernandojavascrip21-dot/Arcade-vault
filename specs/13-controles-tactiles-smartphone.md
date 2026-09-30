@@ -42,7 +42,7 @@ Todos los motores escuchan `keydown`/`keyup` en `window`. Por eso el control des
 - **Anti-gestos del navegador** en el panel: `touch-action: none`, `user-select: none`, `-webkit-touch-callout: none`, `onContextMenu` prevenido; así no hay scroll, zoom por doble toque ni menú contextual al mantener.
 - **Visibilidad "auto + toggle"**:
   - Detección táctil con `matchMedia("(pointer: coarse)")`.
-  - Preferencia en `localStorage` clave `arcadevault.touch-controls.v1` con valores `"on"` | `"off"`; ausente = automático (visible si `pointer: coarse`).
+  - Preferencia en `localStorage` clave `arcadevault.touch-controls.v1` con valores `"on"` | `"off"`. La preferencia **solo cuenta en dispositivos táctiles**: `visible = isCoarse && preferencia !== "off"`. En escritorio (`pointer: fine`) el panel no aparece nunca, haya lo que haya guardado.
   - Ambos leídos con `useSyncExternalStore` (snapshot de servidor/hidratación = oculto), igual que la skin de Bloques: sin `localStorage` en inicializadores de `useState` ni `setState` en efectos de montaje.
   - Botón **MANDO** en la barra superior de `PlayRoom` (junto a PAUSA/FIN), visible solo en dispositivos con `pointer: coarse` y solo en los 4 juegos reales; alterna mostrar/ocultar y persiste `"on"`/`"off"`.
 - **Integración en `app/play/[id]/play-room.tsx`**: el control se renderiza debajo de la `CrtFrame` solo para `isAsteroids || isBloques || isRompemuros || isSerpiente` y si la visibilidad resuelve a visible. Cuando está visible, se **oculta** la línea de ayuda de teclado (`"← → ROTAR · …"`); la etiqueta `ARCADE VAULT CRT-19` se mantiene.
@@ -115,7 +115,7 @@ Persistencia (solo navegador):
 
 | Clave `localStorage`            | Valores           | Ausente                                    |
 | ------------------------------- | ----------------- | ------------------------------------------ |
-| `arcadevault.touch-controls.v1` | `"on"` \| `"off"` | automático: visible si `(pointer: coarse)` |
+| `arcadevault.touch-controls.v1` | `"on"` \| `"off"` | visible si `(pointer: coarse)`; en `pointer: fine` nunca se muestra |
 
 ---
 
@@ -162,6 +162,7 @@ Persistencia (solo navegador):
 - **Deslizador horizontal**, no vertical como en la maqueta: la pala se mueve en horizontal, así que el arrastre es intuitivo.
 - **Universal con modo automático por `game.id`**, sin las pestañas laterales de la maqueta: el juego ya se conoce, elegir modo a mano sería un paso inútil y propenso a errores.
 - **Visibilidad por `(pointer: coarse)` + toggle MANDO persistido.** Descartado: por ancho de pantalla (mostraría el control en ventanas estrechas de escritorio y lo ocultaría en tablets) y solo automático (sin forma de ocultarlo con teclado Bluetooth).
+- **La preferencia MANDO solo cuenta en táctil** (cambio del 2026-09-30, durante la verificación): un `"on"` guardado en una sesión táctil (p. ej. DevTools en modo dispositivo, portátil táctil) hacía aparecer el panel en escritorio sin botón MANDO para quitarlo. Ahora en `pointer: fine` el panel nunca se muestra. Descartado: mostrar MANDO también en escritorio cuando el panel está visible (contradice el criterio de escritorio sin cambios y añade ruido a la barra).
 - **`useSyncExternalStore` con snapshot de servidor oculto**, mismo patrón que la skin de Bloques, para evitar errores de hidratación y la regla `react-hooks/set-state-in-effect`.
 - **DAS/ARR solo en Bloques (170 ms / 50 ms).** Asteroides y Rompemuros leen estado de teclas (mantener = keydown hasta keyup); Serpiente no necesita repetición.
 - **D-pad por zona angular** en vez de 4 botones independientes: permite deslizar entre direcciones, esencial en Serpiente.
