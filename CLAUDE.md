@@ -16,7 +16,9 @@ ids/slugs, which are Spanish).
 Development is **spec-driven**: features are designed with the `/spec` skill and implemented with
 `/spec-impl` (skills from `Klerith/fernando-skills`, installed via
 `npx skills@latest add Klerith/fernando-skills`). Prefer that workflow — write/confirm the spec
-before writing feature code. Specs live in `specs/NN-slug.md` (Draft → Implementado);
+before writing feature code. Small follow-ups to an implemented spec go in a dated
+**addendum** section of that spec (e.g. §8 "skins visuales" in `specs/08-juego-tetris-real.md`)
+instead of a new spec. Specs live in `specs/NN-slug.md` (Draft → Implementado);
 `/spec-impl` creates a `spec-NN-slug` branch (see `specs/.spec-config.yml`, `AutoCreateBranch`)
 and work lands via PR into `main`.
 
@@ -60,7 +62,8 @@ Subagents live in `.claude/agents/`:
   into **two** full numeric `Draft` specs with different mechanic resolutions (same id/category,
   same shape as specs 06/08/10/11) at `specs/game-jam/<slug>-a.md` and `<slug>-b.md`. No code, no
   Supabase. Review both, pick one, approve it, and renumber into `specs/NN-slug.md` before
-  `/spec-impl`.
+  `/spec-impl`. (`specs/game-jam/bombardero.md` is an earlier single-spec draft from before the
+  two-variant format.)
 
 ## Hooks and MCP
 
@@ -79,8 +82,8 @@ Copy `.env.example`: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHAB
 ## Architecture
 
 - **App Router only**, all under `app/`. `app/layout.tsx` is the root layout (loads Geist fonts via
-  `next/font/google`, sets `<html>`/`<body>`); `app/page.tsx` is `/`. The layout `metadata` is still
-  the scaffold default ("Create Next App") — update it when building real pages.
+  `next/font/google`, sets `<html>`/`<body>`); `app/page.tsx` is `/`. Layout `metadata` is set
+  (`title: "Arcade Vault"`).
 - **Route/layout prop types are global and generated** — `LayoutProps<"/">`, `PageProps<"/route">`,
   `RouteContext<...>` are injected by Next's typegen (`.next/types/`), not imported. Do not add manual
   imports for them.
@@ -129,13 +132,17 @@ Pages are Server Components that fetch data and pass it to `*-client.tsx` / clie
 - `session-context` — simulated session (no real auth); player name persisted in `localStorage`
   key `arcade-vault:player-name` via `useSyncExternalStore`, falling back to memory. `playGuest()` = guest.
 - `credits-context` — simulated arcade credits (start 3, max 99), memory only.
+- Not in `contexts/`: the Bloques skin preference lives in `app/play/[id]/play-room.tsx`
+  (`localStorage` key `arcadevault.bloques.skin.v1`, see Games).
 
 ## Games
 
 Playable games (id → engine): `asteroides` (Asteroids), `bloques` (Tetris), `rompemuros` (Arkanoid),
-`serpiente` (Snake), under `components/games/<slug>/{engine.ts,<slug>-game.tsx}`.
+`serpiente` (Snake), under `components/games/<slug>/{engine.ts,<slug>-game.tsx}` — except
+Asteroides, whose folder is `components/games/asteroids/` (`asteroids-game.tsx`).
 
-- `engine.ts` is framework-free: `create<Name>Engine(canvas, handlers)` → `{ start, stop, setPaused, restart }`,
+- `engine.ts` is framework-free: `create<Name>Engine(canvas, handlers, options?)` →
+  `{ start, stop, setPaused, restart }` (plus game-specific setters, e.g. Bloques `setSkin`),
   pushes state via `onStateChange`, signals `onGameOver(finalScore)`; owns its RAF loop and key listeners.
   It does not draw game-over or auto-restart — React does.
 - `<slug>-game.tsx` is a thin `forwardRef` wrapper mounting the engine in a `useEffect` and exposing
@@ -144,10 +151,19 @@ Playable games (id → engine): `asteroides` (Asteroids), `bloques` (Tetris), `r
   (**not** a generic registry yet) — a new game adds its own branches there. On game over it uses
   `components/game-over-ranking.tsx` to show rank + score; `hall-of-fame.tsx` shows general ranking,
   per-game boards and the player's history (“MIS PARTIDAS”).
+- **Bloques skins** (spec 08 §8): `BloquesSkin` = `retro | neon | pastel | pixel`, `BLOQUES_SKINS`
+  and `setSkin()` in `components/games/bloques/engine.ts` (redraws instantly, even paused);
+  `bloques-game.tsx` takes a controlled `skin` prop (same pattern as `paused`). The SKIN selector
+  sits in the `PlayRoom` top bar only when `isBloques`, persisted via `useSyncExternalStore`
+  (server/hydration snapshot is always `"retro"`). Don't read `localStorage` in a `useState`
+  initializer or `setState` in a mount effect — it causes a hydration error and trips the lint
+  rule `react-hooks/set-state-in-effect`. Client-only preference: no Supabase, no score impact.
 - Pipeline for a new game: `game-planner` agent (decide which game) → `/add-game` (spec) →
   `/spec-impl` (code). Games to-do: `references/games-suggestion-all.md`.
-- Add a game with `/add-game`. Reference sources: `references/started-games/` (asteroids, tetris,
-  arkanoid), sprites in `references/source-assets/`, original mockups in `references/resource/`.
+- Add a game with `/add-game`. Reference sources: `references/started-games/`
+  (`02-asteroids`, `03-tetris`, `04-arkanoid`) — these are **git submodules** (`.gitmodules`,
+  `ignore = dirty`); run `git submodule update --init` if empty and never commit changes inside
+  them. Sprites in `references/source-assets/`, original mockups in `references/resource/`.
 
 ## Conventions
 
