@@ -433,6 +433,8 @@ export interface RompemurosEngine {
   restart(): void;
   /** Cambia la skin y redibuja al instante, incluso en pausa. */
   setSkin(next: RompemurosSkin): void;
+  /** Coloca el centro de la pala en `ratio` (0..1) del ancho (control táctil). */
+  setPaddleX(ratio: number): void;
 }
 
 export interface RompemurosEngineOptions {
@@ -1144,6 +1146,15 @@ export function createRompemurosEngine(
       skin = next;
       // Redibuja ya: con la partida terminada el loop está detenido.
       draw();
+    },
+    setPaddleX(ratio: number) {
+      // Mismo criterio que handleMouseMove: ignorado en pausa o al terminar.
+      if (paused || finished) return;
+      paddle.x = clamp(
+        ratio * GAME_WIDTH - paddle.w / 2,
+        0,
+        GAME_WIDTH - paddle.w,
+      );
     },
   };
 }

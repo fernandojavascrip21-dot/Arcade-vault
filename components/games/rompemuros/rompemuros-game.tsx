@@ -13,6 +13,7 @@ import {
 
 export interface RompemurosGameHandle {
   restart(): void;
+  setPaddleX(ratio: number): void;
 }
 
 interface RompemurosGameProps {
@@ -77,6 +78,9 @@ export const RompemurosGame = forwardRef<
   useImperativeHandle(ref, () => ({
     restart() {
       engineRef.current?.restart();
+    },
+    setPaddleX(ratio: number) {
+      engineRef.current?.setPaddleX(ratio);
     },
   }));
 
