@@ -7,6 +7,7 @@ import {
   ROMPEMUROS_WIDTH,
   createRompemurosEngine,
   type RompemurosEngine,
+  type RompemurosSkin,
   type RompemurosState,
 } from "./engine";
 
@@ -16,6 +17,7 @@ export interface RompemurosGameHandle {
 
 interface RompemurosGameProps {
   paused: boolean;
+  skin: RompemurosSkin;
   onStateChange: (state: RompemurosState) => void;
   onGameOver: (finalScore: number) => void;
 }
@@ -25,7 +27,7 @@ interface RompemurosGameProps {
 export const RompemurosGame = forwardRef<
   RompemurosGameHandle,
   RompemurosGameProps
->(function RompemurosGame({ paused, onStateChange, onGameOver }, ref) {
+>(function RompemurosGame({ paused, skin, onStateChange, onGameOver }, ref) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<RompemurosEngine | null>(null);
 
@@ -44,10 +46,16 @@ export const RompemurosGame = forwardRef<
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const engine = createRompemurosEngine(canvas, {
-      onStateChange: (state) => onStateChangeRef.current(state),
-      onGameOver: (finalScore) => onGameOverRef.current(finalScore),
-    });
+    const engine = createRompemurosEngine(
+      canvas,
+      {
+        onStateChange: (state) => onStateChangeRef.current(state),
+        onGameOver: (finalScore) => onGameOverRef.current(finalScore),
+      },
+      // Valor de `skin` en el primer render: el efecto solo corre al montar;
+      // los cambios posteriores los aplica el efecto de `setSkin` de abajo.
+      { initialSkin: skin },
+    );
     engineRef.current = engine;
     engine.start();
 
@@ -55,11 +63,16 @@ export const RompemurosGame = forwardRef<
       engine.stop();
       engineRef.current = null;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     engineRef.current?.setPaused(paused);
   }, [paused]);
+
+  useEffect(() => {
+    engineRef.current?.setSkin(skin);
+  }, [skin]);
 
   useImperativeHandle(ref, () => ({
     restart() {

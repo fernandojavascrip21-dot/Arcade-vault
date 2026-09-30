@@ -15,11 +15,76 @@ const TICK_MIN_MS = 60;
 const FRUIT_SPRITE_URL = "/games/serpiente/fruits.png";
 const FRUIT_DRAW_HEIGHT = 34;
 
-const COLOR_BG_A = "#0b1a10";
-const COLOR_BG_B = "#0e2014";
-const COLOR_SNAKE_BODY = "#4ade80";
-const COLOR_SNAKE_HEAD = "#86efac";
-const COLOR_EYE = "#0b1a10";
+// Skins visuales (spec 11 §8): `clasico` es el aspecto original; `retro`
+// (fósforo ámbar) y `neon` (glow) solo cambian colores y trazo. No cambian
+// mecánica, rejilla, velocidades ni tamaños.
+export type SerpienteSkin = "clasico" | "retro" | "neon";
+
+export const SERPIENTE_SKINS: Array<{ id: SerpienteSkin; label: string }> = [
+  { id: "clasico", label: "CLÁSICO" },
+  { id: "retro", label: "RETRO" },
+  { id: "neon", label: "NEÓN" },
+];
+
+export const SERPIENTE_SKIN_STORAGE_KEY = "arcadevault.serpiente.skin.v1";
+
+interface SerpientePalette {
+  /** Casillas del damero (pares / impares). */
+  bgA: string;
+  bgB: string;
+  body: string;
+  head: string;
+  eye: string;
+  /** Fruta dibujada como forma (null = sprite de fruits.png, como el original). */
+  fruit: string | null;
+  /** Líneas de barrido CRT (null = sin scanlines). */
+  scanlines: string | null;
+}
+
+const SKIN_PALETTES: Record<SerpienteSkin, SerpientePalette> = {
+  // Valores originales sin alterar.
+  clasico: {
+    bgA: "#0b1a10",
+    bgB: "#0e2014",
+    body: "#4ade80",
+    head: "#86efac",
+    eye: "#0b1a10",
+    fruit: null,
+    scanlines: null,
+  },
+  // Fósforo ámbar (el verde ya es el aspecto clásico): la intensidad
+  // distingue fruta > cabeza > cuerpo.
+  retro: {
+    bgA: "#0a0700",
+    bgB: "#0f0a02",
+    body: "#b37000",
+    head: "#ffb000",
+    eye: "#0a0700",
+    fruit: "#ffe7b0",
+    scanlines: "rgba(0, 0, 0, 0.22)",
+  },
+  // Colores saturados con glow, alineados con --cian/--amarillo/--magenta.
+  neon: {
+    bgA: "#05050a",
+    bgB: "#0a0a14",
+    body: "#00f5ff",
+    head: "#f5ff00",
+    eye: "#05050a",
+    fruit: "#ff2d95",
+    scanlines: null,
+  },
+};
+
+const NEON_BODY_GLOW = 8;
+const NEON_HEAD_GLOW = 14;
+const NEON_FRUIT_GLOW = 12;
+const SCANLINE_SPACING = 3;
+
+interface SkinRenderer {
+  body(cell: Cell, color: string): void;
+  head(cell: Cell, color: string): void;
+  fruit(cx: number, cy: number, key: string, color: string): void;
+}
 
 type Direction = "up" | "down" | "left" | "right";
 
@@ -111,11 +176,18 @@ export interface SerpienteEngine {
   stop(): void;
   setPaused(paused: boolean): void;
   restart(): void;
+  /** Cambia la skin y redibuja al instante, incluso en pausa. */
+  setSkin(next: SerpienteSkin): void;
+}
+
+export interface SerpienteEngineOptions {
+  initialSkin?: SerpienteSkin; // default "clasico"
 }
 
 export function createSerpienteEngine(
   canvas: HTMLCanvasElement,
   handlers: SerpienteHandlers,
+  options?: SerpienteEngineOptions,
 ): SerpienteEngine {
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Canvas 2D no disponible");
@@ -139,6 +211,7 @@ export function createSerpienteEngine(
   let fruit: { cell: Cell; key: string } | null = null;
   let fruitsEaten = 0;
   let lastEmitted: SerpienteState | null = null;
+  let skin: SerpienteSkin = options?.initialSkin ?? "clasico";
 
   // El juego no espera a la imagen: hasta que cargue (o si falla) la fruta
   // se dibuja como círculo de color.
@@ -204,17 +277,17 @@ export function createSerpienteEngine(
   }
 
   function drawBoard() {
+    const palette = SKIN_PALETTES[skin];
     for (let y = 0; y < ROWS; y++) {
       for (let x = 0; x < COLS; x++) {
-        g.fillStyle = (x + y) % 2 === 0 ? COLOR_BG_A : COLOR_BG_B;
+        g.fillStyle = (x + y) % 2 === 0 ? palette.bgA : palette.bgB;
         g.fillRect(x * CELL, y * CELL, CELL, CELL);
       }
     }
   }
 
-  function roundedCell(cell: Cell, color: string) {
+  function cellPath(cell: Cell) {
     const pad = 3;
-    g.fillStyle = color;
     g.beginPath();
     g.roundRect(
       cell.x * CELL + pad,
@@ -223,11 +296,97 @@ export function createSerpienteEngine(
       CELL - pad * 2,
       10,
     );
+  }
+
+  function roundedCell(cell: Cell, color: string) {
+    g.fillStyle = color;
+    cellPath(cell);
     g.fill();
   }
 
+  function fruitCircle(cx: number, cy: number, color: string) {
+    g.fillStyle = color;
+    g.beginPath();
+    g.arc(cx, cy, FRUIT_DRAW_HEIGHT / 2 - 2, 0, Math.PI * 2);
+    g.fill();
+  }
+
+  function resetGlow() {
+    g.shadowBlur = 0;
+    g.shadowColor = "transparent";
+  }
+
+  // Un renderer por skin (mismo patrón que SKIN_RENDERERS de Bloques): el
+  // trazo cambia por skin sin `if` dispersos por el código de dibujo.
+  const SKIN_RENDERERS: Record<SerpienteSkin, SkinRenderer> = {
+    clasico: {
+      body: roundedCell,
+      head: roundedCell,
+      fruit(cx, cy, key) {
+        const rect = SPRITE_ATLAS[key];
+        if (fruitImageReady) {
+          const dh = FRUIT_DRAW_HEIGHT;
+          const dw = dh * (rect.w / rect.h);
+          g.drawImage(
+            fruitImage,
+            rect.x,
+            rect.y,
+            rect.w,
+            rect.h,
+            cx - dw / 2,
+            cy - dh / 2,
+            dw,
+            dh,
+          );
+          return;
+        }
+        let hash = 0;
+        for (const ch of key) hash = (hash * 31 + ch.charCodeAt(0)) % 360;
+        fruitCircle(cx, cy, `hsl(${hash}, 80%, 55%)`);
+      },
+    },
+    retro: {
+      body: roundedCell,
+      head: roundedCell,
+      fruit(cx, cy, _key, color) {
+        // Fruta genérica en fósforo: círculo + rabito, mismo tamaño que el
+        // fallback original.
+        fruitCircle(cx, cy + 1, color);
+        g.fillStyle = color;
+        g.fillRect(cx - 1.5, cy - FRUIT_DRAW_HEIGHT / 2 - 1, 3, 6);
+      },
+    },
+    neon: {
+      body(cell, color) {
+        g.globalAlpha = 0.25;
+        roundedCell(cell, color);
+        g.globalAlpha = 1;
+        g.shadowColor = color;
+        g.shadowBlur = NEON_BODY_GLOW;
+        g.strokeStyle = color;
+        g.lineWidth = 2;
+        cellPath(cell);
+        g.stroke();
+        resetGlow();
+      },
+      head(cell, color) {
+        g.shadowColor = color;
+        g.shadowBlur = NEON_HEAD_GLOW;
+        roundedCell(cell, color);
+        resetGlow();
+      },
+      fruit(cx, cy, _key, color) {
+        g.shadowColor = color;
+        g.shadowBlur = NEON_FRUIT_GLOW;
+        fruitCircle(cx, cy, color);
+        resetGlow();
+      },
+    },
+  };
+
   function drawHead(cell: Cell) {
-    roundedCell(cell, COLOR_SNAKE_HEAD);
+    const palette = SKIN_PALETTES[skin];
+    SKIN_RENDERERS[skin].head(cell, palette.head);
     const cx = cell.x * CELL + CELL / 2;
     const cy = cell.y * CELL + CELL / 2;
     // Ojos desplazados según la dirección de la cabeza.
@@ -241,7 +400,7 @@ export function createSerpienteEngine(
     };
     const [fx, fy] = vec[direction];
     const [sx, sy] = [Math.abs(fy) > 0 ? side : 0, Math.abs(fx) > 0 ? side : 0];
-    g.fillStyle = COLOR_EYE;
+    g.fillStyle = palette.eye;
     for (const sign of [-1, 1]) {
       g.beginPath();
       g.arc(cx + fx + sx * sign, cy + fy + sy * sign, 3.5, 0, Math.PI * 2);
@@ -253,42 +412,33 @@ export function createSerpienteEngine(
     if (!fruit) return;
     const cx = fruit.cell.x * CELL + CELL / 2;
     const cy = fruit.cell.y * CELL + CELL / 2;
-    const rect = SPRITE_ATLAS[fruit.key];
-    if (fruitImageReady) {
-      const dh = FRUIT_DRAW_HEIGHT;
-      const dw = dh * (rect.w / rect.h);
-      g.drawImage(
-        fruitImage,
-        rect.x,
-        rect.y,
-        rect.w,
-        rect.h,
-        cx - dw / 2,
-        cy - dh / 2,
-        dw,
-        dh,
-      );
-      return;
-    }
-    let hash = 0;
-    for (const ch of fruit.key) hash = (hash * 31 + ch.charCodeAt(0)) % 360;
-    g.fillStyle = `hsl(${hash}, 80%, 55%)`;
-    g.beginPath();
-    g.arc(cx, cy, FRUIT_DRAW_HEIGHT / 2 - 2, 0, Math.PI * 2);
-    g.fill();
+    const palette = SKIN_PALETTES[skin];
+    SKIN_RENDERERS[skin].fruit(cx, cy, fruit.key, palette.fruit ?? "");
   }
 
   function drawSnake() {
+    const palette = SKIN_PALETTES[skin];
+    const renderer = SKIN_RENDERERS[skin];
     for (let i = snake.length - 1; i >= 1; i--) {
-      roundedCell(snake[i], COLOR_SNAKE_BODY);
+      renderer.body(snake[i], palette.body);
     }
     drawHead(snake[0]);
+  }
+
+  function drawScanlines() {
+    const color = SKIN_PALETTES[skin].scanlines;
+    if (!color) return;
+    g.fillStyle = color;
+    for (let y = 0; y < SERPIENTE_HEIGHT; y += SCANLINE_SPACING) {
+      g.fillRect(0, y, SERPIENTE_WIDTH, 1);
+    }
   }
 
   function draw() {
     drawBoard();
     drawFruit();
     drawSnake();
+    drawScanlines();
   }
 
   function step() {
@@ -411,6 +561,12 @@ export function createSerpienteEngine(
       resetSnake();
       spawnFruit();
       emitState();
+    },
+    setSkin(next: SerpienteSkin) {
+      if (next === skin) return;
+      skin = next;
+      // Redibuja ya: no depende de que el loop siga activo (pausa, fin).
+      draw();
     },
   };
 }

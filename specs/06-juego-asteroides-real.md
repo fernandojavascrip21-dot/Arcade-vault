@@ -147,6 +147,109 @@ No hay persistencia nueva: la puntuación final sigue guardándose exactamente i
 
 ---
 
+## 8 — Addendum (2026-09-30): skins visuales
+
+**Objetivo:** dar a Asteroides las tres skins requeridas por la plataforma — CLÁSICO
+(default, aspecto original sin cambios), RETRO (fósforo verde) y NEÓN (glow sobre fondo casi
+negro) — con el mismo patrón que Bloques (spec 08 §8): tabla de paletas en el motor,
+`setSkin()`, prop controlada `skin` y selector SKIN persistido en `PlayRoom`.
+
+**Contrato ampliado** (`components/games/asteroids/engine.ts`):
+
+```ts
+export type AsteroidsSkin = "clasico" | "retro" | "neon";
+
+export const ASTEROIDS_SKINS: Array<{ id: AsteroidsSkin; label: string }>; // CLÁSICO, RETRO, NEÓN
+export const ASTEROIDS_SKIN_STORAGE_KEY = "arcadevault.asteroides.skin.v1";
+
+export interface AsteroidsEngineOptions {
+  initialSkin?: AsteroidsSkin; // default "clasico"
+}
+
+export function createAsteroidsEngine(
+  canvas: HTMLCanvasElement,
+  handlers: AsteroidsHandlers,
+  options?: AsteroidsEngineOptions,
+): AsteroidsEngine;
+
+export interface AsteroidsEngine {
+  // ...igual que antes, más:
+  setSkin(next: AsteroidsSkin): void; // no-op si no cambia; redibuja al instante, incluso en pausa
+}
+```
+
+`AsteroidsGame` (`asteroids-game.tsx`) recibe la prop controlada `skin: AsteroidsSkin`: la pasa
+como `initialSkin` al crear el motor y sincroniza cambios con `engine.setSkin(skin)` en un
+efecto. Store genérico en `lib/skin-store.ts`:
+
+```ts
+export function createSkinStore<T extends string>(
+  storageKey: string,
+  skins: ReadonlyArray<{ id: T }>,
+  fallback: T,
+): SkinStore<T>; // { subscribe, read, write, serverSnapshot }
+export function useSkin<T extends string>(store: SkinStore<T>): T; // useSyncExternalStore
+```
+
+**Decisiones:**
+
+- **Sí:** todos los colores del canvas (fondo, nave, llama, asteroides, balas, partículas, HUD
+  interno y acento "BOMBA NOVA") salen de `SKIN_PALETTES: Record<AsteroidsSkin, AsteroidsPalette>`;
+  `clasico` copia los valores originales sin tocar ninguno (`#000`, `#fff`,
+  `rgba(255, 130, 0, 0.85)`, `#0ff`). Motivo: CLÁSICO debe ser idéntico al juego previo.
+- **Sí:** glow y scanlines viven en `SKIN_RENDERERS` (`glow(color, blur)` + `overlay()`), no en
+  `if` dispersos; tras dibujar las entidades se restablecen `shadowBlur = 0` y
+  `shadowColor = "transparent"`. Motivo: patrón de Bloques.
+- **Sí:** RETRO en fósforo verde con 4 intensidades — asteroide `#1f9e45` (tenue), partículas
+  `#27c957`, nave/HUD `#33ff66`, bala `#f0fff4` (casi blanca) — sobre `#020a04`, con scanlines de
+  1 px cada 3 px a alfa 0.14. — decisión del agente (pendiente de revisar)
+- **Sí:** NEÓN sobre `#05050a`: nave `#00f5ff` (= `--cian`), asteroides `#ff2d95` (magenta
+  aclarado respecto a `--magenta` para llegar holgado a 3:1), balas `#f5ff00` (= `--amarillo`),
+  partículas/llama/acento lima `#39ff14`, HUD `#d9fbff`. `shadowBlur` 12 en nave y asteroides, 8
+  en balas; sin glow en partículas (son muchas: coste y emborronado) ni en el texto del HUD del
+  canvas (nitidez). — decisión del agente (pendiente de revisar)
+- **Sí:** en CLÁSICO nave, asteroides y balas comparten el blanco. Motivo: es el aspecto
+  original del juego (regla "cero cambio"); se distinguen por forma (triángulo, polígono
+  irregular, punto relleno). Las skins nuevas sí los separan por color/intensidad. — decisión
+  del agente (pendiente de revisar)
+- **Sí:** store genérico `lib/skin-store.ts` (`createSkinStore` + `useSkin`) y selector
+  reutilizable `components/skin-select.tsx` (tokens `text-texto-tenue`, `bg-background`,
+  `text-cian`, sin hex). El store de Bloques en `play-room.tsx` no se migró en este cambio para
+  no pisar trabajo en paralelo; puede migrarse sin cambiar su comportamiento. — decisión del
+  agente (pendiente de revisar)
+- **Sí:** persistencia en `localStorage` (`arcadevault.asteroides.skin.v1`) vía
+  `useSyncExternalStore`, snapshot de servidor/hidratación siempre `"clasico"`; `replay()` no
+  reinicia la skin.
+- **No:** cambiar el fondo `#000` que `PlayRoom` pasa a `CrtFrame` para las franjas del
+  letterbox. Motivo: los fondos de RETRO/NEÓN son casi negros y la diferencia con las franjas es
+  imperceptible; se evita tocar código compartido. — decisión del agente (pendiente de revisar)
+- **No:** cambios de mecánica, velocidades, hitboxes, tamaños, puntuación ni Supabase.
+
+**Criterios de aceptación añadidos:**
+
+- [ ] `/play/asteroides` muestra el selector SKIN (CLÁSICO/RETRO/NEÓN) en la barra superior;
+      CLÁSICO es el default y se ve idéntico al juego anterior.
+- [ ] Cambiar de skin recolorea al instante nave, asteroides, balas, partículas y HUD del canvas,
+      incluso con el juego en pausa.
+- [ ] La skin elegida persiste tras recargar y tras "JUGAR DE NUEVO".
+- [ ] Sin error de hidratación ni aviso `react-hooks/set-state-in-effect`.
+- [ ] El glow de NEÓN no se filtra al HUD ni a las partículas.
+
+**Contrastes medidos (WCAG, contra el fondo de cada skin):**
+
+| Skin    | Fondo     | Nave            | Asteroides     | Balas           | Partículas      | HUD             | Peor caso   |
+| ------- | --------- | --------------- | -------------- | --------------- | --------------- | --------------- | ----------- |
+| CLÁSICO | `#000`    | `#fff` 21.00    | `#fff` 21.00   | `#fff` 21.00    | `#fff` 21.00    | `#0ff` 16.75    | 16.75       |
+| RETRO   | `#020a04` | `#33ff66` 14.92 | `#1f9e45` 5.76 | `#f0fff4` 19.39 | `#27c957` 9.14  | `#33ff66` 14.92 | 5.76 (ast.) |
+| NEÓN    | `#05050a` | `#00f5ff` 15.02 | `#ff2d95` 5.87 | `#f5ff00` 18.58 | `#39ff14` 15.00 | `#d9fbff` 18.59 | 5.87 (ast.) |
+
+Separación entre entidades: RETRO nave/asteroide 2.59:1, bala/nave 1.30:1 (además de forma);
+NEÓN nave/asteroide 2.56:1 y tonos distintos (cian/magenta/amarillo).
+
+La llama del propulsor es decorativa (CLÁSICO `#ff8200` 8.45:1).
+
+---
+
 ## Lo que **no** entra en este spec
 
 - Adaptar cualquier otro juego del catálogo (rompemuros, serpiente, invasores, bloques, laberinto).

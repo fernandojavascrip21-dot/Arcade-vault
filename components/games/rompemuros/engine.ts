@@ -189,6 +189,114 @@ const LEVELS: LevelLayout[] = [
   ],
 ];
 
+// Skins visuales (spec 10 §8): `clasico` es el aspecto original (spritesheet
+// sin cambios); `retro` y `neon` dibujan pala, pelota y ladrillos con formas
+// de canvas y su propia paleta. No cambian mecánica, hitboxes ni tamaños.
+export type RompemurosSkin = "clasico" | "retro" | "neon";
+
+export const ROMPEMUROS_SKINS: Array<{ id: RompemurosSkin; label: string }> = [
+  { id: "clasico", label: "CLÁSICO" },
+  { id: "retro", label: "RETRO" },
+  { id: "neon", label: "NEÓN" },
+];
+
+export const ROMPEMUROS_SKIN_STORAGE_KEY = "arcadevault.rompemuros.skin.v1";
+
+interface RompemurosPalette {
+  /** null = `clearRect` (se ve el `bg-black` del canvas), como el original. */
+  background: string | null;
+  /** Color de cada ladrillo; también colorea sus partículas. */
+  bricks: Record<BrickColor, string>;
+  paddle: string;
+  ball: string;
+  text: string;
+  overlay: string;
+  pauseOverlay: string;
+  button: string;
+  buttonSelected: string;
+  buttonSelectedText: string;
+  /** Líneas de barrido CRT (null = sin scanlines). */
+  scanlines: string | null;
+}
+
+const SKIN_PALETTES: Record<RompemurosSkin, RompemurosPalette> = {
+  // Valores originales sin alterar. Pala, pelota y ladrillos salen del
+  // spritesheet; `paddle`/`ball` solo documentan su tono dominante medido.
+  clasico: {
+    background: null,
+    bricks: {
+      hotpink: "hotpink",
+      magenta: "magenta",
+      yellow: "yellow",
+      green: "green",
+      cyan: "cyan",
+      gray: "gray",
+    },
+    paddle: "#babac5",
+    ball: "#babac5",
+    text: "#fff",
+    overlay: "rgba(0, 0, 0, 0.7)",
+    pauseOverlay: "rgba(0, 0, 0, 0.5)",
+    button: "rgba(255, 255, 255, 0.15)",
+    buttonSelected: "#fff",
+    buttonSelectedText: "#000",
+    scanlines: null,
+  },
+  // Fósforo verde: la intensidad distingue pelota > pala > filas de ladrillos.
+  retro: {
+    background: "#030a05",
+    bricks: {
+      hotpink: "#29cc52",
+      magenta: "#29cc52",
+      yellow: "#1f9e40",
+      green: "#1f9e40",
+      cyan: "#177a31",
+      gray: "#177a31",
+    },
+    paddle: "#33ff66",
+    ball: "#eafff0",
+    text: "#33ff66",
+    overlay: "rgba(1, 8, 3, 0.78)",
+    pauseOverlay: "rgba(1, 8, 3, 0.6)",
+    button: "rgba(51, 255, 102, 0.15)",
+    buttonSelected: "#33ff66",
+    buttonSelectedText: "#030a05",
+    scanlines: "rgba(0, 0, 0, 0.22)",
+  },
+  // Colores saturados con glow, alineados con --cian/--magenta/--amarillo.
+  neon: {
+    background: "#05050a",
+    bricks: {
+      hotpink: "#ff4fd8",
+      magenta: "#ff006e",
+      yellow: "#f5ff00",
+      green: "#39ff14",
+      cyan: "#2e9bff",
+      gray: "#b388ff",
+    },
+    paddle: "#00f5ff",
+    ball: "#ffffff",
+    text: "#00f5ff",
+    overlay: "rgba(5, 5, 10, 0.78)",
+    pauseOverlay: "rgba(5, 5, 10, 0.6)",
+    button: "rgba(0, 245, 255, 0.15)",
+    buttonSelected: "#00f5ff",
+    buttonSelectedText: "#05050a",
+    scanlines: null,
+  },
+};
+
+const NEON_BRICK_GLOW = 10;
+const NEON_PADDLE_GLOW = 14;
+const NEON_BALL_GLOW = 10;
+const SCANLINE_SPACING = 3;
+
+interface SkinRenderer {
+  brick(brick: Brick, color: string): void;
+  paddle(x: number, y: number, w: number, h: number, color: string): void;
+  ball(cx: number, cy: number, r: number, color: string): void;
+}
+
 interface SpriteFrame {
   sx: number;
   sy: number;
@@ -225,7 +333,9 @@ interface Particle {
   vx: number;
   vy: number;
   size: number;
-  color: string;
+  // Se resuelve contra la paleta al dibujar: cambiar de skin recolorea
+  // también las partículas en vuelo.
+  color: BrickColor;
   elapsed: number;
 }
 
@@ -321,6 +431,12 @@ export interface RompemurosEngine {
   stop(): void;
   setPaused(paused: boolean): void;
   restart(): void;
+  /** Cambia la skin y redibuja al instante, incluso en pausa. */
+  setSkin(next: RompemurosSkin): void;
+}
+
+export interface RompemurosEngineOptions {
+  initialSkin?: RompemurosSkin; // default "clasico"
 }
 
 export const ROMPEMUROS_WIDTH = GAME_WIDTH;
@@ -339,6 +455,7 @@ const GAME_KEYS = [
 export function createRompemurosEngine(
   canvas: HTMLCanvasElement,
   handlers: RompemurosHandlers,
+  options?: RompemurosEngineOptions,
 ): RompemurosEngine {
   const ctx2d = canvas.getContext("2d");
   if (!ctx2d) {
@@ -356,6 +473,7 @@ export function createRompemurosEngine(
   let paused = false;
   let muted = false;
   let finished = false;
+  let skin: RompemurosSkin = options?.initialSkin ?? "clasico";
   const paddle = {
     x: PADDLE_START_X,
     y: PADDLE_START_Y,
@@ -646,35 +764,118 @@ export function createRompemurosEngine(
     );
   }
 
+  function resetGlow() {
+    ctx.shadowBlur = 0;
+    ctx.shadowColor = "transparent";
+  }
+
+  // Un renderer por skin (mismo patrón que SKIN_RENDERERS de Bloques): el
+  // trazo cambia por skin sin `if` dispersos por el código de dibujo.
+  const SKIN_RENDERERS: Record<RompemurosSkin, SkinRenderer> = {
+    clasico: {
+      brick(brick) {
+        drawSprite(
+          SPRITES.blocks[brick.color],
+          brick.x,
+          brick.y,
+          brick.w,
+          brick.h,
+        );
+      },
+      paddle(x, y, w, h) {
+        drawSprite(SPRITES.paddle, x, y, w, h);
+      },
+      ball(cx, cy, r) {
+        drawSprite(SPRITES.ball, cx - r, cy - r, r * 2, r * 2);
+      },
+    },
+    retro: {
+      brick(brick, color) {
+        ctx.fillStyle = color;
+        ctx.fillRect(brick.x, brick.y, brick.w, brick.h);
+        // Ranura interior en el color de fondo: separa ladrillos contiguos
+        // sin cambiar su tamaño ni su hitbox.
+        ctx.strokeStyle = SKIN_PALETTES.retro.background ?? "#000";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(brick.x + 4, brick.y + 4, brick.w - 8, brick.h - 8);
+      },
+      paddle(x, y, w, h, color) {
+        ctx.fillStyle = color;
+        ctx.fillRect(x, y, w, h);
+      },
+      ball(cx, cy, r, color) {
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fill();
+      },
+    },
+    neon: {
+      brick(brick, color) {
+        ctx.globalAlpha = 0.18;
+        ctx.fillStyle = color;
+        ctx.fillRect(brick.x + 2, brick.y + 2, brick.w - 4, brick.h - 4);
+        ctx.globalAlpha = 1;
+        ctx.shadowColor = color;
+        ctx.shadowBlur = NEON_BRICK_GLOW;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(brick.x + 2, brick.y + 2, brick.w - 4, brick.h - 4);
+        resetGlow();
+      },
+      paddle(x, y, w, h, color) {
+        ctx.shadowColor = color;
+        ctx.shadowBlur = NEON_PADDLE_GLOW;
+        ctx.fillStyle = color;
+        ctx.fillRect(x, y, w, h);
+        resetGlow();
+      },
+      ball(cx, cy, r, color) {
+        ctx.shadowColor = color;
+        ctx.shadowBlur = NEON_BALL_GLOW;
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fill();
+        resetGlow();
+      },
+    },
+  };
+
   function drawBricks() {
+    const palette = SKIN_PALETTES[skin];
+    const renderer = SKIN_RENDERERS[skin];
     for (const brick of bricks) {
       if (!brick.alive) continue;
-      drawSprite(
-        SPRITES.blocks[brick.color],
-        brick.x,
-        brick.y,
-        brick.w,
-        brick.h,
-      );
+      renderer.brick(brick, palette.bricks[brick.color]);
     }
   }
 
   function drawParticles() {
+    const palette = SKIN_PALETTES[skin];
     for (const particle of particles) {
       ctx.globalAlpha = 1 - particle.elapsed / PARTICLE_LIFETIME;
-      ctx.fillStyle = particle.color;
+      ctx.fillStyle = palette.bricks[particle.color];
       ctx.fillRect(particle.x, particle.y, particle.size, particle.size);
     }
     ctx.globalAlpha = 1;
+  }
+
+  function drawScanlines(color: string) {
+    ctx.fillStyle = color;
+    for (let y = 0; y < GAME_HEIGHT; y += SCANLINE_SPACING) {
+      ctx.fillRect(0, y, GAME_WIDTH, 1);
+    }
   }
 
   const HUD_LIFE_RADIUS = 8;
   const HUD_LIFE_GAP = 24;
 
   function drawMuteButton() {
-    ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
+    const palette = SKIN_PALETTES[skin];
+    ctx.fillStyle = palette.button;
     ctx.fillRect(MUTE_RECT.x, MUTE_RECT.y, MUTE_RECT.w, MUTE_RECT.h);
-    ctx.fillStyle = "#fff";
+    ctx.fillStyle = palette.text;
     ctx.textAlign = "center";
     ctx.font = "20px sans-serif";
     ctx.fillText(
@@ -686,7 +887,8 @@ export function createRompemurosEngine(
   }
 
   function drawHUD() {
-    ctx.fillStyle = "#fff";
+    const palette = SKIN_PALETTES[skin];
+    ctx.fillStyle = palette.text;
     ctx.textAlign = "left";
     ctx.font = "bold 22px sans-serif";
     ctx.fillText(`Score: ${score}`, 12, 36);
@@ -696,30 +898,30 @@ export function createRompemurosEngine(
     const startX = GAME_WIDTH - 12 - HUD_LIFE_RADIUS;
     for (let i = 0; i < lives; i++) {
       const cx = startX - i * HUD_LIFE_GAP;
-      drawSprite(
-        SPRITES.ball,
-        cx - HUD_LIFE_RADIUS,
-        36 - HUD_LIFE_RADIUS * 2,
-        HUD_LIFE_RADIUS * 2,
-        HUD_LIFE_RADIUS * 2,
+      SKIN_RENDERERS[skin].ball(
+        cx,
+        36 - HUD_LIFE_RADIUS,
+        HUD_LIFE_RADIUS,
+        palette.ball,
       );
     }
   }
 
   function drawDifficultyScreen() {
-    ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+    const palette = SKIN_PALETTES[skin];
+    ctx.fillStyle = palette.overlay;
     ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
-    ctx.fillStyle = "#fff";
+    ctx.fillStyle = palette.text;
     ctx.textAlign = "center";
     ctx.font = "bold 40px sans-serif";
     ctx.fillText("ELEGÍ LA DIFICULTAD", GAME_WIDTH / 2, GAME_HEIGHT / 2 - 160);
 
     for (const rect of getDifficultyOptionRects()) {
       const isSelected = rect.key === difficulty;
-      ctx.fillStyle = isSelected ? "#fff" : "rgba(255, 255, 255, 0.15)";
+      ctx.fillStyle = isSelected ? palette.buttonSelected : palette.button;
       ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
-      ctx.fillStyle = isSelected ? "#000" : "#fff";
+      ctx.fillStyle = isSelected ? palette.buttonSelectedText : palette.text;
       ctx.font = "bold 24px sans-serif";
       ctx.fillText(
         DIFFICULTIES[rect.key].label,
@@ -728,7 +930,7 @@ export function createRompemurosEngine(
       );
     }
 
-    ctx.fillStyle = "#fff";
+    ctx.fillStyle = palette.text;
     ctx.font = "18px sans-serif";
     ctx.fillText(
       "Presioná 1, 2 o 3, o hacé click en una opción",
@@ -738,22 +940,23 @@ export function createRompemurosEngine(
   }
 
   function draw() {
+    const palette = SKIN_PALETTES[skin];
+    const renderer = SKIN_RENDERERS[skin];
     ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    if (palette.background) {
+      ctx.fillStyle = palette.background;
+      ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    }
 
     drawBricks();
-    drawSprite(SPRITES.paddle, paddle.x, paddle.y, paddle.w, paddle.h);
-    drawSprite(
-      SPRITES.ball,
-      ball.x - ball.radius,
-      ball.y - ball.radius,
-      ball.radius * 2,
-      ball.radius * 2,
-    );
+    renderer.paddle(paddle.x, paddle.y, paddle.w, paddle.h, palette.paddle);
+    renderer.ball(ball.x, ball.y, ball.radius, palette.ball);
     drawParticles();
     drawHUD();
+    if (palette.scanlines) drawScanlines(palette.scanlines);
 
     if (screen === "start") {
-      ctx.fillStyle = "#fff";
+      ctx.fillStyle = palette.text;
       ctx.textAlign = "center";
       ctx.font = "bold 48px sans-serif";
       ctx.fillText("ARKANOID", GAME_WIDTH / 2, GAME_HEIGHT / 2 - 20);
@@ -762,9 +965,9 @@ export function createRompemurosEngine(
     }
 
     if (screen === "level-complete") {
-      ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+      ctx.fillStyle = palette.overlay;
       ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-      ctx.fillStyle = "#fff";
+      ctx.fillStyle = palette.text;
       ctx.textAlign = "center";
       ctx.font = "bold 40px sans-serif";
       ctx.fillText(
@@ -781,9 +984,9 @@ export function createRompemurosEngine(
     }
 
     if (paused) {
-      ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+      ctx.fillStyle = palette.pauseOverlay;
       ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-      ctx.fillStyle = "#fff";
+      ctx.fillStyle = palette.text;
       ctx.textAlign = "center";
       ctx.font = "bold 48px sans-serif";
       ctx.fillText("PAUSADO", GAME_WIDTH / 2, GAME_HEIGHT / 2);
@@ -935,6 +1138,12 @@ export function createRompemurosEngine(
       initGame();
       draw();
       startLoop();
+    },
+    setSkin(next: RompemurosSkin) {
+      if (next === skin) return;
+      skin = next;
+      // Redibuja ya: con la partida terminada el loop está detenido.
+      draw();
     },
   };
 }

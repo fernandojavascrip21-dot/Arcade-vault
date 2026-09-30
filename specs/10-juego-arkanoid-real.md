@@ -189,6 +189,102 @@ No hay persistencia nueva: la puntuación final se guarda exactamente igual que 
 
 ---
 
+## 8 — Addendum (2026-09-30): skins visuales
+
+**Objetivo:** dar a Rompemuros las tres skins mínimas de la plataforma — CLÁSICO (default,
+el spritesheet original sin cambios), RETRO (fósforo verde) y NEÓN (colores saturados con
+glow) — con el mismo patrón que Bloques (spec 08 §8): tabla de paletas + renderers por skin
+en el motor, `setSkin()`, prop controlada `skin` y selector SKIN en la barra de `PlayRoom`.
+
+**Contrato ampliado** (`components/games/rompemuros/engine.ts`):
+
+```ts
+export type RompemurosSkin = "clasico" | "retro" | "neon";
+
+export const ROMPEMUROS_SKINS: Array<{ id: RompemurosSkin; label: string }>; // CLÁSICO, RETRO, NEÓN
+export const ROMPEMUROS_SKIN_STORAGE_KEY = "arcadevault.rompemuros.skin.v1";
+
+export interface RompemurosEngineOptions {
+  initialSkin?: RompemurosSkin; // default "clasico"
+}
+
+export function createRompemurosEngine(
+  canvas: HTMLCanvasElement,
+  handlers: RompemurosHandlers,
+  options?: RompemurosEngineOptions,
+): RompemurosEngine;
+
+export interface RompemurosEngine {
+  // ...igual que antes, más:
+  setSkin(next: RompemurosSkin): void; // no-op si no cambia; redibuja al instante, incluso en pausa
+}
+```
+
+`RompemurosGame` (`rompemuros-game.tsx`) recibe la prop controlada `skin: RompemurosSkin`
+(mismo patrón que `paused`): la pasa como `initialSkin` al crear el motor y sincroniza los
+cambios con `engine.setSkin(skin)` en un efecto.
+
+**Decisiones:**
+
+- **Sí:** `clasico` sigue dibujando pala, pelota y ladrillos con el spritesheet, y su paleta
+  guarda los valores hard-coded previos sin alterar (partículas `hotpink`/`magenta`/`yellow`/
+  `green`/`cyan`/`gray`, texto `#fff`, overlays `rgba(0,0,0,.7)`/`.5`, botones
+  `rgba(255,255,255,.15)`/`#fff`/`#000`, fondo por `clearRect`). Motivo: CLÁSICO = cero cambio
+  visual.
+- **Sí:** `retro` y `neon` dibujan las entidades con formas de canvas (rectángulos y círculo)
+  exactamente en las mismas coordenadas y tamaños que los sprites, vía `SKIN_RENDERERS`
+  (`brick`/`paddle`/`ball` por skin), sin `if` dispersos. Motivo: el spritesheet no se puede
+  recolorear; hitboxes y tamaños no cambian — decisión del agente (pendiente de revisar).
+- **Sí:** RETRO en fósforo verde con 5 intensidades: pelota `#eafff0` > pala `#33ff66` >
+  ladrillos en 3 franjas (`#29cc52` filas rosa/magenta, `#1f9e40` amarillo/verde, `#177a31`
+  cian/gris), ranura interior del color de fondo en cada ladrillo y scanlines sutiles cada
+  3 px (`rgba(0,0,0,.22)`). Motivo: guía estética de fósforo; los ladrillos pierden su color
+  individual pero conservan puntos y distinción por franja — decisión del agente (pendiente
+  de revisar).
+- **Sí:** NEÓN sobre `#05050a`: pala cian `#00f5ff` (= `--cian`), pelota blanca, ladrillos
+  `#ff4fd8`/`#ff006e` (= `--magenta`)/`#f5ff00` (= `--amarillo`)/`#39ff14`/`#2e9bff`/`#b388ff`
+  con relleno translúcido + borde con `shadowBlur` 10 (pala 14, pelota 10); el texto del HUD
+  se dibuja sin glow. El ladrillo "cyan" pasa a azul eléctrico para no confundirse con la
+  pala. `shadowBlur`/`shadowColor` se restablecen tras cada entidad con glow — decisión del
+  agente (pendiente de revisar).
+- **Sí:** las partículas guardan el `BrickColor` y se resuelven contra la paleta al dibujar,
+  así que cambiar de skin recolorea también las que están en vuelo. Las vidas del HUD usan el
+  renderer de pelota de la skin — decisión del agente (pendiente de revisar).
+- **Sí:** persistencia en `localStorage` (`arcadevault.rompemuros.skin.v1`) con el store
+  genérico `lib/skin-store.ts` (`createSkinStore` + `useSkin`, `useSyncExternalStore`, snapshot
+  de servidor/hidratación siempre `"clasico"`) y selector `components/skin-select.tsx` en la
+  barra superior, visible solo en `/play/rompemuros`. "JUGAR DE NUEVO" no reinicia la skin.
+- **No:** tocar Supabase, puntuación, velocidades, controles, sonido ni el tamaño del canvas
+  (800×600). Las skins son una preferencia solo de cliente.
+- **No:** corregir el contraste del ladrillo gris del spritesheet en CLÁSICO (1.65:1). Motivo:
+  CLÁSICO debe ser idéntico al original; quien lo necesite tiene RETRO/NEÓN — decisión del
+  agente (pendiente de revisar).
+
+**Contrastes medidos** (WCAG, color jugable vs. fondo de la skin; en CLÁSICO, tono dominante
+del sprite medido en el PNG):
+
+| Skin    | Fondo     | Pala    | Pelota  | Ladrillos (peor → mejor)                 | Peor caso              |
+| ------- | --------- | ------- | ------- | ---------------------------------------- | ---------------------- |
+| clasico | `#000000` | 10.92:1 | 10.92:1 | gris 1.65 · magenta 3.24 · … · amar 11.3 | gris `#323142` 1.65:1¹ |
+| retro   | `#030a05` | 14.90:1 | 19.11:1 | `#177a31` 3.68 · `#1f9e40` 5.74 · 9.39   | `#177a31` 3.68:1       |
+| neon    | `#05050a` | 15.02:1 | 20.34:1 | `#ff006e` 5.30 · … · `#f5ff00` 18.58     | `#ff006e` 5.30:1       |
+
+¹ Excepción aceptada: CLÁSICO no altera el sprite original (ver decisiones).
+
+**Criterios de aceptación añadidos:**
+
+- [ ] El selector SKIN (CLÁSICO/RETRO/NEÓN) aparece en la barra superior de `/play/rompemuros`,
+      con CLÁSICO por defecto.
+- [ ] CLÁSICO se ve idéntico a antes del addendum (spritesheet, colores de partículas, textos).
+- [ ] Cambiar de skin redibuja al instante pala, pelota, ladrillos, partículas, vidas del HUD y
+      overlays, también en pausa, en la pantalla de dificultad y con la partida terminada.
+- [ ] La skin persiste tras recargar `/play/rompemuros` y tras "JUGAR DE NUEVO", sin error de
+      hidratación.
+- [ ] Mecánica, puntuación, velocidades y hitboxes no cambian con ninguna skin.
+- [ ] Todo elemento jugable de RETRO y NEÓN tiene contraste ≥ 3:1 contra su fondo.
+
+---
+
 ## Lo que **no** entra en este spec
 
 - Música de fondo, volumen ajustable y persistencia de la preferencia de silencio.

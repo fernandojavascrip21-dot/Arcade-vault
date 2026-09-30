@@ -7,13 +7,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What this is
 
 **Arcade Vault** — a platform for playing games online and competing for the highest score
-(see `README.md`). This is a fresh `create-next-app` scaffold: almost no application code exists
-yet, so nearly everything is still to be built.
+(see `README.md`). Specs 01–12 are all implemented (`specs/`, status `Implementado`): visual
+screens, landing, English routes, About/contact (Resend), Supabase integration, catalog +
+leaderboards, four playable canvas games, light/dark theme, and player names with rankings.
+UI copy is in Spanish; routes, file names and code identifiers are in English (except game
+ids/slugs, which are Spanish).
 
 Development is **spec-driven**: features are designed with the `/spec` skill and implemented with
 `/spec-impl` (skills from `Klerith/fernando-skills`, installed via
 `npx skills@latest add Klerith/fernando-skills`). Prefer that workflow — write/confirm the spec
-before writing feature code.
+before writing feature code. Small follow-ups to an implemented spec go in a dated
+**addendum** section of that spec (e.g. §8 "skins visuales" in `specs/08-juego-tetris-real.md`)
+instead of a new spec. Specs live in `specs/NN-slug.md` (Draft → Implementado);
+`/spec-impl` creates a `spec-NN-slug` branch (see `specs/.spec-config.yml`, `AutoCreateBranch`)
+and work lands via PR into `main`.
 
 ## Read this first
 
@@ -36,14 +43,54 @@ There is no test runner and no typecheck script configured. Type errors surface 
 (or `npx tsc --noEmit`). If you add a test runner, document the single-test invocation here.
 
 ## Skills
-Usa simepre el /frontend-design para diseñar las interfazes de ususarios
 
+Skills live in `.agents/skills/` and are symlinked from `.claude/skills/`.
+
+- `/spec` — design a feature spec (`specs/NN-slug.md`, state `Draft`). No code.
+- `/spec-impl NN-slug` — implement an approved spec.
+- `/add-game` — project-specific variant of `/spec` for integrating a new game (port from
+  `references/started-games/` or from scratch). Produces the spec only; `/spec-impl` does the work.
+- `/frontend-design` — **always use it when designing user interfaces** (project rule).
+
+Subagents live in `.claude/agents/`:
+
+- `game-planner` (`model: inherit`) — evaluates game suggestions and decides which game fits the
+  platform next; keeps the traffic-light to-do list in `references/games-suggestion-all.md`
+  (done / pending by priority / discarded — no round history). Run it before `/add-game`.
+- `game-jam` (`model: sonnet`) — given the name of a specific game already decided on (typically one
+  approved in "⏳ Pendientes" of `references/games-suggestion-all.md`, e.g. BOMBARDERO), turns it
+  into **two** full numeric `Draft` specs with different mechanic resolutions (same id/category,
+  same shape as specs 06/08/10/11) at `specs/game-jam/<slug>-a.md` and `<slug>-b.md`. No code, no
+  Supabase. Review both, pick one, approve it, and renumber into `specs/NN-slug.md` before
+  `/spec-impl`. (`specs/game-jam/bombardero.md` is an earlier single-spec draft from before the
+  two-variant format.)
+- `skin-designer` (`model: inherit`) — audits that every game has at least the skins `clasico`
+  (default), `retro` and `neon`, implements missing ones following the Bloques pattern (engine
+  palette table + `setSkin`, controlled `skin` prop, SKIN selector in `PlayRoom`), checks dark-mode
+  contrast (≥ 3:1), documents a dated addendum in each game's spec and runs lint/build. Keeps the
+  per-game skin registry in `references/games-skins.md`. Must be given a game (or "todos");
+  otherwise it stops without changing anything and asks which one — never picks one itself. Never
+  touches Supabase, mechanics or scores; doesn't commit.
+
+## Hooks and MCP
+
+- `.claude/hooks/format-and-lint.sh` (PostToolUse on `Write|Edit`): runs Prettier on `.ts/.tsx/.js/.md`
+  files and `eslint --fix` on code files; unfixable ESLint errors block with exit 2. Don't fight it.
+- `.mcp.json` registers the **Supabase MCP** server (project `mfbnebhnhcbyaniksqav`). Schema changes
+  (new tables, new `games` rows) are applied as migrations through it, never from app code.
+- GitHub workflows `claude.yml` / `claude-code-review.yml` and a PR template live in `.github/`.
+
+## Environment variables
+
+Copy `.env.example`: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (public),
+`RESEND_API_KEY`, `CONTACT_TO_EMAIL` (server-only, used by `app/api/contact/route.ts`),
+`SUPERBASE_DB_PASSWORD`. Never commit real values.
 
 ## Architecture
 
 - **App Router only**, all under `app/`. `app/layout.tsx` is the root layout (loads Geist fonts via
-  `next/font/google`, sets `<html>`/`<body>`); `app/page.tsx` is `/`. The layout `metadata` is still
-  the scaffold default ("Create Next App") — update it when building real pages.
+  `next/font/google`, sets `<html>`/`<body>`); `app/page.tsx` is `/`. Layout `metadata` is set
+  (`title: "Arcade Vault"`).
 - **Route/layout prop types are global and generated** — `LayoutProps<"/">`, `PageProps<"/route">`,
   `RouteContext<...>` are injected by Next's typegen (`.next/types/`), not imported. Do not add manual
   imports for them.
@@ -56,3 +103,76 @@ Usa simepre el /frontend-design para diseñar las interfazes de ususarios
 - **Turbopack** is the default bundler for both dev and build. Adding a `webpack` config to
   `next.config.ts` will break `next build` unless you pass `--webpack`. Turbopack options go at the
   top level of `next.config.ts` (`turbopack: { ... }`), not under `experimental`.
+
+## Routes
+
+`/` (home, `app/home-client.tsx`) · `/games` (catalog + category filter) · `/game/[id]` (detail) ·
+`/play/[id]` (play room) · `/hall-of-fame` (rankings) · `/about` · `/auth` · `POST /api/contact` (Resend).
+Old Spanish routes (`/juego`, `/jugar`, `/salon-fama`) were removed with no redirects (spec 03).
+Pages are Server Components that fetch data and pass it to `*-client.tsx` / client components.
+
+## Data layer (Supabase)
+
+- Tables `games` (catalog) and `scores` (`game_id`, `player_name`, `score`). The catalog and
+  leaderboards are **not** in code anymore; `app/data.ts` only holds the UI category filter.
+- `lib/supabase/server.ts` (`createClient`, `@supabase/ssr`) for server code, `client.ts` for the browser.
+- `lib/supabase/queries.ts` — server-only reads: `getGames`, `getGameById`, `getBoard`,
+  `getBoardsForGames`, `getBestPerGame`, `getTopPlayersGlobal`, `getGeneralBoard`, `getPlayerHistory`,
+  `getScoreRank`. Never import from client code.
+- Server Actions: `saveScoreAction(gameId, playerName, score)` in `app/play/[id]/actions.ts`
+  (validates score/name/game, inserts, returns board + rank) and `getPlayerHistoryAction` in
+  `app/hall-of-fame/actions.ts`. The pipeline is generic by `game_id`: a new game needs only a new
+  `games` row.
+- Domain types in `lib/types.ts`; `lib/scores.ts` has `rankColor` (uses CSS tokens).
+- **Player names** (`lib/player-name.ts`, spec 12): `normalizePlayerName` (trim, collapse spaces,
+  uppercase, max 14) and `validatePlayerName` (3–14 chars, letters/digits/`_`/space; `INVITADO`
+  always valid). Shared by client and server; the **server always re-validates**.
+
+## Client state (`contexts/`, wired in `contexts/providers.tsx`)
+
+`ThemeProvider` → `SessionProvider` → `CreditsProvider`.
+
+- `theme-context` — `dark`/`light`, persisted in `localStorage` key `arcadevault.theme.v1`; an inline
+  anti-flash script in `app/layout.tsx` sets `data-theme` on `<html>` before hydration. Colors are CSS
+  tokens in `app/globals.css` (`--cian`, `--magenta`, `--amarillo`, `--rango-*`…) redefined for light
+  mode — use tokens, not hard-coded hex, so both themes work.
+- `session-context` — simulated session (no real auth); player name persisted in `localStorage`
+  key `arcade-vault:player-name` via `useSyncExternalStore`, falling back to memory. `playGuest()` = guest.
+- `credits-context` — simulated arcade credits (start 3, max 99), memory only.
+- Not in `contexts/`: the Bloques skin preference lives in `app/play/[id]/play-room.tsx`
+  (`localStorage` key `arcadevault.bloques.skin.v1`, see Games).
+
+## Games
+
+Playable games (id → engine): `asteroides` (Asteroids), `bloques` (Tetris), `rompemuros` (Arkanoid),
+`serpiente` (Snake), under `components/games/<slug>/{engine.ts,<slug>-game.tsx}` — except
+Asteroides, whose folder is `components/games/asteroids/` (`asteroids-game.tsx`).
+
+- `engine.ts` is framework-free: `create<Name>Engine(canvas, handlers, options?)` →
+  `{ start, stop, setPaused, restart }` (plus game-specific setters, e.g. Bloques `setSkin`),
+  pushes state via `onStateChange`, signals `onGameOver(finalScore)`; owns its RAF loop and key listeners.
+  It does not draw game-over or auto-restart — React does.
+- `<slug>-game.tsx` is a thin `forwardRef` wrapper mounting the engine in a `useEffect` and exposing
+  `restart()`, letterboxed inside `components/crt-frame.tsx` (16:10).
+- `app/play/[id]/play-room.tsx` integrates each game through explicit `game.id === "<slug>"` branches
+  (**not** a generic registry yet) — a new game adds its own branches there. On game over it uses
+  `components/game-over-ranking.tsx` to show rank + score; `hall-of-fame.tsx` shows general ranking,
+  per-game boards and the player's history (“MIS PARTIDAS”).
+- **Bloques skins** (spec 08 §8): `BloquesSkin` = `retro | neon | pastel | pixel`, `BLOQUES_SKINS`
+  and `setSkin()` in `components/games/bloques/engine.ts` (redraws instantly, even paused);
+  `bloques-game.tsx` takes a controlled `skin` prop (same pattern as `paused`). The SKIN selector
+  sits in the `PlayRoom` top bar only when `isBloques`, persisted via `useSyncExternalStore`
+  (server/hydration snapshot is always `"retro"`). Don't read `localStorage` in a `useState`
+  initializer or `setState` in a mount effect — it causes a hydration error and trips the lint
+  rule `react-hooks/set-state-in-effect`. Client-only preference: no Supabase, no score impact.
+- Pipeline for a new game: `game-planner` agent (decide which game) → `/add-game` (spec) →
+  `/spec-impl` (code). Games to-do: `references/games-suggestion-all.md`.
+- Add a game with `/add-game`. Reference sources: `references/started-games/`
+  (`02-asteroids`, `03-tetris`, `04-arkanoid`) — these are **git submodules** (`.gitmodules`,
+  `ignore = dirty`); run `git submodule update --init` if empty and never commit changes inside
+  them. Sprites in `references/source-assets/`, original mockups in `references/resource/`.
+
+## Conventions
+
+- Commit messages follow `feat:` / `chore:` / `Refactor` style, one PR per spec (`spec-NN-slug`).
+- Next.js docs to consult first live in `node_modules/next/dist/docs/` (see AGENTS.md).

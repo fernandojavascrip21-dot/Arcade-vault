@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { saveScoreAction } from "@/app/play/[id]/actions";
 import { CrtFrame } from "@/components/crt-frame";
@@ -10,22 +10,40 @@ import {
   AsteroidsGame,
   type AsteroidsGameHandle,
 } from "@/components/games/asteroids/asteroids-game";
-import type { AsteroidsState } from "@/components/games/asteroids/engine";
+import {
+  ASTEROIDS_SKINS,
+  ASTEROIDS_SKIN_STORAGE_KEY,
+  type AsteroidsState,
+} from "@/components/games/asteroids/engine";
 import {
   BloquesGame,
   type BloquesGameHandle,
 } from "@/components/games/bloques/bloques-game";
-import type { BloquesState } from "@/components/games/bloques/engine";
-import type { RompemurosState } from "@/components/games/rompemuros/engine";
+import {
+  BLOQUES_SKINS,
+  BLOQUES_SKIN_STORAGE_KEY,
+  type BloquesSkin,
+  type BloquesState,
+} from "@/components/games/bloques/engine";
+import {
+  ROMPEMUROS_SKINS,
+  ROMPEMUROS_SKIN_STORAGE_KEY,
+  type RompemurosState,
+} from "@/components/games/rompemuros/engine";
 import {
   RompemurosGame,
   type RompemurosGameHandle,
 } from "@/components/games/rompemuros/rompemuros-game";
-import type { SerpienteState } from "@/components/games/serpiente/engine";
+import {
+  SERPIENTE_SKINS,
+  SERPIENTE_SKIN_STORAGE_KEY,
+  type SerpienteState,
+} from "@/components/games/serpiente/engine";
 import {
   SerpienteGame,
   type SerpienteGameHandle,
 } from "@/components/games/serpiente/serpiente-game";
+import { SkinSelect } from "@/components/skin-select";
 import { useCredits } from "@/contexts/credits-context";
 import { useSession } from "@/contexts/session-context";
 import {
@@ -34,9 +52,66 @@ import {
   normalizePlayerName,
   validatePlayerName,
 } from "@/lib/player-name";
+import { createSkinStore, useSkin } from "@/lib/skin-store";
 import type { Game, SavedResult } from "@/lib/types";
 
 const SAVED_TEXT = "PUNTUACIÓN GUARDADA";
+
+// Skin de Asteroides (spec 06 §8): store genérico de lib/skin-store.ts.
+const asteroidsSkinStore = createSkinStore(
+  ASTEROIDS_SKIN_STORAGE_KEY,
+  ASTEROIDS_SKINS,
+  "clasico",
+);
+
+// Skin de Rompemuros (spec 10 §8): store genérico de lib/skin-store.ts.
+const rompemurosSkinStore = createSkinStore(
+  ROMPEMUROS_SKIN_STORAGE_KEY,
+  ROMPEMUROS_SKINS,
+  "clasico",
+);
+
+// Skin de Serpiente (spec 11 §8): store genérico de lib/skin-store.ts.
+const serpienteSkinStore = createSkinStore(
+  SERPIENTE_SKIN_STORAGE_KEY,
+  SERPIENTE_SKINS,
+  "clasico",
+);
+
+// La skin de Bloques se recuerda en localStorage (mismo patrón que el nombre
+// del jugador en contexts/session-context.tsx): useSyncExternalStore evita el
+// desajuste de hidratación que produciría leer localStorage directamente en
+// el render o en un efecto.
+let memoryBloquesSkin: BloquesSkin = "retro";
+const bloquesSkinListeners = new Set<() => void>();
+
+function isBloquesSkin(value: string | null): value is BloquesSkin {
+  return BLOQUES_SKINS.some((s) => s.id === value);
+}
+
+function readBloquesSkin(): BloquesSkin {
+  try {
+    const stored = localStorage.getItem(BLOQUES_SKIN_STORAGE_KEY);
+    return isBloquesSkin(stored) ? stored : memoryBloquesSkin;
+  } catch {
+    return memoryBloquesSkin;
+  }
+}
+
+function writeBloquesSkin(next: BloquesSkin) {
+  memoryBloquesSkin = next;
+  try {
+    localStorage.setItem(BLOQUES_SKIN_STORAGE_KEY, next);
+  } catch {
+    // localStorage puede no estar disponible (modo privado, cuotas, etc.).
+  }
+  bloquesSkinListeners.forEach((notify) => notify());
+}
+
+function subscribeBloquesSkin(notify: () => void) {
+  bloquesSkinListeners.add(notify);
+  return () => bloquesSkinListeners.delete(notify);
+}
 
 function HudStat({
   label,
@@ -66,6 +141,16 @@ export function PlayRoom({ game }: { game: Game }) {
   const [lives, setLives] = useState(3);
   const [level, setLevel] = useState(1);
   const [, setLines] = useState(0);
+  // "retro" en servidor e hidratación; el valor real de localStorage llega
+  // después de montar, sin provocar desajuste (mismo patrón que useSession).
+  const skin = useSyncExternalStore(
+    subscribeBloquesSkin,
+    readBloquesSkin,
+    () => "retro" as BloquesSkin,
+  );
+  const asteroidsSkin = useSkin(asteroidsSkinStore);
+  const rompemurosSkin = useSkin(rompemurosSkinStore);
+  const serpienteSkin = useSkin(serpienteSkinStore);
   const [paused, setPaused] = useState(false);
   const [over, setOver] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -97,6 +182,8 @@ export function PlayRoom({ game }: { game: Game }) {
 
   const playerName = user ?? "INVITADO";
   const exit = () => router.push("/games");
+
+  const handleSkinChange = (next: BloquesSkin) => writeBloquesSkin(next);
 
   // Sin motor de juego: simula el final de una partida con una puntuación
   // pseudoaleatoria para poder recorrer el flujo de guardado.
@@ -256,7 +343,48 @@ export function PlayRoom({ game }: { game: Game }) {
             <span className="text-sm text-[#cdd8de]">{playerName}</span>
           </div>
         </div>
-        <div className="flex gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
+          {isAsteroids ? (
+            <SkinSelect
+              value={asteroidsSkin}
+              skins={ASTEROIDS_SKINS}
+              onChange={asteroidsSkinStore.write}
+            />
+          ) : null}
+          {isRompemuros ? (
+            <SkinSelect
+              value={rompemurosSkin}
+              skins={ROMPEMUROS_SKINS}
+              onChange={rompemurosSkinStore.write}
+            />
+          ) : null}
+          {isSerpiente ? (
+            <SkinSelect
+              value={serpienteSkin}
+              skins={SERPIENTE_SKINS}
+              onChange={serpienteSkinStore.write}
+            />
+          ) : null}
+          {isBloques ? (
+            <label className="flex items-center gap-1.5">
+              <span className="text-[10px] tracking-[2px] text-[#6f7d88]">
+                SKIN
+              </span>
+              <select
+                value={skin}
+                onChange={(e) =>
+                  handleSkinChange(e.target.value as BloquesSkin)
+                }
+                className="whitespace-nowrap border border-cian/40 bg-[#0a0a0f] px-2.5 py-1.5 font-display text-[9px] text-cian transition-colors hover:border-cian focus:border-cian focus:outline-none"
+              >
+                {BLOQUES_SKINS.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
           <button
             type="button"
             onClick={() => setPaused((p) => !p)}
@@ -287,6 +415,7 @@ export function PlayRoom({ game }: { game: Game }) {
             <AsteroidsGame
               ref={gameRef}
               paused={paused}
+              skin={asteroidsSkin}
               onStateChange={handleAsteroidsStateChange}
               onGameOver={handleAsteroidsGameOver}
             />
@@ -294,6 +423,7 @@ export function PlayRoom({ game }: { game: Game }) {
             <BloquesGame
               ref={bloquesGameRef}
               paused={paused}
+              skin={skin}
               onStateChange={handleBloquesStateChange}
               onGameOver={handleBloquesGameOver}
             />
@@ -301,6 +431,7 @@ export function PlayRoom({ game }: { game: Game }) {
             <RompemurosGame
               ref={rompemurosGameRef}
               paused={paused}
+              skin={rompemurosSkin}
               onStateChange={handleRompemurosStateChange}
               onGameOver={handleRompemurosGameOver}
             />
@@ -308,6 +439,7 @@ export function PlayRoom({ game }: { game: Game }) {
             <SerpienteGame
               ref={serpienteGameRef}
               paused={paused}
+              skin={serpienteSkin}
               onStateChange={handleSerpienteStateChange}
               onGameOver={handleSerpienteGameOver}
             />
