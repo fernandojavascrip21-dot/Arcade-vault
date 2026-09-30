@@ -382,7 +382,7 @@ export function PlayRoom({ game }: { game: Game }) {
   };
 
   return (
-    <main className="relative z-10 mx-auto w-full max-w-[1020px] flex-1 animate-fade px-[18px] pb-20 pt-8 mobile:px-3 mobile:pb-6 mobile:pt-3">
+    <main className="relative z-10 mx-auto w-full max-w-[1020px] flex-1 animate-fade px-[18px] pb-20 pt-8 mobile:px-3 mobile:pb-6 mobile:pt-3 mobile-landscape:flex mobile-landscape:min-h-dvh mobile-landscape:flex-col mobile-landscape:pb-[max(8px,env(safe-area-inset-bottom))] mobile-landscape:pl-[max(12px,env(safe-area-inset-left))] mobile-landscape:pr-[max(12px,env(safe-area-inset-right))] mobile-landscape:pt-2">
       <div className="flex flex-wrap items-center justify-between gap-3.5 border border-cian/30 bg-[rgba(8,10,16,.92)] px-5 py-4 mobile:flex-nowrap mobile:gap-2 mobile:px-3 mobile:py-1">
         <div className="flex flex-wrap gap-x-[26px] gap-y-3 mobile:flex-nowrap mobile:gap-x-4">
           {!isBloques && !isRompemuros ? (
@@ -521,73 +521,85 @@ export function PlayRoom({ game }: { game: Game }) {
 
       <RotateHint enabled={isRealGame && touch.isCoarse} />
 
-      <CrtFrame
-        background={
-          isAsteroids || isBloques || isRompemuros || isSerpiente
-            ? "#000"
-            : game.thumb
-        }
-        label=""
-        compact
-        className="mt-6 mobile:mt-3"
-        art={
-          isAsteroids ? (
-            <AsteroidsGame
-              ref={gameRef}
-              paused={paused}
-              skin={asteroidsSkin}
-              onStateChange={handleAsteroidsStateChange}
-              onGameOver={handleAsteroidsGameOver}
-            />
-          ) : isBloques ? (
-            <BloquesGame
-              ref={bloquesGameRef}
-              paused={paused}
-              skin={skin}
-              onStateChange={handleBloquesStateChange}
-              onGameOver={handleBloquesGameOver}
-            />
-          ) : isRompemuros ? (
-            <RompemurosGame
-              ref={rompemurosGameRef}
-              paused={paused}
-              skin={rompemurosSkin}
-              onStateChange={handleRompemurosStateChange}
-              onGameOver={handleRompemurosGameOver}
-            />
-          ) : isSerpiente ? (
-            <SerpienteGame
-              ref={serpienteGameRef}
-              paused={paused}
-              skin={serpienteSkin}
-              onStateChange={handleSerpienteStateChange}
-              onGameOver={handleSerpienteGameOver}
-            />
-          ) : undefined
-        }
+      {/* Zona de juego. En horizontal (spec 14) es un grid de 3 columnas:
+          mando izquierdo · CRT · mando derecho. --crt-w es el ancho del CRT
+          que llena el alto libre: 92px = barra (54) + paddings/gap (24) +
+          marco compacto (14); ×1.6 por el 16:10 y +14px de marco. */}
+      <div
+        className={`mobile-landscape:mt-2 mobile-landscape:grid mobile-landscape:min-h-0 mobile-landscape:flex-1 mobile-landscape:items-center mobile-landscape:gap-4 mobile-landscape:[--crt-w:calc((100dvh_-_92px)*1.6_+_14px)] ${
+          showTouch
+            ? "mobile-landscape:grid-cols-[minmax(150px,1fr)_minmax(0,var(--crt-w))_minmax(150px,1fr)]"
+            : "mobile-landscape:grid-cols-[1fr_minmax(0,var(--crt-w))_1fr]"
+        }`}
       >
-        {paused ? (
-          <div className="grid h-full place-items-center bg-[rgba(4,4,10,.78)]">
-            <div className="font-display text-xl tracking-[2px] text-amarillo [text-shadow:0_0_20px_rgba(245,255,0,.6)]">
-              EN PAUSA
-            </div>
-          </div>
-        ) : null}
-      </CrtFrame>
-
-      {showTouch && touchLayout ? (
-        <TouchController
-          layout={touchLayout}
-          disabled={paused || over}
-          onPaddleMove={
-            isRompemuros
-              ? (delta) => rompemurosGameRef.current?.movePaddleBy(delta)
-              : undefined
+        <CrtFrame
+          background={
+            isAsteroids || isBloques || isRompemuros || isSerpiente
+              ? "#000"
+              : game.thumb
           }
-        />
-      ) : null}
+          label=""
+          compact
+          className="mt-6 mobile:mt-3 mobile-landscape:col-start-2 mobile-landscape:row-start-1 mobile-landscape:mt-0 mobile-landscape:w-full"
+          art={
+            isAsteroids ? (
+              <AsteroidsGame
+                ref={gameRef}
+                paused={paused}
+                skin={asteroidsSkin}
+                onStateChange={handleAsteroidsStateChange}
+                onGameOver={handleAsteroidsGameOver}
+              />
+            ) : isBloques ? (
+              <BloquesGame
+                ref={bloquesGameRef}
+                paused={paused}
+                skin={skin}
+                onStateChange={handleBloquesStateChange}
+                onGameOver={handleBloquesGameOver}
+              />
+            ) : isRompemuros ? (
+              <RompemurosGame
+                ref={rompemurosGameRef}
+                paused={paused}
+                skin={rompemurosSkin}
+                onStateChange={handleRompemurosStateChange}
+                onGameOver={handleRompemurosGameOver}
+              />
+            ) : isSerpiente ? (
+              <SerpienteGame
+                ref={serpienteGameRef}
+                paused={paused}
+                skin={serpienteSkin}
+                onStateChange={handleSerpienteStateChange}
+                onGameOver={handleSerpienteGameOver}
+              />
+            ) : undefined
+          }
+        >
+          {paused ? (
+            <div className="grid h-full place-items-center bg-[rgba(4,4,10,.78)]">
+              <div className="font-display text-xl tracking-[2px] text-amarillo [text-shadow:0_0_20px_rgba(245,255,0,.6)]">
+                EN PAUSA
+              </div>
+            </div>
+          ) : null}
+        </CrtFrame>
 
-      <div className="mt-4 flex flex-wrap justify-between gap-2.5 text-[11px] tracking-[2px] text-[#46525e]">
+        {showTouch && touchLayout ? (
+          <TouchController
+            layout={touchLayout}
+            disabled={paused || over}
+            onPaddleMove={
+              isRompemuros
+                ? (delta) => rompemurosGameRef.current?.movePaddleBy(delta)
+                : undefined
+            }
+          />
+        ) : null}
+      </div>
+
+      <div className="mt-4 flex flex-wrap justify-between gap-2.5 text-[11px] tracking-[2px] text-[#46525e] mobile-landscape:hidden">
         {/* Con el control táctil visible, la ayuda de teclado no aplica. */}
         {showTouch ? null : (
           <span>

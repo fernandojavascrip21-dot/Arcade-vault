@@ -62,6 +62,7 @@ export function NavBar() {
   const creditsText = String(credits).padStart(2, "0");
   const closeMenu = () => setMenuOpen(false);
   const isHome = pathname === "/";
+  const isPlay = pathname.startsWith("/play/");
   const isGames =
     pathname === "/games" ||
     pathname.startsWith("/game/") ||
@@ -69,7 +70,13 @@ export function NavBar() {
 
   return (
     <>
-      <nav className="sticky top-0 z-40 flex items-center justify-between gap-4 border-b border-cian/30 bg-background/90 px-[22px] py-3.5 shadow-[0_6px_30px_rgba(0,0,0,.6)] backdrop-blur-md">
+      {/* En /play con el móvil en horizontal se oculta (spec 14): cada píxel
+          de alto va al CRT; se sale con SALIR del menú ⋮. */}
+      <nav
+        className={`sticky top-0 z-40 flex items-center justify-between gap-4 border-b border-cian/30 bg-background/90 px-[22px] py-3.5 shadow-[0_6px_30px_rgba(0,0,0,.6)] backdrop-blur-md ${
+          isPlay ? "mobile-landscape:hidden" : ""
+        }`}
+      >
         <Link
           href="/"
           className="whitespace-nowrap font-display text-sm tracking-wider text-cian [text-shadow:0_0_10px_rgba(0,245,255,.8)]"
