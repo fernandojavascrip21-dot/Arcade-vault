@@ -1,6 +1,6 @@
 # SPEC 13 — Controles táctiles para smartphone
 
-> **Status:** Draft
+> **Status:** Aprovado
 > **Depends on:** SPEC 06, SPEC 08, SPEC 09, SPEC 10, SPEC 11
 > **Date:** 2026-09-30
 > **Objective:** Añadir bajo el CRT de `/play/[id]` un "Arcade Universal Controller" táctil (D-pad, deslizador y botones de acción, con el estilo de `references/source-assets/smarphone-controllers/`) que se muestra solo en dispositivos táctiles y hace jugables en el móvil los cuatro juegos reales, enviando eventos de teclado sintéticos a los motores existentes.
