@@ -17,7 +17,7 @@ El spec 13 hizo jugables los cuatro juegos en el móvil con el "Arcade Universal
 - No se exporta `viewport` (sin `viewport-fit=cover`), así que el notch tapa contenido en horizontal, y no se usa `dvh`.
 - `play-room.tsx` no tiene ni una variante responsive (`sm:`/`md:`): todo depende de `flex-wrap`.
 
-Este spec resuelve **solo la sala de juego**. El resto del sitio (navbar, catálogo, detalle, Hall of Fame, About, Auth) queda para el **spec 15**. Las pautas de accesibilidad/táctil se tomaron de la skill `/ui-ux-pro-max` (objetivos ≥ 44 px, ≥ 8 px entre objetivos, `dvh` en lugar de `vh`, viewport meta, `overscroll-behavior` para evitar pull-to-refresh).
+Este spec resuelve **solo la sala de juego**. El resto del sitio (navbar, catálogo, detalle, Hall of Fame, About, Auth) queda para el **spec 16** (el 15 es la sala de juego en escritorio; ver §6, 2026-09-30). Las pautas de accesibilidad/táctil se tomaron de la skill `/ui-ux-pro-max` (objetivos ≥ 44 px, ≥ 8 px entre objetivos, `dvh` en lugar de `vh`, viewport meta, `overscroll-behavior` para evitar pull-to-refresh).
 
 ---
 
@@ -76,7 +76,7 @@ Este spec resuelve **solo la sala de juego**. El resto del sitio (navbar, catál
 
 **Out of scope (para specs futuros):**
 
-- **Spec 15**: responsive del resto del sitio — navbar y menú lateral (objetivos < 44 px como `+ MONEDA`, "Salir", enlaces del menú), `/`, `/games`, `/game/[id]`, `/hall-of-fame` (tablas con `min-w-[420/560px]`), `/about`, `/auth`, y `min-h-screen` → `min-h-dvh` global.
+- **Spec 16**: responsive del resto del sitio — navbar y menú lateral (objetivos < 44 px como `+ MONEDA`, "Salir", enlaces del menú), `/`, `/games`, `/game/[id]`, `/hall-of-fame` (tablas con `min-w-[420/560px]`), `/about`, `/auth`, y `min-h-screen` → `min-h-dvh` global.
 - Fullscreen API, bloqueo de orientación (`screen.orientation.lock`) o PWA/instalable.
 - Tablets: se quedan con el layout de escritorio (+ mando del spec 13 si son táctiles).
 - Reanudar automáticamente tras cerrar el menú ⋮ o tras rotar.
@@ -190,7 +190,7 @@ Las claves de skins y `arcadevault.touch-controls.v1` no cambian.
 
 ## 6 — Decisiones tomadas y descartadas
 
-- **Dividir en dos specs**: este (sala de juego) y el spec 15 (resto del sitio). La sala tiene problemas propios (orientación, CRT, mando, modal) y cada PR se verifica por separado. Descartado: un único spec para las 7 pantallas.
+- **Dividir en dos specs**: este (sala de juego) y el spec 16 (resto del sitio; renumerado, ver abajo). La sala tiene problemas propios (orientación, CRT, mando, modal) y cada PR se verifica por separado. Descartado: un único spec para las 7 pantallas.
 - **Detección por media queries CSS de tamaño** (`max-width: 767px` / `landscape and max-height: 540px`) como variantes Tailwind. Sin JS, sin desajuste de hidratación y funciona en DevTools. Descartado: combinar con `(pointer: coarse)` (una ventana estrecha de escritorio vería layout de escritorio roto) y decidir el árbol por `useMediaQuery` (snapshot de servidor distinto → parpadeo). La visibilidad del mando sigue dependiendo de `(pointer: coarse)` (spec 13).
 - **`mobile` en forma de bloque y registrada antes que `mobile-landscape`** (cambio del 2026-09-30, paso 1 de la implementación): con la lista separada por coma, Tailwind v4 generó un selector inválido (`.mobile\:hidden (orientation: landscape)… { … }`), así que se aplicó la mitigación prevista en §7. Además, las variantes se emiten en orden de registro: `mobile` va primero para que `mobile-landscape:` gane en conflictos (`mobile:px-3 mobile-landscape:px-0`). Verificado compilando con `@tailwindcss/postcss`.
 - **Umbral 540 px de alto** para horizontal: cubre teléfonos acostados (360–430 px de alto) y deja fuera tablets (≥ 768 px), que conservan el layout de escritorio.
@@ -206,9 +206,20 @@ Las claves de skins y `arcadevault.touch-controls.v1` no cambian.
 - **Sugerencia "gira el móvil" descartable y persistida**: ayuda a descubrir el modo horizontal sin molestar a quien prefiere vertical.
 - **`viewport-fit=cover` + safe areas y `dvh`**: el notch en horizontal y la barra dinámica del navegador rompían `vh`. No se bloquea el zoom (`userScalable` intacto) por accesibilidad.
 - **`overscroll-behavior: none` solo en `/play`**: evita pull-to-refresh accidental en partida sin cambiar el resto del sitio.
-- **`compact` como prop explícita de `CrtFrame`**: el marco reducido solo aplica a la sala; aplicar `mobile:` directamente en `CrtFrame` cambiaría home y detalle, que son del spec 15.
+- **`compact` como prop explícita de `CrtFrame`**: el marco reducido solo aplica a la sala; aplicar `mobile:` directamente en `CrtFrame` cambiaría home y detalle, que son del spec 16.
 
 ---
+
+### Ajustes durante la implementación (2026-09-30)
+
+- **Ancho del CRT en horizontal**: `--crt-w = (100dvh − 92px) × 1.6 + 14px` en lugar de `(100dvh − 72px) × 1.6`. La fórmula original no contaba el marco compacto (14 px) ni la barra real (54 px) y el CRT se salía ~20 px por abajo. Resultado: 488×310 en 844×390 (≥ 480 ✓).
+- **`min-h-dvh` en lugar de `h-dvh`** en el `main` horizontal: idéntico con juegos reales (el contenido llena justo el alto) y los juegos del simulador conservan accesible "SIMULAR FIN DE PARTIDA".
+- **Portal a `<body>` para la hoja OPCIONES y el modal FIN DEL JUEGO**: el `<main>` de la sala conserva `transform: matrix(1,0,0,1,0,0)` tras `animate-fade` y era el bloque contenedor de sus `position: fixed`, así que el modal se centraba en `<main>` (en escritorio salía cortado, `top −17`) y la hoja se pegaba al final de `<main>`, no de la pantalla. Efecto secundario aceptado: las scanlines del sitio ya no se pintan encima de modal y hoja. Descartado: quitar el `transform` de `av-fade` (cambio global en todas las páginas).
+- **`PlayMenuSheet` recibe además `gameName` y `paused`** para la línea de estado ("ASTEROIDES · EN PAUSA").
+- **CRT `mobile:mt-3`** (en vez de `mt-6`) para acompañar los paddings móviles; **modal** con `max-h-[calc(100dvh-40px)]` en vertical/escritorio (el overlay tiene `p-5`) y `100dvh-24px` en horizontal (`p-3`); **"GUARDAR COMO INVITADO"** con `mobile:min-h-11` (medía 14 px).
+- **Pista del deslizador en horizontal ≈ 92 px** (no 120–140): la columna queda en su mínimo de 150 px y el pulgar de 56 px necesita margen. Con 2.5× bastan ~37 px de arrastre para cruzar el campo; jugable.
+- **Paso 8 (pausa al girar) en un PR aparte** (rama `spec-14-pausa-al-girar`): la rama principal del spec se mergeó (PR #19) antes de los pasos 8–10. Ese PR completa el paso 8, la verificación restante del paso 9 y el paso 10.
+- **Renumeración**: la sala de juego **en escritorio** pasa a ser el **spec 15** (sin scroll, barra compacta + ⋮, modal en dos columnas, pantalla completa) y el responsive del resto del sitio en móvil, el **spec 16**.
 
 ## 7 — Riesgos identificados
 
@@ -223,7 +234,8 @@ Las claves de skins y `arcadevault.touch-controls.v1` no cambian.
 
 ## Lo que **no** entra en este spec
 
-- Responsive del resto del sitio (spec 15): navbar, menú lateral, catálogo, detalle, Hall of Fame, About, Auth.
+- Sala de juego en escritorio (spec 15).
+- Responsive del resto del sitio (spec 16): navbar, menú lateral, catálogo, detalle, Hall of Fame, About, Auth.
 - Fullscreen, bloqueo de orientación, PWA.
 - Layout especial para tablets.
 - Cambios en motores, mecánicas, puntuaciones, skins, mapeos del mando o Supabase.

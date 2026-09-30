@@ -213,6 +213,18 @@ export function PlayRoom({ game }: { game: Game }) {
     };
   }, []);
 
+  // Pausa automática al girar el móvil (spec 14): el layout salta y el
+  // jugador pierde la referencia. Solo con partida real en curso; al volver a
+  // girar no reanuda. setPaused va en el callback del listener, no en el
+  // cuerpo del efecto.
+  useEffect(() => {
+    if (!isRealGame || over) return;
+    const media = window.matchMedia("(orientation: landscape)");
+    const onRotate = () => setPaused(true);
+    media.addEventListener("change", onRotate);
+    return () => media.removeEventListener("change", onRotate);
+  }, [isRealGame, over]);
+
   const playerName = user ?? "INVITADO";
   const exit = () => router.push("/games");
 
