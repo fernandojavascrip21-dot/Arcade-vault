@@ -3,6 +3,7 @@
 import { EllipsisVertical, Pause, Play } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 
 import { saveScoreAction } from "@/app/play/[id]/actions";
 import { PlayMenuSheet } from "@/app/play/[id]/play-menu-sheet";
@@ -629,106 +630,119 @@ export function PlayRoom({ game }: { game: Game }) {
         </div>
       ) : null}
 
-      {over ? (
-        <div className="fixed inset-0 z-[70] grid animate-fade place-items-center bg-[rgba(4,4,9,.86)] p-5 backdrop-blur-sm">
-          <div className="grid max-h-[92vh] w-full max-w-[460px] justify-items-center overflow-y-auto gap-5 border border-magenta bg-[#0c0a12] px-7 py-9 text-center shadow-[0_0_60px_rgba(255,0,110,.4)]">
-            <div className="font-display text-xl tracking-wider text-magenta [text-shadow:0_0_18px_rgba(255,0,110,.7)]">
-              FIN DEL JUEGO
-            </div>
-            <div className="text-xs tracking-[3px] text-[#6f7d88]">
-              PUNTUACIÓN FINAL
-            </div>
-            <div className="font-display text-[34px] text-amarillo [text-shadow:0_0_22px_rgba(245,255,0,.55)]">
-              {score.toLocaleString("es-ES")}
-            </div>
-
-            {!saved ? (
-              <form
-                className="grid w-full gap-3"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  if (!nameError && !saving) handleSave(nameNormalized);
-                }}
-              >
-                <label className="grid gap-2 text-left text-[10px] uppercase tracking-[2px] text-[#6f7d88]">
-                  Tu nombre
-                  <input
-                    value={nameValue}
-                    onChange={(e) => setNameDraft(e.target.value)}
-                    // Los motores escuchan el teclado en window y cancelan sus
-                    // teclas (A, S, D, P...): sin esto el input no las recibe.
-                    onKeyDown={(e) => e.stopPropagation()}
-                    onKeyUp={(e) => e.stopPropagation()}
-                    maxLength={NAME_MAX}
-                    placeholder="JUGADOR_01"
-                    autoComplete="off"
-                    aria-invalid={showNameError ? true : undefined}
-                    className="border border-cian/30 bg-cian/5 px-3.5 py-3 text-[15px] uppercase text-foreground focus:border-cian focus:shadow-[0_0_20px_rgba(0,245,255,.4)]"
-                  />
-                </label>
-                {showNameError ? (
-                  <div className="text-left text-[11px] leading-relaxed text-magenta">
-                    {nameError}
+      {/* Portal a <body>: el <main> tiene `transform` (animate-fade) y sería el
+          bloque contenedor del `fixed`; así el modal se centra en la pantalla. */}
+      {over
+        ? createPortal(
+            <div className="fixed inset-0 z-[70] grid animate-fade place-items-center bg-[rgba(4,4,9,.86)] p-5 backdrop-blur-sm mobile-landscape:p-3">
+              {/* En horizontal (spec 14) pasa a dos columnas: izquierda título,
+              puntuación y botones; derecha formulario o ranking con scroll
+              propio. Los contenedores de columna son `contents` fuera de
+              horizontal, así que vertical y escritorio no cambian. */}
+              <div className="grid max-h-[calc(100dvh-40px)] w-full max-w-[460px] justify-items-center overflow-y-auto gap-5 border border-magenta bg-[#0c0a12] px-7 py-9 text-center shadow-[0_0_60px_rgba(255,0,110,.4)] mobile-landscape:max-h-[calc(100dvh-24px)] mobile-landscape:max-w-[760px] mobile-landscape:grid-cols-2 mobile-landscape:grid-rows-[1fr_auto] mobile-landscape:items-start mobile-landscape:gap-x-6 mobile-landscape:gap-y-4 mobile-landscape:overflow-hidden mobile-landscape:p-5">
+                <div className="contents mobile-landscape:col-start-1 mobile-landscape:row-start-1 mobile-landscape:grid mobile-landscape:content-center mobile-landscape:justify-items-center mobile-landscape:gap-3 mobile-landscape:self-stretch">
+                  <div className="font-display text-xl tracking-wider text-magenta [text-shadow:0_0_18px_rgba(255,0,110,.7)]">
+                    FIN DEL JUEGO
                   </div>
-                ) : null}
-                <button
-                  type="submit"
-                  disabled={saving || nameError !== null}
-                  className="w-full whitespace-nowrap border border-cian bg-cian/5 p-4 font-display text-[11px] text-cian transition-colors hover:bg-cian hover:text-[#0a0a0f] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {saving ? "GUARDANDO..." : "GUARDAR PUNTUACIÓN"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSave(GUEST_NAME)}
-                  disabled={saving}
-                  className="whitespace-nowrap font-display text-[9px] text-[#8b98a3] underline-offset-4 transition-colors hover:text-amarillo hover:underline disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  GUARDAR COMO INVITADO
-                </button>
-              </form>
-            ) : null}
+                  <div className="text-xs tracking-[3px] text-[#6f7d88]">
+                    PUNTUACIÓN FINAL
+                  </div>
+                  <div className="font-display text-[34px] text-amarillo [text-shadow:0_0_22px_rgba(245,255,0,.55)]">
+                    {score.toLocaleString("es-ES")}
+                  </div>
+                </div>
 
-            {saveError ? (
-              <div className="text-[11px] leading-relaxed text-magenta">
-                {saveError}
+                <div className="contents mobile-landscape:col-start-2 mobile-landscape:row-span-2 mobile-landscape:row-start-1 mobile-landscape:grid mobile-landscape:max-h-[calc(100dvh-64px)] mobile-landscape:w-full mobile-landscape:content-start mobile-landscape:justify-items-center mobile-landscape:gap-3 mobile-landscape:overflow-y-auto">
+                  {!saved ? (
+                    <form
+                      className="grid w-full gap-3"
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        if (!nameError && !saving) handleSave(nameNormalized);
+                      }}
+                    >
+                      <label className="grid gap-2 text-left text-[10px] uppercase tracking-[2px] text-[#6f7d88]">
+                        Tu nombre
+                        <input
+                          value={nameValue}
+                          onChange={(e) => setNameDraft(e.target.value)}
+                          // Los motores escuchan el teclado en window y cancelan sus
+                          // teclas (A, S, D, P...): sin esto el input no las recibe.
+                          onKeyDown={(e) => e.stopPropagation()}
+                          onKeyUp={(e) => e.stopPropagation()}
+                          maxLength={NAME_MAX}
+                          placeholder="JUGADOR_01"
+                          autoComplete="off"
+                          aria-invalid={showNameError ? true : undefined}
+                          className="border border-cian/30 bg-cian/5 px-3.5 py-3 text-[15px] uppercase text-foreground focus:border-cian focus:shadow-[0_0_20px_rgba(0,245,255,.4)]"
+                        />
+                      </label>
+                      {showNameError ? (
+                        <div className="text-left text-[11px] leading-relaxed text-magenta">
+                          {nameError}
+                        </div>
+                      ) : null}
+                      <button
+                        type="submit"
+                        disabled={saving || nameError !== null}
+                        className="w-full whitespace-nowrap border border-cian bg-cian/5 p-4 font-display text-[11px] text-cian transition-colors hover:bg-cian hover:text-[#0a0a0f] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {saving ? "GUARDANDO..." : "GUARDAR PUNTUACIÓN"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleSave(GUEST_NAME)}
+                        disabled={saving}
+                        className="whitespace-nowrap font-display text-[9px] text-[#8b98a3] underline-offset-4 mobile:min-h-11 mobile:w-full transition-colors hover:text-amarillo hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        GUARDAR COMO INVITADO
+                      </button>
+                    </form>
+                  ) : null}
+
+                  {saveError ? (
+                    <div className="text-[11px] leading-relaxed text-magenta">
+                      {saveError}
+                    </div>
+                  ) : null}
+
+                  {savedResult ? (
+                    <GameOverRanking
+                      result={savedResult.result}
+                      name={savedResult.name}
+                      score={score}
+                    />
+                  ) : null}
+
+                  {saveMsg ? (
+                    <div className="font-display text-[11px] tracking-wider text-cian">
+                      {saveMsg}
+                      <span className="animate-caret">_</span>
+                    </div>
+                  ) : null}
+                </div>
+
+                <div className="mt-1 grid w-full gap-2.5 mobile-landscape:col-start-1 mobile-landscape:row-start-2 mobile-landscape:mt-0">
+                  <button
+                    type="button"
+                    onClick={replay}
+                    className="whitespace-nowrap border border-amarillo/50 p-4 text-center font-display text-[10px] text-amarillo transition-colors hover:bg-amarillo/10 active:scale-95"
+                  >
+                    JUGAR DE NUEVO
+                  </button>
+                  <button
+                    type="button"
+                    onClick={exit}
+                    className="whitespace-nowrap border border-white/20 p-4 text-center font-display text-[10px] text-[#8b98a3] transition-colors hover:border-magenta hover:text-magenta active:scale-95"
+                  >
+                    VOLVER AL VAULT
+                  </button>
+                </div>
               </div>
-            ) : null}
-
-            {savedResult ? (
-              <GameOverRanking
-                result={savedResult.result}
-                name={savedResult.name}
-                score={score}
-              />
-            ) : null}
-
-            {saveMsg ? (
-              <div className="font-display text-[11px] tracking-wider text-cian">
-                {saveMsg}
-                <span className="animate-caret">_</span>
-              </div>
-            ) : null}
-
-            <div className="mt-1 grid w-full gap-2.5">
-              <button
-                type="button"
-                onClick={replay}
-                className="whitespace-nowrap border border-amarillo/50 p-4 text-center font-display text-[10px] text-amarillo transition-colors hover:bg-amarillo/10 active:scale-95"
-              >
-                JUGAR DE NUEVO
-              </button>
-              <button
-                type="button"
-                onClick={exit}
-                className="whitespace-nowrap border border-white/20 p-4 text-center font-display text-[10px] text-[#8b98a3] transition-colors hover:border-magenta hover:text-magenta active:scale-95"
-              >
-                VOLVER AL VAULT
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+            </div>,
+            document.body,
+          )
+        : null}
     </main>
   );
 }

@@ -2,6 +2,7 @@
 
 import { X } from "lucide-react";
 import { useEffect, useRef, type KeyboardEvent, type RefObject } from "react";
+import { createPortal } from "react-dom";
 
 import { ThemeToggleButton } from "@/components/nav-bar";
 
@@ -99,7 +100,9 @@ export function PlayMenuSheet({
       ?.focus();
   };
 
-  return (
+  // Portal a <body>: el <main> de la sala tiene `transform` (animate-fade) y
+  // sería el bloque contenedor de este `fixed`, no la pantalla.
+  return createPortal(
     <div
       className="fixed inset-0 z-[65] animate-fade bg-[rgba(4,4,9,.72)] motion-reduce:animate-none"
       onClick={onClose}
@@ -227,6 +230,7 @@ export function PlayMenuSheet({
           SALIR
         </button>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
