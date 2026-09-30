@@ -7,9 +7,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What this is
 
 **Arcade Vault** — a platform for playing games online and competing for the highest score
-(see `README.md`). Specs 01–12 are all implemented (`specs/`, status `Implementado`): visual
+(see `README.md`). Specs 01–14 are all implemented (`specs/`, status `Implementado`): visual
 screens, landing, English routes, About/contact (Resend), Supabase integration, catalog +
-leaderboards, four playable canvas games, light/dark theme, and player names with rankings.
+leaderboards, four playable canvas games, light/dark theme, player names with rankings, touch
+controls (13) and the responsive mobile play room (14).
 UI copy is in Spanish; routes, file names and code identifiers are in English (except game
 ids/slugs, which are Spanish).
 
@@ -165,6 +166,21 @@ Asteroides, whose folder is `components/games/asteroids/` (`asteroids-game.tsx`)
   (server/hydration snapshot is always `"retro"`). Don't read `localStorage` in a `useState`
   initializer or `setState` in a mount effect — it causes a hydration error and trips the lint
   rule `react-hooks/set-state-in-effect`. Client-only preference: no Supabase, no score impact.
+- **Touch controller** (spec 13): `components/touch-controller/` dispatches synthetic
+  `KeyboardEvent`s to the engines (per-game `TOUCH_LAYOUTS`; Rompemuros adds `movePaddleBy`).
+  Shown only on `(pointer: coarse)`; preference in `localStorage` key `arcadevault.touch-controls.v1`.
+- **Responsive play room** (spec 14): Tailwind variants `mobile:` (< 768 px wide **or** landscape
+  ≤ 540 px tall) and `mobile-landscape:` in `app/globals.css`, mirrored as `MOBILE_QUERY` /
+  `MOBILE_LANDSCAPE_QUERY` in `lib/responsive.ts` — keep both in sync. `mobile` is declared in block
+  form and **before** `mobile-landscape` (a comma query list compiles to an invalid selector, and
+  later-registered variants win). On mobile the top bar collapses to stats + PAUSA + ⋮, which opens
+  `app/play/[id]/play-menu-sheet.tsx` (SKIN/MANDO/TEMA/SALIR; opening pauses). In landscape `/play`
+  hides nav/footer, the zone is a 3-column grid (controller left · CRT · controller right, the
+  controller uses `display: contents`) and the room fits without scroll. `CrtFrame` has a
+  `compact` prop (play room only). `rotate-hint.tsx` (key `arcadevault.rotate-hint.v1`); rotating
+  pauses a running game; `/play` sets `overscroll-behavior: none`.
+- **`fixed` overlays in the play room must use `createPortal(…, document.body)`**: `<main>` keeps a
+  `transform` from `animate-fade`, which makes it the containing block of `position: fixed`.
 - Pipeline for a new game: `game-planner` agent (decide which game) → `/add-game` (spec) →
   `/spec-impl` (code). Games to-do: `references/games-suggestion-all.md`.
 - Add a game with `/add-game`. Reference sources: `references/started-games/`
