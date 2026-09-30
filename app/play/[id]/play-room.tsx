@@ -430,6 +430,7 @@ export function PlayRoom({ game }: { game: Game }) {
             : game.thumb
         }
         label=""
+        compact
         className="mt-6"
         art={
           isAsteroids ? (
