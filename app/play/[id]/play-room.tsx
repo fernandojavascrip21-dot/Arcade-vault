@@ -1,9 +1,11 @@
 "use client";
 
+import { EllipsisVertical, Pause, Play } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { saveScoreAction } from "@/app/play/[id]/actions";
+import { PlayMenuSheet } from "@/app/play/[id]/play-menu-sheet";
 import { CrtFrame } from "@/components/crt-frame";
 import { GameOverRanking } from "@/components/game-over-ranking";
 import {
@@ -129,11 +131,15 @@ function HudStat({
   className?: string;
 }) {
   return (
-    <div className="grid gap-1.5">
-      <span className="whitespace-nowrap text-[10px] tracking-[2px] text-[#6f7d88]">
+    <div className="grid gap-1.5 mobile:gap-1">
+      <span className="whitespace-nowrap text-[10px] tracking-[2px] text-[#6f7d88] mobile:text-[9px] mobile:tracking-[1px]">
         {label}
       </span>
-      <span className={`font-display text-[15px] ${className}`}>{value}</span>
+      <span
+        className={`font-display text-[15px] mobile:text-[13px] ${className}`}
+      >
+        {value}
+      </span>
     </div>
   );
 }
@@ -158,6 +164,9 @@ export function PlayRoom({ game }: { game: Game }) {
   const rompemurosSkin = useSkin(rompemurosSkinStore);
   const serpienteSkin = useSkin(serpienteSkinStore);
   const [paused, setPaused] = useState(false);
+  // Hoja OPCIONES (menú ⋮) de la sala en móvil (spec 14).
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
   const [over, setOver] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -195,6 +204,44 @@ export function PlayRoom({ game }: { game: Game }) {
   const exit = () => router.push("/games");
 
   const handleSkinChange = (next: BloquesSkin) => writeBloquesSkin(next);
+
+  // Abrir la hoja pausa una partida real en curso; cerrarla no reanuda: el
+  // jugador pulsa SEGUIR (spec 14).
+  const openMenu = () => {
+    if (isRealGame && !over) setPaused(true);
+    setMenuOpen(true);
+  };
+
+  // Skins del juego actual para la hoja OPCIONES (mismos stores que el
+  // selector SKIN de escritorio).
+  const skinControl = isAsteroids
+    ? {
+        value: asteroidsSkin,
+        options: ASTEROIDS_SKINS,
+        onChange: (id: string) =>
+          asteroidsSkinStore.write(id as typeof asteroidsSkin),
+      }
+    : isBloques
+      ? {
+          value: skin,
+          options: BLOQUES_SKINS,
+          onChange: (id: string) => handleSkinChange(id as BloquesSkin),
+        }
+      : isRompemuros
+        ? {
+            value: rompemurosSkin,
+            options: ROMPEMUROS_SKINS,
+            onChange: (id: string) =>
+              rompemurosSkinStore.write(id as typeof rompemurosSkin),
+          }
+        : isSerpiente
+          ? {
+              value: serpienteSkin,
+              options: SERPIENTE_SKINS,
+              onChange: (id: string) =>
+                serpienteSkinStore.write(id as typeof serpienteSkin),
+            }
+          : undefined;
 
   // Sin motor de juego: simula el final de una partida con una puntuación
   // pseudoaleatoria para poder recorrer el flujo de guardado.
@@ -324,8 +371,8 @@ export function PlayRoom({ game }: { game: Game }) {
 
   return (
     <main className="relative z-10 mx-auto w-full max-w-[1020px] flex-1 animate-fade px-[18px] pb-20 pt-8">
-      <div className="flex flex-wrap items-center justify-between gap-3.5 border border-cian/30 bg-[rgba(8,10,16,.92)] px-5 py-4">
-        <div className="flex flex-wrap gap-x-[26px] gap-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-3.5 border border-cian/30 bg-[rgba(8,10,16,.92)] px-5 py-4 mobile:flex-nowrap mobile:gap-2 mobile:px-3 mobile:py-1">
+        <div className="flex flex-wrap gap-x-[26px] gap-y-3 mobile:flex-nowrap mobile:gap-x-4">
           {!isBloques && !isRompemuros ? (
             <>
               <HudStat
@@ -347,14 +394,14 @@ export function PlayRoom({ game }: { game: Game }) {
               />
             </>
           ) : null}
-          <div className="grid gap-1.5">
+          <div className="grid gap-1.5 mobile:hidden">
             <span className="text-[10px] tracking-[2px] text-[#6f7d88]">
               JUGADOR
             </span>
             <span className="text-sm text-[#cdd8de]">{playerName}</span>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5 mobile:hidden">
           {isAsteroids ? (
             <SkinSelect
               value={asteroidsSkin}
@@ -421,7 +468,44 @@ export function PlayRoom({ game }: { game: Game }) {
             SALIR
           </button>
         </div>
+        {/* Móvil: PAUSA solo icono + menú ⋮ (SKIN, MANDO, TEMA, SALIR). */}
+        <div className="ml-auto hidden shrink-0 items-center gap-2 mobile:flex">
+          <button
+            type="button"
+            onClick={() => setPaused((p) => !p)}
+            aria-label={paused ? "Seguir" : "Pausar"}
+            className="grid size-11 place-items-center border border-amarillo/50 text-amarillo transition-colors hover:bg-amarillo/10 active:scale-95"
+          >
+            {paused ? (
+              <Play size={18} aria-hidden />
+            ) : (
+              <Pause size={18} aria-hidden />
+            )}
+          </button>
+          <button
+            ref={menuButtonRef}
+            type="button"
+            onClick={openMenu}
+            aria-label="Opciones de la partida"
+            aria-haspopup="dialog"
+            aria-expanded={menuOpen}
+            className="grid size-11 place-items-center border border-cian/50 text-cian transition-colors hover:bg-cian/10 active:scale-95"
+          >
+            <EllipsisVertical size={18} aria-hidden />
+          </button>
+        </div>
       </div>
+
+      <PlayMenuSheet
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        gameName={game.title}
+        paused={paused}
+        skins={skinControl}
+        touch={isRealGame && touch.isCoarse ? touch : undefined}
+        onExit={exit}
+        returnFocusRef={menuButtonRef}
+      />
 
       <CrtFrame
         background={

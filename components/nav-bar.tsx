@@ -13,7 +13,8 @@ import { useMediaQuery } from "@/lib/use-media-query";
 // El ícono visible lo resuelve el CSS de [data-theme] (ver globals.css), no
 // una condición sobre `theme`: así el primer render del cliente no puede
 // desentonar con lo que mandó el servidor (ver nota en globals.css).
-function ThemeToggleButton({ className = "" }: { className?: string }) {
+// Exportado para la hoja OPCIONES de la sala de juego (spec 14).
+export function ThemeToggleButton({ className = "" }: { className?: string }) {
   const { toggleTheme } = useTheme();
 
   return (

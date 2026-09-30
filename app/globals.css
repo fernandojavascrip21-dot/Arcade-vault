@@ -77,6 +77,7 @@
   --animate-pulse-neon: av-pulse 1.8s ease-in-out infinite;
   --animate-row: av-row 0.5s ease both;
   --animate-fade: av-fade 0.28s ease both;
+  --animate-sheet: av-sheet 0.2s ease-out both;
   --animate-caret: av-caret 1s step-end infinite;
   --animate-float: av-float 6s ease-in-out infinite;
   --animate-shake: av-shake 0.4s;
@@ -185,6 +186,18 @@ input:focus {
   from {
     opacity: 0;
     transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Hoja inferior OPCIONES de la sala de juego (spec 14). */
+@keyframes av-sheet {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
   }
   to {
     opacity: 1;
