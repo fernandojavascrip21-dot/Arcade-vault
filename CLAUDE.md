@@ -55,10 +55,11 @@ Subagents live in `.claude/agents/`:
 - `game-planner` (`model: inherit`) — evaluates game suggestions and decides which game fits the
   platform next; keeps the traffic-light to-do list in `references/games-suggestion-all.md`
   (done / pending by priority / discarded — no round history). Run it before `/add-game`.
-- `game-jam` (`model: inherit`) — given a game-jam theme, invents 2 distinct games and writes one
-  full `Draft` spec per game (same shape as specs 06/08/10/11) at
-  `specs/game-jam/<theme>-NN-slug.md`. No code, no Supabase. Renumber into `specs/NN-slug.md`
-  before `/spec-impl`.
+- `game-jam` (`model: sonnet`) — given the name of a specific game already decided on (typically one
+  approved in "⏳ Pendientes" of `references/games-suggestion-all.md`, e.g. BOMBARDERO), turns it
+  into one full numeric `Draft` spec (same shape as specs 06/08/10/11) at
+  `specs/game-jam/<slug>.md`. No code, no Supabase. Review, approve, and renumber into
+  `specs/NN-slug.md` before `/spec-impl`.
 
 ## Hooks and MCP
 
