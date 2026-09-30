@@ -10,7 +10,11 @@ import {
   AsteroidsGame,
   type AsteroidsGameHandle,
 } from "@/components/games/asteroids/asteroids-game";
-import type { AsteroidsState } from "@/components/games/asteroids/engine";
+import {
+  ASTEROIDS_SKINS,
+  ASTEROIDS_SKIN_STORAGE_KEY,
+  type AsteroidsState,
+} from "@/components/games/asteroids/engine";
 import {
   BloquesGame,
   type BloquesGameHandle,
@@ -21,16 +25,25 @@ import {
   type BloquesSkin,
   type BloquesState,
 } from "@/components/games/bloques/engine";
-import type { RompemurosState } from "@/components/games/rompemuros/engine";
+import {
+  ROMPEMUROS_SKINS,
+  ROMPEMUROS_SKIN_STORAGE_KEY,
+  type RompemurosState,
+} from "@/components/games/rompemuros/engine";
 import {
   RompemurosGame,
   type RompemurosGameHandle,
 } from "@/components/games/rompemuros/rompemuros-game";
-import type { SerpienteState } from "@/components/games/serpiente/engine";
+import {
+  SERPIENTE_SKINS,
+  SERPIENTE_SKIN_STORAGE_KEY,
+  type SerpienteState,
+} from "@/components/games/serpiente/engine";
 import {
   SerpienteGame,
   type SerpienteGameHandle,
 } from "@/components/games/serpiente/serpiente-game";
+import { SkinSelect } from "@/components/skin-select";
 import { useCredits } from "@/contexts/credits-context";
 import { useSession } from "@/contexts/session-context";
 import {
@@ -39,9 +52,31 @@ import {
   normalizePlayerName,
   validatePlayerName,
 } from "@/lib/player-name";
+import { createSkinStore, useSkin } from "@/lib/skin-store";
 import type { Game, SavedResult } from "@/lib/types";
 
 const SAVED_TEXT = "PUNTUACIÓN GUARDADA";
+
+// Skin de Asteroides (spec 06 §8): store genérico de lib/skin-store.ts.
+const asteroidsSkinStore = createSkinStore(
+  ASTEROIDS_SKIN_STORAGE_KEY,
+  ASTEROIDS_SKINS,
+  "clasico",
+);
+
+// Skin de Rompemuros (spec 10 §8): store genérico de lib/skin-store.ts.
+const rompemurosSkinStore = createSkinStore(
+  ROMPEMUROS_SKIN_STORAGE_KEY,
+  ROMPEMUROS_SKINS,
+  "clasico",
+);
+
+// Skin de Serpiente (spec 11 §8): store genérico de lib/skin-store.ts.
+const serpienteSkinStore = createSkinStore(
+  SERPIENTE_SKIN_STORAGE_KEY,
+  SERPIENTE_SKINS,
+  "clasico",
+);
 
 // La skin de Bloques se recuerda en localStorage (mismo patrón que el nombre
 // del jugador en contexts/session-context.tsx): useSyncExternalStore evita el
@@ -113,6 +148,9 @@ export function PlayRoom({ game }: { game: Game }) {
     readBloquesSkin,
     () => "retro" as BloquesSkin,
   );
+  const asteroidsSkin = useSkin(asteroidsSkinStore);
+  const rompemurosSkin = useSkin(rompemurosSkinStore);
+  const serpienteSkin = useSkin(serpienteSkinStore);
   const [paused, setPaused] = useState(false);
   const [over, setOver] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -306,6 +344,27 @@ export function PlayRoom({ game }: { game: Game }) {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2.5">
+          {isAsteroids ? (
+            <SkinSelect
+              value={asteroidsSkin}
+              skins={ASTEROIDS_SKINS}
+              onChange={asteroidsSkinStore.write}
+            />
+          ) : null}
+          {isRompemuros ? (
+            <SkinSelect
+              value={rompemurosSkin}
+              skins={ROMPEMUROS_SKINS}
+              onChange={rompemurosSkinStore.write}
+            />
+          ) : null}
+          {isSerpiente ? (
+            <SkinSelect
+              value={serpienteSkin}
+              skins={SERPIENTE_SKINS}
+              onChange={serpienteSkinStore.write}
+            />
+          ) : null}
           {isBloques ? (
             <label className="flex items-center gap-1.5">
               <span className="text-[10px] tracking-[2px] text-[#6f7d88]">
@@ -356,6 +415,7 @@ export function PlayRoom({ game }: { game: Game }) {
             <AsteroidsGame
               ref={gameRef}
               paused={paused}
+              skin={asteroidsSkin}
               onStateChange={handleAsteroidsStateChange}
               onGameOver={handleAsteroidsGameOver}
             />
@@ -371,6 +431,7 @@ export function PlayRoom({ game }: { game: Game }) {
             <RompemurosGame
               ref={rompemurosGameRef}
               paused={paused}
+              skin={rompemurosSkin}
               onStateChange={handleRompemurosStateChange}
               onGameOver={handleRompemurosGameOver}
             />
@@ -378,6 +439,7 @@ export function PlayRoom({ game }: { game: Game }) {
             <SerpienteGame
               ref={serpienteGameRef}
               paused={paused}
+              skin={serpienteSkin}
               onStateChange={handleSerpienteStateChange}
               onGameOver={handleSerpienteGameOver}
             />

@@ -200,6 +200,101 @@ Sin cambios en la base de datos: la fila `serpiente` de `public.games` ya existe
 
 ---
 
+## 8 — Addendum (2026-09-30): skins visuales
+
+**Objetivo:** dar a Serpiente las tres skins mínimas de la plataforma — CLÁSICO (default, el
+aspecto original sin cambios), RETRO (fósforo ámbar) y NEÓN (colores saturados con glow) — con
+el mismo patrón que Bloques (spec 08 §8): tabla de paletas + renderers por skin en el motor,
+`setSkin()`, prop controlada `skin` y selector SKIN en la barra de `PlayRoom`.
+
+**Contrato ampliado** (`components/games/serpiente/engine.ts`):
+
+```ts
+export type SerpienteSkin = "clasico" | "retro" | "neon";
+
+export const SERPIENTE_SKINS: Array<{ id: SerpienteSkin; label: string }>; // CLÁSICO, RETRO, NEÓN
+export const SERPIENTE_SKIN_STORAGE_KEY = "arcadevault.serpiente.skin.v1";
+
+export interface SerpienteEngineOptions {
+  initialSkin?: SerpienteSkin; // default "clasico"
+}
+
+export function createSerpienteEngine(
+  canvas: HTMLCanvasElement,
+  handlers: SerpienteHandlers,
+  options?: SerpienteEngineOptions,
+): SerpienteEngine;
+
+export interface SerpienteEngine {
+  // ...igual que antes, más:
+  setSkin(next: SerpienteSkin): void; // no-op si no cambia; redibuja al instante, incluso en pausa
+}
+```
+
+`SerpienteGame` (`serpiente-game.tsx`) recibe la prop controlada `skin: SerpienteSkin` (mismo
+patrón que `paused`): la pasa como `initialSkin` al crear el motor y sincroniza los cambios con
+`engine.setSkin(skin)` en un efecto.
+
+**Decisiones:**
+
+- **Sí:** la paleta `clasico` guarda los valores hard-coded previos sin alterar (damero
+  `#0b1a10`/`#0e2014`, cuerpo `#4ade80`, cabeza `#86efac`, ojos `#0b1a10`) y su renderer sigue
+  dibujando la fruta con el sprite de `fruits.png` (y el círculo `hsl(hash, 80%, 55%)` como
+  fallback). Motivo: CLÁSICO = cero cambio visual.
+- **Sí:** RETRO en fósforo **ámbar** (no verde) sobre damero `#0a0700`/`#0f0a02`, con 3
+  intensidades: fruta `#ffe7b0` > cabeza `#ffb000` > cuerpo `#b37000`, ojos del color del
+  fondo y scanlines sutiles cada 3 px (`rgba(0,0,0,.22)`). Motivo: la serpiente clásica ya es
+  verde, así que un RETRO verde se distinguiría poco del CLÁSICO — decisión del agente
+  (pendiente de revisar).
+- **Sí:** en RETRO y NEÓN la fruta se dibuja como forma de canvas (círculo del mismo tamaño que
+  el fallback original; en RETRO con un rabito) en lugar del sprite multicolor. Motivo: el
+  sprite no se puede recolorear y rompería el monocromo/neón; la celda y la mecánica no
+  cambian — decisión del agente (pendiente de revisar).
+- **Sí:** NEÓN sobre damero `#05050a`/`#0a0a14`: cuerpo cian `#00f5ff` (= `--cian`) con relleno
+  translúcido (25 %) y borde con `shadowBlur` 8, cabeza amarilla `#f5ff00` (= `--amarillo`)
+  rellena con `shadowBlur` 14 y fruta magenta `#ff2d95` con `shadowBlur` 12. Los ojos se dibujan
+  sin glow. `shadowBlur`/`shadowColor` se restablecen tras cada entidad con glow — decisión del
+  agente (pendiente de revisar).
+- **Sí:** el trazo por skin vive en `SKIN_RENDERERS` (`body`/`head`/`fruit`), sin `if`
+  dispersos; los ojos y el damero son comunes y toman su color de la paleta.
+- **Sí:** persistencia en `localStorage` (`arcadevault.serpiente.skin.v1`) con el store genérico
+  `lib/skin-store.ts` (`createSkinStore` + `useSkin`, `useSyncExternalStore`, snapshot de
+  servidor/hidratación siempre `"clasico"`) y selector `components/skin-select.tsx` en la barra
+  superior, visible solo en `/play/serpiente`. "JUGAR DE NUEVO" no reinicia la skin.
+- **No:** tocar Supabase, puntuación, rejilla, velocidades, controles ni el tamaño del canvas
+  (1280×800). Las skins son una preferencia solo de cliente.
+- **No:** corregir el contraste del círculo de fallback de CLÁSICO (peor tono `hsl(240,80%,55%)`
+  = 2.20:1 sobre `#0e2014`). Motivo: CLÁSICO debe ser idéntico al original y el fallback solo
+  aparece si `fruits.png` no carga — decisión del agente (pendiente de revisar).
+
+**Contrastes medidos** (WCAG, color jugable vs. la casilla más clara del damero de la skin):
+
+| Skin    | Fondo (peor casilla) | Cuerpo            | Cabeza            | Fruta                       | Peor caso        |
+| ------- | -------------------- | ----------------- | ----------------- | --------------------------- | ---------------- |
+| clasico | `#0e2014`            | `#4ade80` 9.76:1  | `#86efac` 12.11:1 | sprite (fallback ≥ 2.20:1)¹ | fallback 2.20:1¹ |
+| retro   | `#0f0a02`            | `#b37000` 4.92:1  | `#ffb000` 10.77:1 | `#ffe7b0` 16.26:1           | `#b37000` 4.92:1 |
+| neon    | `#0a0a14`            | `#00f5ff` 14.54:1 | `#f5ff00` 17.99:1 | `#ff2d95` 5.68:1            | `#ff2d95` 5.68:1 |
+
+¹ Excepción aceptada: CLÁSICO no altera el original (ver decisiones); el sprite multicolor no
+se midió.
+
+Distinción entre entidades: RETRO por intensidad (cabeza/cuerpo 2.19:1, fruta/cuerpo 3.31:1,
+además de forma y ojos); NEÓN por tono (cian / amarillo / magenta).
+
+**Criterios de aceptación añadidos:**
+
+- [ ] El selector SKIN (CLÁSICO/RETRO/NEÓN) aparece en la barra superior de `/play/serpiente`,
+      con CLÁSICO por defecto.
+- [ ] CLÁSICO se ve idéntico a antes del addendum (damero, serpiente, ojos y sprite de fruta).
+- [ ] Cambiar de skin redibuja al instante damero, serpiente y fruta, también en pausa, antes de
+      la primera tecla y con la partida terminada.
+- [ ] La skin persiste tras recargar `/play/serpiente` y tras "JUGAR DE NUEVO", sin error de
+      hidratación.
+- [ ] Mecánica, puntuación, velocidades y rejilla no cambian con ninguna skin.
+- [ ] Todo elemento jugable de RETRO y NEÓN tiene contraste ≥ 3:1 contra su fondo.
+
+---
+
 ## What is **not** in this spec
 
 - Cambios en Supabase, en `saveScoreAction` o en el ranking.

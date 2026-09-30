@@ -7,6 +7,7 @@ import {
   SERPIENTE_WIDTH,
   createSerpienteEngine,
   type SerpienteEngine,
+  type SerpienteSkin,
   type SerpienteState,
 } from "./engine";
 
@@ -16,6 +17,7 @@ export interface SerpienteGameHandle {
 
 interface SerpienteGameProps {
   paused: boolean;
+  skin: SerpienteSkin;
   onStateChange: (state: SerpienteState) => void;
   onGameOver: (finalScore: number) => void;
 }
@@ -25,7 +27,7 @@ interface SerpienteGameProps {
 export const SerpienteGame = forwardRef<
   SerpienteGameHandle,
   SerpienteGameProps
->(function SerpienteGame({ paused, onStateChange, onGameOver }, ref) {
+>(function SerpienteGame({ paused, skin, onStateChange, onGameOver }, ref) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<SerpienteEngine | null>(null);
 
@@ -44,10 +46,16 @@ export const SerpienteGame = forwardRef<
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const engine = createSerpienteEngine(canvas, {
-      onStateChange: (state) => onStateChangeRef.current(state),
-      onGameOver: (finalScore) => onGameOverRef.current(finalScore),
-    });
+    const engine = createSerpienteEngine(
+      canvas,
+      {
+        onStateChange: (state) => onStateChangeRef.current(state),
+        onGameOver: (finalScore) => onGameOverRef.current(finalScore),
+      },
+      // Valor de `skin` en el primer render: el efecto solo corre al montar;
+      // los cambios posteriores los aplica el efecto de `setSkin` de abajo.
+      { initialSkin: skin },
+    );
     engineRef.current = engine;
     engine.start();
 
@@ -55,11 +63,16 @@ export const SerpienteGame = forwardRef<
       engine.stop();
       engineRef.current = null;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     engineRef.current?.setPaused(paused);
   }, [paused]);
+
+  useEffect(() => {
+    engineRef.current?.setSkin(skin);
+  }, [skin]);
 
   useImperativeHandle(ref, () => ({
     restart() {

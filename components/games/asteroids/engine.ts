@@ -36,6 +36,66 @@ const LARGE_ASTEROID_SHAPE: Array<[number, number]> = [
   [-24, -34],
 ];
 
+// Skins visuales (spec 06 §8). Todos los colores del canvas salen de esta
+// tabla; `clasico` conserva exactamente los valores originales del puerto.
+export type AsteroidsSkin = "clasico" | "retro" | "neon";
+
+export const ASTEROIDS_SKINS: Array<{ id: AsteroidsSkin; label: string }> = [
+  { id: "clasico", label: "CLÁSICO" },
+  { id: "retro", label: "RETRO" },
+  { id: "neon", label: "NEÓN" },
+];
+
+export const ASTEROIDS_SKIN_STORAGE_KEY = "arcadevault.asteroides.skin.v1";
+
+interface AsteroidsPalette {
+  background: string;
+  ship: string;
+  thrust: string;
+  asteroid: string;
+  bullet: string;
+  /** Canales "r,g,b" de las partículas; el alfa lo pone su vida restante. */
+  particleRgb: string;
+  hud: string;
+  hudAccent: string;
+}
+
+const SKIN_PALETTES: Record<AsteroidsSkin, AsteroidsPalette> = {
+  clasico: {
+    background: "#000",
+    ship: "#fff",
+    thrust: "rgba(255, 130, 0, 0.85)",
+    asteroid: "#fff",
+    bullet: "#fff",
+    particleRgb: "255,255,255",
+    hud: "#fff",
+    hudAccent: "#0ff",
+  },
+  // Fósforo verde: se distinguen por intensidad (asteroide tenue < partícula
+  // < nave/HUD < bala casi blanca).
+  retro: {
+    background: "#020a04",
+    ship: "#33ff66",
+    thrust: "rgba(51, 255, 102, 0.7)",
+    asteroid: "#1f9e45",
+    bullet: "#f0fff4",
+    particleRgb: "39,201,87",
+    hud: "#33ff66",
+    hudAccent: "#bfffd0",
+  },
+  // Neón: tonos de --cian / --magenta / --amarillo más lima, con glow.
+  neon: {
+    background: "#05050a",
+    ship: "#00f5ff",
+    thrust: "rgba(57, 255, 20, 0.9)",
+    asteroid: "#ff2d95",
+    bullet: "#f5ff00",
+    particleRgb: "57,255,20",
+    hud: "#d9fbff",
+    hudAccent: "#39ff14",
+  },
+};
+
 interface KeyState {
   [code: string]: boolean;
 }
@@ -67,8 +127,8 @@ class Bullet {
     if (this.ttl <= 0) this.dead = true;
   }
 
-  draw(ctx: CanvasRenderingContext2D) {
-    ctx.fillStyle = "#fff";
+  draw(ctx: CanvasRenderingContext2D, color: string) {
+    ctx.fillStyle = color;
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
     ctx.fill();
@@ -130,11 +190,11 @@ class Asteroid {
     ];
   }
 
-  draw(ctx: CanvasRenderingContext2D) {
+  draw(ctx: CanvasRenderingContext2D, color: string) {
     ctx.save();
     ctx.translate(this.x, this.y);
     ctx.rotate(this.rot);
-    ctx.strokeStyle = "#fff";
+    ctx.strokeStyle = color;
     ctx.lineWidth = 1.5;
     ctx.lineJoin = "round";
     ctx.beginPath();
@@ -205,7 +265,7 @@ class Ship {
     return [new Bullet(ox, oy, this.angle)];
   }
 
-  draw(ctx: CanvasRenderingContext2D) {
+  draw(ctx: CanvasRenderingContext2D, color: string, thrustColor: string) {
     if (this.dead) return;
     // Parpadeo durante invencibilidad de reaparición
     if (this.invincible > 0 && Math.floor(this.invincible * 8) % 2 === 0)
@@ -214,7 +274,7 @@ class Ship {
     ctx.save();
     ctx.translate(this.x, this.y);
     ctx.rotate(this.angle);
-    ctx.strokeStyle = "#fff";
+    ctx.strokeStyle = color;
     ctx.lineWidth = 1.5;
     ctx.lineJoin = "round";
 
@@ -233,7 +293,7 @@ class Ship {
       ctx.moveTo(-8, -4);
       ctx.lineTo(-8 - rand(6, 14), 0);
       ctx.lineTo(-8, 4);
-      ctx.strokeStyle = "rgba(255, 130, 0, 0.85)";
+      ctx.strokeStyle = thrustColor;
       ctx.stroke();
     }
 
@@ -269,9 +329,9 @@ class Particle {
     if (this.ttl <= 0) this.dead = true;
   }
 
-  draw(ctx: CanvasRenderingContext2D) {
+  draw(ctx: CanvasRenderingContext2D, rgb: string) {
     const alpha = this.ttl / this.life;
-    ctx.strokeStyle = `rgba(255,255,255,${alpha.toFixed(2)})`;
+    ctx.strokeStyle = `rgba(${rgb},${alpha.toFixed(2)})`;
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(this.x, this.y);
@@ -297,6 +357,12 @@ export interface AsteroidsEngine {
   stop(): void;
   setPaused(paused: boolean): void;
   restart(): void;
+  /** Cambia la skin y redibuja al instante, incluso en pausa. */
+  setSkin(next: AsteroidsSkin): void;
+}
+
+export interface AsteroidsEngineOptions {
+  initialSkin?: AsteroidsSkin; // default "clasico"
 }
 
 export const ASTEROIDS_WIDTH = GAME_WIDTH;
@@ -314,12 +380,49 @@ const GAME_KEYS = [
 export function createAsteroidsEngine(
   canvas: HTMLCanvasElement,
   handlers: AsteroidsHandlers,
+  options?: AsteroidsEngineOptions,
 ): AsteroidsEngine {
   const ctx2d = canvas.getContext("2d");
   if (!ctx2d) {
     throw new Error("No se pudo obtener el contexto 2D del canvas");
   }
   const ctx: CanvasRenderingContext2D = ctx2d;
+
+  let skin: AsteroidsSkin = options?.initialSkin ?? "clasico";
+  let initialized = false;
+
+  // Lo que cambia el trazo por skin (glow, scanlines) vive aquí y no en `if`
+  // dispersos. `glow` prepara la sombra antes de un grupo de entidades;
+  // `overlay` corre tras dibujarlas, antes del HUD.
+  interface SkinRenderer {
+    glow(color: string, blur: number): void;
+    overlay(): void;
+  }
+  const noGlow = () => {};
+  const SKIN_RENDERERS: Record<AsteroidsSkin, SkinRenderer> = {
+    clasico: { glow: noGlow, overlay: () => {} },
+    retro: {
+      glow: noGlow,
+      // Scanlines sutiles: 1 px cada 3 px con alfa bajo, no tapan las balas.
+      overlay() {
+        ctx.fillStyle = "rgba(0, 0, 0, 0.14)";
+        for (let y = 0; y < GAME_HEIGHT; y += 3)
+          ctx.fillRect(0, y, GAME_WIDTH, 1);
+      },
+    },
+    neon: {
+      glow(color, blur) {
+        ctx.shadowColor = color;
+        ctx.shadowBlur = blur;
+      },
+      overlay: () => {},
+    },
+  };
+
+  function resetGlow() {
+    ctx.shadowBlur = 0;
+    ctx.shadowColor = "transparent";
+  }
 
   const keys: KeyState = {};
   const justPressed: KeyState = {};
@@ -510,7 +613,7 @@ export function createAsteroidsEngine(
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(-Math.PI / 2);
-    ctx.strokeStyle = "#fff";
+    ctx.strokeStyle = SKIN_PALETTES[skin].hud;
     ctx.lineWidth = 1.2;
     ctx.lineJoin = "round";
     ctx.beginPath();
@@ -524,7 +627,8 @@ export function createAsteroidsEngine(
   }
 
   function drawHUD() {
-    ctx.fillStyle = "#fff";
+    const palette = SKIN_PALETTES[skin];
+    ctx.fillStyle = palette.hud;
     ctx.font = "15px monospace";
 
     ctx.textAlign = "left";
@@ -537,20 +641,29 @@ export function createAsteroidsEngine(
 
     if (novaBombs > 0) {
       ctx.textAlign = "left";
-      ctx.fillStyle = "#0ff";
+      ctx.fillStyle = palette.hudAccent;
       ctx.fillText("BOMBA NOVA [B]", 14, 48);
     }
   }
 
   function draw() {
-    ctx.fillStyle = "#000";
+    const palette = SKIN_PALETTES[skin];
+    const renderer = SKIN_RENDERERS[skin];
+    ctx.fillStyle = palette.background;
     ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
-    particles.forEach((p) => p.draw(ctx));
-    asteroids.forEach((a) => a.draw(ctx));
-    bullets.forEach((b) => b.draw(ctx));
-    ship.draw(ctx);
+    // Partículas sin glow: son muchas y el blur las emborronaría.
+    particles.forEach((p) => p.draw(ctx, palette.particleRgb));
+    renderer.glow(palette.asteroid, 12);
+    asteroids.forEach((a) => a.draw(ctx, palette.asteroid));
+    renderer.glow(palette.bullet, 8);
+    bullets.forEach((b) => b.draw(ctx, palette.bullet));
+    renderer.glow(palette.ship, 12);
+    ship.draw(ctx, palette.ship, palette.thrust);
+    resetGlow();
 
+    renderer.overlay();
+    // HUD sin glow para que el texto del canvas siga nítido.
     drawHUD();
   }
 
@@ -575,6 +688,7 @@ export function createAsteroidsEngine(
       window.addEventListener("keydown", handleKeyDown);
       window.addEventListener("keyup", handleKeyUp);
       initGame();
+      initialized = true;
       draw();
       lastTime = null;
       rafId = requestAnimationFrame(loop);
@@ -596,6 +710,11 @@ export function createAsteroidsEngine(
       initGame();
       draw();
       lastTime = null;
+    },
+    setSkin(next: AsteroidsSkin) {
+      if (next === skin) return;
+      skin = next;
+      if (initialized) draw();
     },
   };
 }
