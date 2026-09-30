@@ -42,6 +42,50 @@ const COLORS: Array<string | null> = [
   "#ffb74d", // L - orange
 ];
 
+// Skins visuales: paletas inspiradas en dos ramas nunca fusionadas del propio
+// repo de referencia de Tetris (main-2/main-3), adaptadas a las 7 piezas ya
+// portadas aquí. "pixel" reutiliza la paleta de "retro": solo cambia el
+// render (textura), no el color, igual que en esas ramas.
+export type BloquesSkin = "retro" | "neon" | "pastel" | "pixel";
+
+export const BLOQUES_SKINS: Array<{ id: BloquesSkin; label: string }> = [
+  { id: "retro", label: "RETRO" },
+  { id: "neon", label: "NEÓN" },
+  { id: "pastel", label: "PASTEL" },
+  { id: "pixel", label: "PIXEL ART" },
+];
+
+export const BLOQUES_SKIN_STORAGE_KEY = "arcadevault.bloques.skin.v1";
+
+const NEON_COLORS: Array<string | null> = [
+  null,
+  "#00fff2", // I - cian
+  "#faff00", // O - amarillo
+  "#ff00e6", // T - magenta
+  "#00ff6a", // S - verde
+  "#ff2d55", // Z - rojo
+  "#5ac8ff", // J - azul
+  "#ff9500", // L - naranja
+];
+
+const PASTEL_COLORS: Array<string | null> = [
+  null,
+  "#a8e6e6", // I
+  "#fff2b0", // O
+  "#e3c6f0", // T
+  "#bdeecb", // S
+  "#f7bcc0", // Z
+  "#c3d9f5", // J
+  "#f6d8ae", // L
+];
+
+const SKIN_PALETTES: Record<BloquesSkin, Array<string | null>> = {
+  retro: COLORS,
+  neon: NEON_COLORS,
+  pastel: PASTEL_COLORS,
+  pixel: COLORS,
+};
+
 const PIECES: Array<number[][] | null> = [
   null,
   [
@@ -108,6 +152,11 @@ export interface BloquesEngine {
   stop(): void;
   setPaused(paused: boolean): void;
   restart(): void;
+  setSkin(next: BloquesSkin): void;
+}
+
+export interface BloquesEngineOptions {
+  initialSkin?: BloquesSkin;
 }
 
 export const BLOQUES_WIDTH = GAME_WIDTH;
@@ -125,6 +174,7 @@ const GAME_KEYS = [
 export function createBloquesEngine(
   canvas: HTMLCanvasElement,
   handlers: BloquesHandlers,
+  options?: BloquesEngineOptions,
 ): BloquesEngine {
   const ctx2d = canvas.getContext("2d");
   if (!ctx2d) {
@@ -132,6 +182,7 @@ export function createBloquesEngine(
   }
   const ctx: CanvasRenderingContext2D = ctx2d;
 
+  let skin: BloquesSkin = options?.initialSkin ?? "retro";
   let board: Board;
   let current: Piece;
   let next: Piece;
@@ -279,6 +330,86 @@ export function createBloquesEngine(
     handlers.onGameOver(score);
   }
 
+  function drawBlockRetro(px: number, py: number, color: string, size: number) {
+    ctx.fillStyle = color;
+    ctx.fillRect(px + 1, py + 1, size - 2, size - 2);
+    ctx.fillStyle = HIGHLIGHT;
+    ctx.fillRect(px + 1, py + 1, size - 2, 4);
+  }
+
+  function drawBlockNeon(px: number, py: number, color: string, size: number) {
+    const x = px + 1;
+    const y = py + 1;
+    const w = size - 2;
+    const h = size - 2;
+    ctx.fillStyle = "rgba(10,10,24,0.55)";
+    ctx.fillRect(x, y, w, h);
+    ctx.save();
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 8;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
+    ctx.restore();
+  }
+
+  function drawBlockPastel(
+    px: number,
+    py: number,
+    color: string,
+    size: number,
+  ) {
+    const x = px + 1;
+    const y = py + 1;
+    const w = size - 2;
+    const h = size - 2;
+    const r = 6;
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.fillStyle = "rgba(255,255,255,0.45)";
+    ctx.beginPath();
+    ctx.arc(x + w * 0.3, y + h * 0.3, w * 0.14, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  function drawBlockPixel(px: number, py: number, color: string, size: number) {
+    const x = px + 1;
+    const y = py + 1;
+    const w = size - 2;
+    const h = size - 2;
+    ctx.fillStyle = color;
+    ctx.fillRect(x, y, w, h);
+    const cell = w / 4;
+    ctx.fillStyle = "rgba(255,255,255,0.15)";
+    for (let r = 0; r < 4; r++) {
+      for (let c = 0; c < 4; c++) {
+        if ((r + c) % 2 === 0) {
+          ctx.fillRect(x + c * cell, y + r * cell, cell, cell);
+        }
+      }
+    }
+    ctx.strokeStyle = "rgba(0,0,0,0.5)";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x, y, w, h);
+  }
+
+  const SKIN_RENDERERS: Record<
+    BloquesSkin,
+    (px: number, py: number, color: string, size: number) => void
+  > = {
+    retro: drawBlockRetro,
+    neon: drawBlockNeon,
+    pastel: drawBlockPastel,
+    pixel: drawBlockPixel,
+  };
+
   function drawBlock(
     px: number,
     py: number,
@@ -287,14 +418,13 @@ export function createBloquesEngine(
     alpha = 1,
   ) {
     if (!colorIndex) return;
-    const color = COLORS[colorIndex];
+    const color = SKIN_PALETTES[skin][colorIndex];
     if (!color) return;
     ctx.globalAlpha = alpha;
-    ctx.fillStyle = color;
-    ctx.fillRect(px + 1, py + 1, size - 2, size - 2);
-    ctx.fillStyle = HIGHLIGHT;
-    ctx.fillRect(px + 1, py + 1, size - 2, 4);
+    SKIN_RENDERERS[skin](px, py, color, size);
     ctx.globalAlpha = 1;
+    ctx.shadowBlur = 0;
+    ctx.shadowColor = "transparent";
   }
 
   function drawGrid() {
@@ -513,6 +643,11 @@ export function createBloquesEngine(
       draw();
       lastTime = null;
       rafId = requestAnimationFrame(loop);
+    },
+    setSkin(nextSkin: BloquesSkin) {
+      if (nextSkin === skin) return;
+      skin = nextSkin;
+      draw();
     },
   };
 }

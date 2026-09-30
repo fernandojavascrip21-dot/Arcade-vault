@@ -160,6 +160,79 @@ No hay persistencia nueva: la puntuación final se guarda exactamente igual que 
 
 ---
 
+## 8 — Addendum (2026-09-29): skins visuales
+
+**Objetivo:** agregar un selector de 4 skins visuales — Retro, Neón, Pastel y Pixel Art —
+al motor de Bloques ya implementado (sección 1–7), inspirado en dos ramas nunca fusionadas
+del propio repo de referencia de Tetris (`main-2`/`4e7b9af` y `main-3`/`ecbbf18`; la rama
+`main-4` realmente vendorizada en `references/started-games/03-tetris` no tiene este
+sistema, solo el interruptor de tema claro/oscuro ya descartado en la sección 6). Las
+paletas y el estilo de render de cada skin se adaptaron a las 7 piezas ya portadas aquí,
+no se copiaron literalmente.
+
+**Contrato ampliado** (`components/games/bloques/engine.ts`):
+
+```ts
+export type BloquesSkin = "retro" | "neon" | "pastel" | "pixel";
+
+export const BLOQUES_SKINS: Array<{ id: BloquesSkin; label: string }>;
+export const BLOQUES_SKIN_STORAGE_KEY = "arcadevault.bloques.skin.v1";
+
+export interface BloquesEngineOptions {
+  initialSkin?: BloquesSkin; // default "retro"
+}
+
+export function createBloquesEngine(
+  canvas: HTMLCanvasElement,
+  handlers: BloquesHandlers,
+  options?: BloquesEngineOptions,
+): BloquesEngine;
+
+export interface BloquesEngine {
+  // ...igual que antes, más:
+  setSkin(next: BloquesSkin): void; // recolorea/redibuja al instante, incluso en pausa
+}
+```
+
+`BloquesGame` (`bloques-game.tsx`) recibe una nueva prop controlada `skin: BloquesSkin`,
+mismo patrón que `paused`: la pasa como `initialSkin` al crear el motor y sincroniza
+cambios posteriores con `engine.setSkin(skin)` en un efecto.
+
+**Decisiones:**
+
+- **Sí:** cada skin tiene su propia función de dibujo de bloque (`drawBlockRetro` = el
+  render original sin cambios, `drawBlockNeon` = relleno oscuro + borde con `shadowBlur`
+  del color de la pieza, `drawBlockPastel` = esquinas redondeadas + brillo, `drawBlockPixel`
+  = textura de dithering 4×4 + borde). Afectan por igual al tablero, la pieza actual, el
+  ghost piece y el preview `NEXT`, porque todos ya pasan por el mismo `drawBlock`.
+- **Sí:** `pixel` reutiliza la paleta de `retro` (`COLORS`) — la diferencia es solo de
+  render/textura, no de color, igual que en la rama de referencia.
+- **Sí:** persistencia en `localStorage` (clave `arcadevault.bloques.skin.v1`), vía
+  `useSyncExternalStore` en `play-room.tsx` (mismo patrón que el nombre del jugador en
+  `contexts/session-context.tsx`): el snapshot de servidor/hidratación es siempre `"retro"`
+  y el valor real de `localStorage` se aplica después de montar, sin desajuste de
+  hidratación. Leer `localStorage` directamente en el inicializador de un `useState` (o
+  llamar a `setState` de forma síncrona dentro de un `useEffect` de montaje) se probó y
+  falla: produce un error de hidratación de React y lo bloquea la regla de lint
+  `react-hooks/set-state-in-effect`.
+- **Sí:** el selector (4 botones, misma línea visual que PAUSA/SALIR) vive en la barra
+  superior de `PlayRoom`, visible solo cuando `isBloques`. Es una preferencia de cliente,
+  no de partida: no toca Supabase, `lib/types.ts` ni la puntuación, y sobrevive a "JUGAR DE
+  NUEVO" (`replay()` no reinicia `skin`).
+- **No:** ninguna skin nueva ni cambio de paleta para `rompemuros` u otro juego — Arkanoid
+  se renderiza con spritesheet, no con paleta por índice de color, y no tiene equivalente.
+
+**Criterios de aceptación añadidos:**
+
+- [ ] El selector SKIN (RETRO/NEÓN/PASTEL/PIXEL ART) solo aparece en `/play/bloques`.
+- [ ] Cambiar de skin recolorea/reestiliza al instante las piezas fijas del tablero, la
+      pieza actual, el ghost piece y el preview NEXT — funciona incluso con el juego en
+      pausa.
+- [ ] La skin elegida persiste tras recargar `/play/bloques` y tras "JUGAR DE NUEVO".
+- [ ] Ningún otro `/play/[id]` muestra el selector ni cambia de comportamiento.
+
+---
+
 ## Lo que **no** entra en este spec
 
 - Modo Desafío completo (selector de modo, niveles con basura/obstáculos/retraso de bloqueo/rotación invertida).

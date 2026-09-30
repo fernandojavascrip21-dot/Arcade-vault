@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { saveScoreAction } from "@/app/play/[id]/actions";
 import { CrtFrame } from "@/components/crt-frame";
@@ -15,7 +15,12 @@ import {
   BloquesGame,
   type BloquesGameHandle,
 } from "@/components/games/bloques/bloques-game";
-import type { BloquesState } from "@/components/games/bloques/engine";
+import {
+  BLOQUES_SKINS,
+  BLOQUES_SKIN_STORAGE_KEY,
+  type BloquesSkin,
+  type BloquesState,
+} from "@/components/games/bloques/engine";
 import type { RompemurosState } from "@/components/games/rompemuros/engine";
 import {
   RompemurosGame,
@@ -37,6 +42,41 @@ import {
 import type { Game, SavedResult } from "@/lib/types";
 
 const SAVED_TEXT = "PUNTUACIÓN GUARDADA";
+
+// La skin de Bloques se recuerda en localStorage (mismo patrón que el nombre
+// del jugador en contexts/session-context.tsx): useSyncExternalStore evita el
+// desajuste de hidratación que produciría leer localStorage directamente en
+// el render o en un efecto.
+let memoryBloquesSkin: BloquesSkin = "retro";
+const bloquesSkinListeners = new Set<() => void>();
+
+function isBloquesSkin(value: string | null): value is BloquesSkin {
+  return BLOQUES_SKINS.some((s) => s.id === value);
+}
+
+function readBloquesSkin(): BloquesSkin {
+  try {
+    const stored = localStorage.getItem(BLOQUES_SKIN_STORAGE_KEY);
+    return isBloquesSkin(stored) ? stored : memoryBloquesSkin;
+  } catch {
+    return memoryBloquesSkin;
+  }
+}
+
+function writeBloquesSkin(next: BloquesSkin) {
+  memoryBloquesSkin = next;
+  try {
+    localStorage.setItem(BLOQUES_SKIN_STORAGE_KEY, next);
+  } catch {
+    // localStorage puede no estar disponible (modo privado, cuotas, etc.).
+  }
+  bloquesSkinListeners.forEach((notify) => notify());
+}
+
+function subscribeBloquesSkin(notify: () => void) {
+  bloquesSkinListeners.add(notify);
+  return () => bloquesSkinListeners.delete(notify);
+}
 
 function HudStat({
   label,
@@ -66,6 +106,13 @@ export function PlayRoom({ game }: { game: Game }) {
   const [lives, setLives] = useState(3);
   const [level, setLevel] = useState(1);
   const [, setLines] = useState(0);
+  // "retro" en servidor e hidratación; el valor real de localStorage llega
+  // después de montar, sin provocar desajuste (mismo patrón que useSession).
+  const skin = useSyncExternalStore(
+    subscribeBloquesSkin,
+    readBloquesSkin,
+    () => "retro" as BloquesSkin,
+  );
   const [paused, setPaused] = useState(false);
   const [over, setOver] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -97,6 +144,8 @@ export function PlayRoom({ game }: { game: Game }) {
 
   const playerName = user ?? "INVITADO";
   const exit = () => router.push("/games");
+
+  const handleSkinChange = (next: BloquesSkin) => writeBloquesSkin(next);
 
   // Sin motor de juego: simula el final de una partida con una puntuación
   // pseudoaleatoria para poder recorrer el flujo de guardado.
@@ -256,7 +305,27 @@ export function PlayRoom({ game }: { game: Game }) {
             <span className="text-sm text-[#cdd8de]">{playerName}</span>
           </div>
         </div>
-        <div className="flex gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
+          {isBloques ? (
+            <label className="flex items-center gap-1.5">
+              <span className="text-[10px] tracking-[2px] text-[#6f7d88]">
+                SKIN
+              </span>
+              <select
+                value={skin}
+                onChange={(e) =>
+                  handleSkinChange(e.target.value as BloquesSkin)
+                }
+                className="whitespace-nowrap border border-cian/40 bg-[#0a0a0f] px-2.5 py-1.5 font-display text-[9px] text-cian transition-colors hover:border-cian focus:border-cian focus:outline-none"
+              >
+                {BLOQUES_SKINS.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
           <button
             type="button"
             onClick={() => setPaused((p) => !p)}
@@ -294,6 +363,7 @@ export function PlayRoom({ game }: { game: Game }) {
             <BloquesGame
               ref={bloquesGameRef}
               paused={paused}
+              skin={skin}
               onStateChange={handleBloquesStateChange}
               onGameOver={handleBloquesGameOver}
             />
