@@ -13,6 +13,7 @@ import {
 
 export interface RompemurosGameHandle {
   restart(): void;
+  movePaddleBy(delta: number): number | undefined;
 }
 
 interface RompemurosGameProps {
@@ -77,6 +78,9 @@ export const RompemurosGame = forwardRef<
   useImperativeHandle(ref, () => ({
     restart() {
       engineRef.current?.restart();
+    },
+    movePaddleBy(delta: number) {
+      return engineRef.current?.movePaddleBy(delta);
     },
   }));
 

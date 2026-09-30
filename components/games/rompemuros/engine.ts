@@ -433,6 +433,11 @@ export interface RompemurosEngine {
   restart(): void;
   /** Cambia la skin y redibuja al instante, incluso en pausa. */
   setSkin(next: RompemurosSkin): void;
+  /**
+   * Desplaza la pala `delta` (fracción del ancho) desde su posición real
+   * (control táctil relativo). Devuelve el centro de la pala en 0..1.
+   */
+  movePaddleBy(delta: number): number;
 }
 
 export interface RompemurosEngineOptions {
@@ -1144,6 +1149,17 @@ export function createRompemurosEngine(
       skin = next;
       // Redibuja ya: con la partida terminada el loop está detenido.
       draw();
+    },
+    movePaddleBy(delta: number) {
+      // Mismo criterio que handleMouseMove: no se mueve en pausa o al terminar.
+      if (!paused && !finished) {
+        paddle.x = clamp(
+          paddle.x + delta * GAME_WIDTH,
+          0,
+          GAME_WIDTH - paddle.w,
+        );
+      }
+      return (paddle.x + paddle.w / 2) / GAME_WIDTH;
     },
   };
 }
