@@ -239,7 +239,7 @@ export function TouchController({
   return (
     <section
       aria-label="Control táctil"
-      className="mt-4 touch-none select-none rounded-[18px] border border-cian/30 bg-cian/[.04] px-4 pb-5 pt-3.5 shadow-[0_0_36px_-10px_var(--cian)]"
+      className="mt-4 touch-none select-none rounded-[18px] border border-cian/30 bg-cian/4 px-4 pb-5 pt-3.5 shadow-[0_0_36px_-10px_var(--cian)]"
       style={{ WebkitTouchCallout: "none" }}
       onContextMenu={(e) => e.preventDefault()}
     >
@@ -272,7 +272,7 @@ export function TouchController({
             onPointerCancel={onSliderEnd}
             onLostPointerCapture={onSliderEnd}
           >
-            <div className="absolute inset-x-0 top-1/2 h-2 -translate-y-1/2 rounded-full border border-cian/40 bg-cian/[.08]" />
+            <div className="absolute inset-x-0 top-1/2 h-2 -translate-y-1/2 rounded-full border border-cian/40 bg-cian/8" />
             <div
               className="absolute top-1/2 h-1 -translate-y-1/2 rounded-full bg-cian/50"
               style={{ left: 0, width: `${ratio * 100}%` }}
@@ -332,7 +332,7 @@ export function TouchController({
                   className={`grid size-16 place-items-center rounded-full border-2 border-cian/80 text-cian transition-[transform,background-color,box-shadow] duration-75 motion-reduce:transition-none ${
                     isPressed(action.id)
                       ? "scale-[.94] bg-cian/25 shadow-[0_0_22px_var(--cian)]"
-                      : "bg-cian/[.06] shadow-[0_0_10px_-2px_var(--cian)]"
+                      : "bg-cian/6 shadow-[0_0_10px_-2px_var(--cian)]"
                   }`}
                 >
                   <ActionGlyph icon={action.icon} />
