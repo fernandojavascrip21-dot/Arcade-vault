@@ -1,5 +1,23 @@
 @import "tailwindcss";
 
+/* Variantes responsive de la sala de juego (spec 14). Mantener sincronizadas
+   con MOBILE_QUERY / MOBILE_LANDSCAPE_QUERY de lib/responsive.ts.
+   - mobile-landscape: teléfono acostado (poca altura).
+   - mobile: teléfono en vertical (< 768 px de ancho) o acostado.
+   `mobile` va en forma de bloque: con una lista de queries separada por coma
+   Tailwind v4 genera un selector inválido. Y se registra ANTES que
+   `mobile-landscape` para que esta última gane en caso de conflicto
+   (p. ej. `mobile:px-3 mobile-landscape:px-0`). */
+@custom-variant mobile {
+  @media (max-width: 767px) {
+    @slot;
+  }
+  @media (orientation: landscape) and (max-height: 540px) {
+    @slot;
+  }
+}
+@custom-variant mobile-landscape (@media (orientation: landscape) and (max-height: 540px));
+
 :root {
   /* Tokens base del scaffold — se conservan, solo se ajustan los valores a la maqueta. */
   --background: #0a0a0f;
@@ -59,6 +77,7 @@
   --animate-pulse-neon: av-pulse 1.8s ease-in-out infinite;
   --animate-row: av-row 0.5s ease both;
   --animate-fade: av-fade 0.28s ease both;
+  --animate-sheet: av-sheet 0.2s ease-out both;
   --animate-caret: av-caret 1s step-end infinite;
   --animate-float: av-float 6s ease-in-out infinite;
   --animate-shake: av-shake 0.4s;
@@ -167,6 +186,18 @@ input:focus {
   from {
     opacity: 0;
     transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Hoja inferior OPCIONES de la sala de juego (spec 14). */
+@keyframes av-sheet {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
   }
   to {
     opacity: 1;

@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import type { CSSProperties, ReactNode } from "react";
 
 import { NavBar } from "@/components/nav-bar";
@@ -29,6 +30,11 @@ const scanlinesStyle: CSSProperties = {
 // navegación, aviso de moneda y footer. Las páginas renderizan su propio <main>.
 export function SiteChrome({ children }: { children: ReactNode }) {
   const { coinMsg } = useCredits();
+  // En /play con el móvil en horizontal, footer y aviso de moneda se ocultan
+  // para que la sala quepa en el alto de la pantalla (spec 14).
+  const hideInLandscape = usePathname().startsWith("/play/")
+    ? "mobile-landscape:hidden"
+    : "";
 
   return (
     <div className="relative flex min-h-screen flex-1 flex-col overflow-x-hidden">
@@ -51,14 +57,18 @@ export function SiteChrome({ children }: { children: ReactNode }) {
       <NavBar />
 
       {coinMsg ? (
-        <div className="fixed right-[22px] top-[74px] z-50 animate-fade whitespace-nowrap border border-amarillo bg-background/95 px-3.5 py-3 font-display text-[10px] tracking-wider text-amarillo shadow-[0_0_26px_rgba(245,255,0,.4)]">
+        <div
+          className={`fixed right-[22px] top-[74px] z-50 animate-fade whitespace-nowrap border border-amarillo bg-background/95 px-3.5 py-3 font-display text-[10px] tracking-wider text-amarillo shadow-[0_0_26px_rgba(245,255,0,.4)] ${hideInLandscape}`}
+        >
           {coinMsg}
         </div>
       ) : null}
 
       <div className="relative z-10 flex flex-1 flex-col">{children}</div>
 
-      <footer className="relative z-10 border-t border-foreground/10 px-[22px] pb-10 pt-[26px] text-center text-[11px] tracking-[3px] text-texto-debil">
+      <footer
+        className={`relative z-10 border-t border-foreground/10 px-[22px] pb-10 pt-[26px] text-center text-[11px] tracking-[3px] text-texto-debil ${hideInLandscape}`}
+      >
         ARCADE VAULT · 1986–2026 · INSERTA MONEDA
       </footer>
     </div>

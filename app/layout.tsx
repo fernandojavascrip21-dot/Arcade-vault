@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Press_Start_2P, Courier_Prime } from "next/font/google";
 import { Providers } from "@/contexts/providers";
 import { SiteChrome } from "@/components/site-chrome";
@@ -26,6 +26,14 @@ export const metadata: Metadata = {
   title: "Arcade Vault",
   description:
     "Plataforma para jugar online y competir por la mayor puntuación.",
+};
+
+// viewport-fit=cover (spec 14) para que la sala en horizontal pueda respetar
+// el notch con env(safe-area-inset-*). No se limita el zoom (accesibilidad).
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 // Script anti-flash (spec 09): fija data-theme en <html> antes de hidratar,
