@@ -92,8 +92,16 @@ No hay datos de dominio nuevos ni cambios en Supabase.
 
 ```css
 /* app/globals.css — mantener sincronizado con lib/responsive.ts */
+/* Forma de bloque y registrada antes que mobile-landscape (ver §6, 2026-09-30) */
+@custom-variant mobile {
+  @media (max-width: 767px) {
+    @slot;
+  }
+  @media (orientation: landscape) and (max-height: 540px) {
+    @slot;
+  }
+}
 @custom-variant mobile-landscape (@media (orientation: landscape) and (max-height: 540px));
-@custom-variant mobile (@media (max-width: 767px), (orientation: landscape) and (max-height: 540px));
 ```
 
 ```ts
@@ -184,6 +192,7 @@ Las claves de skins y `arcadevault.touch-controls.v1` no cambian.
 
 - **Dividir en dos specs**: este (sala de juego) y el spec 15 (resto del sitio). La sala tiene problemas propios (orientación, CRT, mando, modal) y cada PR se verifica por separado. Descartado: un único spec para las 7 pantallas.
 - **Detección por media queries CSS de tamaño** (`max-width: 767px` / `landscape and max-height: 540px`) como variantes Tailwind. Sin JS, sin desajuste de hidratación y funciona en DevTools. Descartado: combinar con `(pointer: coarse)` (una ventana estrecha de escritorio vería layout de escritorio roto) y decidir el árbol por `useMediaQuery` (snapshot de servidor distinto → parpadeo). La visibilidad del mando sigue dependiendo de `(pointer: coarse)` (spec 13).
+- **`mobile` en forma de bloque y registrada antes que `mobile-landscape`** (cambio del 2026-09-30, paso 1 de la implementación): con la lista separada por coma, Tailwind v4 generó un selector inválido (`.mobile\:hidden (orientation: landscape)… { … }`), así que se aplicó la mitigación prevista en §7. Además, las variantes se emiten en orden de registro: `mobile` va primero para que `mobile-landscape:` gane en conflictos (`mobile:px-3 mobile-landscape:px-0`). Verificado compilando con `@tailwindcss/postcss`.
 - **Umbral 540 px de alto** para horizontal: cubre teléfonos acostados (360–430 px de alto) y deja fuera tablets (≥ 768 px), que conservan el layout de escritorio.
 - **Mando a los lados del CRT en horizontal**, formato consola portátil, sin scroll. Descartado: apilado con scroll (lo que se quiere evitar) y pantalla completa con mando superpuesto (tapa el juego; iPhone no soporta Fullscreen API).
 - **HUD compacto + menú ⋮ en hoja inferior**. Descartado: todos los botones como iconos en la barra (no caben en 360 px) y mantener la barra reducida en 2 filas.
@@ -203,7 +212,7 @@ Las claves de skins y `arcadevault.touch-controls.v1` no cambian.
 
 ## 7 — Riesgos identificados
 
-- **Variantes Tailwind v4 con listas de media queries**: `@custom-variant` con una query que contiene coma (`mobile`) debe generarse como una sola regla `@media`. Mitigación: verificar el CSS compilado en el paso 1; si no funciona, definir `mobile` con `@custom-variant mobile { @media (...) { @slot; } @media (...) { @slot; } }`.
+- **Variantes Tailwind v4 con listas de media queries**: `@custom-variant` con una query que contiene coma (`mobile`) debe generarse como una sola regla `@media`. Se materializó en el paso 1 y se resolvió con la forma de bloque (ver §6).
 - **`display: contents` y accesibilidad**: algunos navegadores antiguos quitaban el rol de la `<section aria-label="Control táctil">`. Mitigación: en horizontal cada grupo lleva su propio `aria-label` ("Control de dirección" / "Botones de acción").
 - **Teléfonos muy bajos en horizontal (≤ 360 px de alto)**: el CRT puede quedar por debajo de 320 px de ancho. Aceptado; los juegos escalan por letterbox y siguen jugables.
 - **iOS Safari y `dvh`/barra dinámica**: al aparecer/desaparecer la barra del navegador el alto cambia; el layout se reajusta solo (CSS) y no dispara pausa (solo la orientación la dispara).

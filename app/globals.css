@@ -1,5 +1,23 @@
 @import "tailwindcss";
 
+/* Variantes responsive de la sala de juego (spec 14). Mantener sincronizadas
+   con MOBILE_QUERY / MOBILE_LANDSCAPE_QUERY de lib/responsive.ts.
+   - mobile-landscape: teléfono acostado (poca altura).
+   - mobile: teléfono en vertical (< 768 px de ancho) o acostado.
+   `mobile` va en forma de bloque: con una lista de queries separada por coma
+   Tailwind v4 genera un selector inválido. Y se registra ANTES que
+   `mobile-landscape` para que esta última gane en caso de conflicto
+   (p. ej. `mobile:px-3 mobile-landscape:px-0`). */
+@custom-variant mobile {
+  @media (max-width: 767px) {
+    @slot;
+  }
+  @media (orientation: landscape) and (max-height: 540px) {
+    @slot;
+  }
+}
+@custom-variant mobile-landscape (@media (orientation: landscape) and (max-height: 540px));
+
 :root {
   /* Tokens base del scaffold — se conservan, solo se ajustan los valores a la maqueta. */
   --background: #0a0a0f;
