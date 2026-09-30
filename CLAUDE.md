@@ -64,6 +64,13 @@ Subagents live in `.claude/agents/`:
   Supabase. Review both, pick one, approve it, and renumber into `specs/NN-slug.md` before
   `/spec-impl`. (`specs/game-jam/bombardero.md` is an earlier single-spec draft from before the
   two-variant format.)
+- `skin-designer` (`model: inherit`) — audits that every game has at least the skins `clasico`
+  (default), `retro` and `neon`, implements missing ones following the Bloques pattern (engine
+  palette table + `setSkin`, controlled `skin` prop, SKIN selector in `PlayRoom`), checks dark-mode
+  contrast (≥ 3:1), documents a dated addendum in each game's spec and runs lint/build. Keeps the
+  per-game skin registry in `references/games-skins.md`. Must be given a game (or "todos");
+  otherwise it stops without changing anything and asks which one — never picks one itself. Never
+  touches Supabase, mechanics or scores; doesn't commit.
 
 ## Hooks and MCP
 
