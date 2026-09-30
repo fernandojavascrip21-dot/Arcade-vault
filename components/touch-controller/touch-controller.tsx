@@ -25,7 +25,8 @@ type TouchControllerProps = {
   layout: TouchLayout;
   // paused || modal de fin abierto → suelta todo y no emite nada.
   disabled: boolean;
-  onPaddle?: (ratio: number) => void;
+  // Deslizador relativo: delta en fracción del ancho del campo → centro 0..1.
+  onPaddleMove?: (delta: number) => number | undefined;
 };
 
 type Hold = {
@@ -35,6 +36,17 @@ type Hold = {
 };
 
 const DEAD_ZONE = 0.2; // fracción del radio del D-pad
+const PADDLE_GAIN = 1.5; // recorrer 2/3 de la pista cruza todo el campo
+const TAP_MS = 200; // toque corto en la pista = lanzar
+const TAP_PX = 8;
+
+type SliderGesture = {
+  pointerId: number;
+  startX: number;
+  lastX: number;
+  startTime: number;
+  moved: boolean;
+};
 
 function haptic() {
   try {
@@ -52,13 +64,13 @@ function clearTimers(hold: Hold) {
 export function TouchController({
   layout,
   disabled,
-  onPaddle,
+  onPaddleMove,
 }: TouchControllerProps) {
   // Una "hold" por pieza ("dpad" o id de acción): tecla pulsada + timers DAS/ARR.
   const holds = useRef(new Map<string, Hold>());
   const dirRef = useRef<DpadDirection | null>(null);
   const dpadPointer = useRef<number | null>(null);
-  const sliderPointer = useRef<number | null>(null);
+  const slider = useRef<SliderGesture | null>(null);
 
   const [dir, setDir] = useState<DpadDirection | null>(null);
   const [pressed, setPressed] = useState<Record<string, boolean>>({});
@@ -199,31 +211,57 @@ export function TouchController({
 
   // ---- Deslizador de la pala ----
 
-  function slideTo(e: ReactPointerEvent<HTMLDivElement>) {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const next = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
-    setRatio(next);
-    onPaddle?.(next);
-  }
-
+  // Relativo, como un trackpad: tocar no mueve la pala; arrastrar la desplaza
+  // desde su posición real. El pulgar muestra lo que devuelve el motor.
   function onSliderDown(e: ReactPointerEvent<HTMLDivElement>) {
     if (disabled) return;
     e.preventDefault();
     e.currentTarget.setPointerCapture(e.pointerId);
-    sliderPointer.current = e.pointerId;
+    slider.current = {
+      pointerId: e.pointerId,
+      startX: e.clientX,
+      lastX: e.clientX,
+      startTime: e.timeStamp,
+      moved: false,
+    };
     setSliding(true);
-    slideTo(e);
+    const current = onPaddleMove?.(0);
+    if (current !== undefined) setRatio(current);
   }
 
   function onSliderMove(e: ReactPointerEvent<HTMLDivElement>) {
-    if (disabled || e.pointerId !== sliderPointer.current) return;
-    slideTo(e);
+    const gesture = slider.current;
+    if (disabled || !gesture || e.pointerId !== gesture.pointerId) return;
+    const dx = e.clientX - gesture.lastX;
+    gesture.lastX = e.clientX;
+    if (Math.abs(e.clientX - gesture.startX) >= TAP_PX) gesture.moved = true;
+    if (dx === 0) return;
+    const width = e.currentTarget.getBoundingClientRect().width;
+    const next = onPaddleMove?.((dx / width) * PADDLE_GAIN);
+    if (next !== undefined) setRatio(next);
   }
 
-  function onSliderEnd(e: ReactPointerEvent<HTMLDivElement>) {
-    if (e.pointerId !== sliderPointer.current) return;
-    sliderPointer.current = null;
+  function endSlider(e: ReactPointerEvent<HTMLDivElement>) {
+    const gesture = slider.current;
+    if (!gesture || e.pointerId !== gesture.pointerId) return null;
+    slider.current = null;
     setSliding(false);
+    return gesture;
+  }
+
+  function onSliderUp(e: ReactPointerEvent<HTMLDivElement>) {
+    const gesture = endSlider(e);
+    if (
+      gesture &&
+      !disabled &&
+      !gesture.moved &&
+      e.timeStamp - gesture.startTime < TAP_MS
+    ) {
+      // Toque corto: lanza la bola (Space), igual que el botón LANZAR.
+      pressKey("Space");
+      releaseKey("Space");
+      haptic();
+    }
   }
 
   const activeDir = disabled ? null : dir;
@@ -268,9 +306,9 @@ export function TouchController({
             className="relative h-14 cursor-pointer"
             onPointerDown={onSliderDown}
             onPointerMove={onSliderMove}
-            onPointerUp={onSliderEnd}
-            onPointerCancel={onSliderEnd}
-            onLostPointerCapture={onSliderEnd}
+            onPointerUp={onSliderUp}
+            onPointerCancel={endSlider}
+            onLostPointerCapture={endSlider}
           >
             <div className="absolute inset-x-0 top-1/2 h-2 -translate-y-1/2 rounded-full border border-cian/40 bg-cian/8" />
             <div

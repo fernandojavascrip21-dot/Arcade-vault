@@ -7,6 +7,12 @@ import { saveScoreAction } from "@/app/play/[id]/actions";
 import { CrtFrame } from "@/components/crt-frame";
 import { GameOverRanking } from "@/components/game-over-ranking";
 import {
+  TOUCH_LAYOUTS,
+  type TouchGameId,
+} from "@/components/touch-controller/layouts";
+import { TouchController } from "@/components/touch-controller/touch-controller";
+import { useTouchControls } from "@/components/touch-controller/use-touch-controls";
+import {
   AsteroidsGame,
   type AsteroidsGameHandle,
 } from "@/components/games/asteroids/asteroids-game";
@@ -172,6 +178,11 @@ export function PlayRoom({ game }: { game: Game }) {
   const bloquesGameRef = useRef<BloquesGameHandle>(null);
   const rompemurosGameRef = useRef<RompemurosGameHandle>(null);
   const serpienteGameRef = useRef<SerpienteGameHandle>(null);
+  const isRealGame = isAsteroids || isBloques || isRompemuros || isSerpiente;
+  // Control táctil (spec 13): solo en los 4 juegos reales.
+  const touch = useTouchControls();
+  const touchLayout = isRealGame ? TOUCH_LAYOUTS[game.id as TouchGameId] : null;
+  const showTouch = touchLayout !== null && touch.visible;
   const typerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   useEffect(
     () => () => {
@@ -385,6 +396,16 @@ export function PlayRoom({ game }: { game: Game }) {
               </select>
             </label>
           ) : null}
+          {isRealGame && touch.isCoarse ? (
+            <button
+              type="button"
+              onClick={touch.toggle}
+              aria-pressed={touch.visible}
+              className="whitespace-nowrap border border-cian/50 px-4 py-3 font-display text-[10px] text-cian transition-colors hover:bg-cian/10 active:scale-95"
+            >
+              {touch.visible ? "OCULTAR MANDO" : "MANDO"}
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={() => setPaused((p) => !p)}
@@ -455,19 +476,34 @@ export function PlayRoom({ game }: { game: Game }) {
         ) : null}
       </CrtFrame>
 
+      {showTouch && touchLayout ? (
+        <TouchController
+          layout={touchLayout}
+          disabled={paused || over}
+          onPaddleMove={
+            isRompemuros
+              ? (delta) => rompemurosGameRef.current?.movePaddleBy(delta)
+              : undefined
+          }
+        />
+      ) : null}
+
       <div className="mt-4 flex flex-wrap justify-between gap-2.5 text-[11px] tracking-[2px] text-[#46525e]">
-        <span>
-          {isAsteroids
-            ? "← → ROTAR · ↑ IMPULSO · ESPACIO DISPARAR · B BOMBA NOVA"
-            : isBloques
-              ? "← → MOVER · ↑ / X ROTAR · ↓ BAJAR · ESPACIO CAÍDA"
-              : isRompemuros
-                ? "← → / A D / RATÓN MOVER · ESPACIO / CLIC LANZAR · 1 2 3 DIFICULTAD · ESC / P PAUSA"
-                : isSerpiente
-                  ? "← ↑ ↓ → / WASD MOVER · ESC / P PAUSA"
-                  : "MUEVE CON EL RATÓN O ← →"}
-        </span>
-        <span>ARCADE VAULT CRT-19</span>
+        {/* Con el control táctil visible, la ayuda de teclado no aplica. */}
+        {showTouch ? null : (
+          <span>
+            {isAsteroids
+              ? "← → ROTAR · ↑ IMPULSO · ESPACIO DISPARAR · B BOMBA NOVA"
+              : isBloques
+                ? "← → MOVER · ↑ / X ROTAR · ↓ BAJAR · ESPACIO CAÍDA"
+                : isRompemuros
+                  ? "← → / A D / RATÓN MOVER · ESPACIO / CLIC LANZAR · 1 2 3 DIFICULTAD · ESC / P PAUSA"
+                  : isSerpiente
+                    ? "← ↑ ↓ → / WASD MOVER · ESC / P PAUSA"
+                    : "MUEVE CON EL RATÓN O ← →"}
+          </span>
+        )}
+        <span className="ml-auto">ARCADE VAULT CRT-19</span>
       </div>
 
       {!isAsteroids && !isBloques && !isRompemuros && !isSerpiente ? (
