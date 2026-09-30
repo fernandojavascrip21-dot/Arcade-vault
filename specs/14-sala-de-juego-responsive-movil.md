@@ -1,6 +1,6 @@
 # SPEC 14 — Sala de juego responsive en móvil (vertical y horizontal)
 
-> **Status:** Aprovado
+> **Status:** Implementado
 > **Depends on:** SPEC 09, SPEC 12, SPEC 13
 > **Date:** 2026-09-30
 > **Objective:** Hacer que la sala `/play/[id]` se juegue cómodamente en móvil en vertical y en horizontal: HUD compacto de una fila con menú ⋮ en hoja inferior, y en horizontal el CRT centrado con el mando táctil repartido a sus lados, sin scroll durante la partida.
