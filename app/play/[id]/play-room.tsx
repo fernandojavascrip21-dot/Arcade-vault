@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { saveScoreAction } from "@/app/play/[id]/actions";
 import { PlayMenuSheet } from "@/app/play/[id]/play-menu-sheet";
+import { RotateHint } from "@/app/play/[id]/rotate-hint";
 import { CrtFrame } from "@/components/crt-frame";
 import { GameOverRanking } from "@/components/game-over-ranking";
 import {
@@ -200,6 +201,17 @@ export function PlayRoom({ game }: { game: Game }) {
     [],
   );
 
+  // Sin pull-to-refresh ni rebote en la sala (spec 14): un tirón accidental
+  // durante la partida recargaría la página. Solo mientras /play está montada.
+  useEffect(() => {
+    const root = document.documentElement;
+    const previous = root.style.overscrollBehavior;
+    root.style.overscrollBehavior = "none";
+    return () => {
+      root.style.overscrollBehavior = previous;
+    };
+  }, []);
+
   const playerName = user ?? "INVITADO";
   const exit = () => router.push("/games");
 
@@ -370,7 +382,7 @@ export function PlayRoom({ game }: { game: Game }) {
   };
 
   return (
-    <main className="relative z-10 mx-auto w-full max-w-[1020px] flex-1 animate-fade px-[18px] pb-20 pt-8">
+    <main className="relative z-10 mx-auto w-full max-w-[1020px] flex-1 animate-fade px-[18px] pb-20 pt-8 mobile:px-3 mobile:pb-6 mobile:pt-3">
       <div className="flex flex-wrap items-center justify-between gap-3.5 border border-cian/30 bg-[rgba(8,10,16,.92)] px-5 py-4 mobile:flex-nowrap mobile:gap-2 mobile:px-3 mobile:py-1">
         <div className="flex flex-wrap gap-x-[26px] gap-y-3 mobile:flex-nowrap mobile:gap-x-4">
           {!isBloques && !isRompemuros ? (
@@ -507,6 +519,8 @@ export function PlayRoom({ game }: { game: Game }) {
         returnFocusRef={menuButtonRef}
       />
 
+      <RotateHint enabled={isRealGame && touch.isCoarse} />
+
       <CrtFrame
         background={
           isAsteroids || isBloques || isRompemuros || isSerpiente
@@ -515,7 +529,7 @@ export function PlayRoom({ game }: { game: Game }) {
         }
         label=""
         compact
-        className="mt-6"
+        className="mt-6 mobile:mt-3"
         art={
           isAsteroids ? (
             <AsteroidsGame
