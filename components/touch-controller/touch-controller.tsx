@@ -8,6 +8,8 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 
+import { MOBILE_LANDSCAPE_QUERY } from "@/lib/responsive";
+
 import type {
   ActionIcon,
   DpadDirection,
@@ -19,7 +21,10 @@ import { pressKey, releaseAll, releaseKey } from "./synthetic-keys";
 
 // "Arcade Universal Controller" (spec 13): D-pad, deslizador y botones de
 // acción que despachan teclado sintético a los motores. Solo pinta las piezas
-// que declara el `layout` del juego.
+// que declara el `layout` del juego. En móvil horizontal (spec 14) la sección
+// y su fila pasan a `display: contents` y cada pieza se coloca como panel
+// propio en las columnas laterales del grid de la sala (izquierda: D-pad o
+// deslizador; derecha: botones de acción).
 
 type TouchControllerProps = {
   layout: TouchLayout;
@@ -36,7 +41,8 @@ type Hold = {
 };
 
 const DEAD_ZONE = 0.2; // fracción del radio del D-pad
-const PADDLE_GAIN = 1.5; // recorrer 2/3 de la pista cruza todo el campo
+const SLIDER_SENSITIVITY = 1.5; // vertical: 2/3 de la pista cruzan el campo
+const SLIDER_SENSITIVITY_LANDSCAPE = 2.5; // horizontal: la pista es más corta
 const TAP_MS = 200; // toque corto en la pista = lanzar
 const TAP_PX = 8;
 
@@ -46,7 +52,12 @@ type SliderGesture = {
   lastX: number;
   startTime: number;
   moved: boolean;
+  sensitivity: number;
 };
+
+// Panel de cada grupo cuando el mando se reparte a los lados del CRT.
+const SIDE_PANEL =
+  "mobile-landscape:row-start-1 mobile-landscape:self-center mobile-landscape:rounded-[18px] mobile-landscape:border mobile-landscape:border-cian/30 mobile-landscape:bg-cian/4 mobile-landscape:shadow-[0_0_36px_-10px_var(--cian)]";
 
 function haptic() {
   try {
@@ -223,6 +234,11 @@ export function TouchController({
       lastX: e.clientX,
       startTime: e.timeStamp,
       moved: false,
+      // Se decide al empezar el arrastre (no en render): en horizontal la
+      // pista es más corta y necesita más ganancia.
+      sensitivity: window.matchMedia(MOBILE_LANDSCAPE_QUERY).matches
+        ? SLIDER_SENSITIVITY_LANDSCAPE
+        : SLIDER_SENSITIVITY,
     };
     setSliding(true);
     const current = onPaddleMove?.(0);
@@ -237,7 +253,7 @@ export function TouchController({
     if (Math.abs(e.clientX - gesture.startX) >= TAP_PX) gesture.moved = true;
     if (dx === 0) return;
     const width = e.currentTarget.getBoundingClientRect().width;
-    const next = onPaddleMove?.((dx / width) * PADDLE_GAIN);
+    const next = onPaddleMove?.((dx / width) * gesture.sensitivity);
     if (next !== undefined) setRatio(next);
   }
 
@@ -277,11 +293,11 @@ export function TouchController({
   return (
     <section
       aria-label="Control táctil"
-      className="mt-4 touch-none select-none rounded-[18px] border border-cian/30 bg-cian/4 px-4 pb-5 pt-3.5 shadow-[0_0_36px_-10px_var(--cian)]"
+      className="mt-4 touch-none select-none rounded-[18px] border border-cian/30 bg-cian/4 px-4 pb-5 pt-3.5 shadow-[0_0_36px_-10px_var(--cian)] mobile-landscape:contents"
       style={{ WebkitTouchCallout: "none" }}
       onContextMenu={(e) => e.preventDefault()}
     >
-      <header className="mb-4 flex items-center justify-center gap-2.5">
+      <header className="mb-4 flex items-center justify-center gap-2.5 mobile-landscape:hidden">
         <span
           aria-hidden
           className={`size-2 rounded-full transition-colors duration-75 motion-reduce:transition-none ${
@@ -296,7 +312,12 @@ export function TouchController({
       </header>
 
       {layout.paddleSlider ? (
-        <div className="mb-5 px-6">
+        <div
+          role="group"
+          aria-label="Control de dirección"
+          data-side="left"
+          className={`mb-5 px-6 mobile-landscape:col-start-1 mobile-landscape:mb-0 mobile-landscape:w-full mobile-landscape:px-7 mobile-landscape:py-2 ${SIDE_PANEL}`}
+        >
           <div
             role="slider"
             aria-label="Pala"
@@ -330,36 +351,50 @@ export function TouchController({
       ) : null}
 
       <div
-        className={`flex items-center gap-4 ${
+        className={`flex items-center gap-4 mobile-landscape:contents ${
           hasDpad && !soloDpad ? "justify-between" : "justify-center"
         }`}
       >
         {hasDpad ? (
           <div
             role="group"
-            aria-label="Cruceta"
-            className={`relative aspect-square cursor-pointer ${
-              soloDpad ? "w-[min(62vw,220px)]" : "w-[min(46vw,184px)]"
-            }`}
-            onPointerDown={onDpadDown}
-            onPointerMove={onDpadMove}
-            onPointerUp={onDpadEnd}
-            onPointerCancel={onDpadEnd}
-            onLostPointerCapture={onDpadEnd}
+            aria-label="Control de dirección"
+            data-side="left"
+            className={`mobile-landscape:col-start-1 mobile-landscape:w-full mobile-landscape:p-2 ${SIDE_PANEL}`}
           >
-            <Dpad layout={layout} active={activeDir} />
+            <div
+              role="group"
+              aria-label="Cruceta"
+              className={`relative aspect-square cursor-pointer mobile-landscape:mx-auto mobile-landscape:w-full mobile-landscape:max-w-[140px] ${
+                soloDpad ? "w-[min(62vw,220px)]" : "w-[min(46vw,184px)]"
+              }`}
+              onPointerDown={onDpadDown}
+              onPointerMove={onDpadMove}
+              onPointerUp={onDpadEnd}
+              onPointerCancel={onDpadEnd}
+              onLostPointerCapture={onDpadEnd}
+            >
+              <Dpad layout={layout} active={activeDir} />
+            </div>
           </div>
         ) : null}
 
         {layout.actions.length > 0 ? (
-          <div className="flex items-start gap-3.5">
+          <div
+            role="group"
+            aria-label="Botones de acción"
+            data-side="right"
+            className={`flex items-start gap-3.5 mobile-landscape:col-start-3 mobile-landscape:flex-col mobile-landscape:items-center mobile-landscape:justify-self-center mobile-landscape:gap-3 mobile-landscape:px-4 mobile-landscape:py-3 ${SIDE_PANEL}`}
+          >
             {layout.actions.map((action, i) => (
               <button
                 key={action.id}
                 type="button"
                 aria-label={action.label}
                 className={`grid justify-items-center gap-1.5 ${
-                  layout.actions.length > 1 && i === 0 ? "mt-9" : ""
+                  layout.actions.length > 1 && i === 0
+                    ? "mt-9 mobile-landscape:mt-0"
+                    : ""
                 }`}
                 onPointerDown={(e) => onActionDown(action, e)}
                 onPointerUp={() => onActionEnd(action)}
@@ -367,7 +402,7 @@ export function TouchController({
                 onLostPointerCapture={() => onActionEnd(action)}
               >
                 <span
-                  className={`grid size-16 place-items-center rounded-full border-2 border-cian/80 text-cian transition-[transform,background-color,box-shadow] duration-75 motion-reduce:transition-none ${
+                  className={`grid size-16 place-items-center mobile-landscape:size-14 rounded-full border-2 border-cian/80 text-cian transition-[transform,background-color,box-shadow] duration-75 motion-reduce:transition-none ${
                     isPressed(action.id)
                       ? "scale-[.94] bg-cian/25 shadow-[0_0_22px_var(--cian)]"
                       : "bg-cian/6 shadow-[0_0_10px_-2px_var(--cian)]"
