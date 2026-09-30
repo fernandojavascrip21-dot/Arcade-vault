@@ -57,9 +57,10 @@ Subagents live in `.claude/agents/`:
   (done / pending by priority / discarded — no round history). Run it before `/add-game`.
 - `game-jam` (`model: sonnet`) — given the name of a specific game already decided on (typically one
   approved in "⏳ Pendientes" of `references/games-suggestion-all.md`, e.g. BOMBARDERO), turns it
-  into one full numeric `Draft` spec (same shape as specs 06/08/10/11) at
-  `specs/game-jam/<slug>.md`. No code, no Supabase. Review, approve, and renumber into
-  `specs/NN-slug.md` before `/spec-impl`.
+  into **two** full numeric `Draft` specs with different mechanic resolutions (same id/category,
+  same shape as specs 06/08/10/11) at `specs/game-jam/<slug>-a.md` and `<slug>-b.md`. No code, no
+  Supabase. Review both, pick one, approve it, and renumber into `specs/NN-slug.md` before
+  `/spec-impl`.
 
 ## Hooks and MCP
 
