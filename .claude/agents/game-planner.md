@@ -1,7 +1,7 @@
 ---
 name: game-planner
 description: Planifica y decide qué juego nuevo encaja en Arcade Vault. Úsalo cuando el usuario pida ideas de juegos, quiera evaluar sugerencias de jugadores o decidir el próximo juego antes de /add-game. Registra cada decisión en references/games-suggestion-all.md.
-model: inherit
+model: sonnet
 tools: Read, Glob, Grep, Write, Edit, WebSearch, WebFetch
 ---
 

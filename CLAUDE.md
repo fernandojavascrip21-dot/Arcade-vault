@@ -55,7 +55,7 @@ Skills live in `.agents/skills/` and are symlinked from `.claude/skills/`.
 
 Subagents live in `.claude/agents/`:
 
-- `game-planner` (`model: inherit`) — evaluates game suggestions and decides which game fits the
+- `game-planner` (`model: sonnet`) — evaluates game suggestions and decides which game fits the
   platform next; keeps the traffic-light to-do list in `references/games-suggestion-all.md`
   (done / pending by priority / discarded — no round history). Run it before `/add-game`.
 - `game-jam` (`model: sonnet`) — given the name of a specific game already decided on (typically one
@@ -65,13 +65,20 @@ Subagents live in `.claude/agents/`:
   Supabase. Review both, pick one, approve it, and renumber into `specs/NN-slug.md` before
   `/spec-impl`. (`specs/game-jam/bombardero.md` is an earlier single-spec draft from before the
   two-variant format.)
-- `skin-designer` (`model: inherit`) — audits that every game has at least the skins `clasico`
-  (default), `retro` and `neon`, implements missing ones following the Bloques pattern (engine
+- `skin-designer` (`model: sonnet`) — audits that every game has at least the skins `clasico`
+  (default), `retro` and `neon`, implements missing ones following the skin contract (engine
   palette table + `setSkin`, controlled `skin` prop, SKIN selector in `PlayRoom`), checks dark-mode
   contrast (≥ 3:1), documents a dated addendum in each game's spec and runs lint/build. Keeps the
   per-game skin registry in `references/games-skins.md`. Must be given a game (or "todos");
   otherwise it stops without changing anything and asks which one — never picks one itself. Never
   touches Supabase, mechanics or scores; doesn't commit.
+- `mobile-porter` (`model: sonnet`) — audits that a game plays well in both the desktop and the
+  mobile browser, against specs 13 (touch controller) and 14 (responsive play room), and adds what
+  is missing by copying the existing games: `TOUCH_LAYOUTS` entry, `PlayRoom` branches, `mobile:`
+  variants. Never designs new controller pieces (it reports them instead) and only touches an
+  engine under the spec 13 exception (`movePaddleBy`). Documents a dated addendum in the game's
+  spec and runs lint/build; no visual check — that is manual. Must be given a game (or "todos");
+  otherwise it stops and asks. Never touches Supabase, mechanics, scores or skins; doesn't commit.
 
 ## Hooks and MCP
 
@@ -140,8 +147,12 @@ Pages are Server Components that fetch data and pass it to `*-client.tsx` / clie
 - `session-context` — simulated session (no real auth); player name persisted in `localStorage`
   key `arcade-vault:player-name` via `useSyncExternalStore`, falling back to memory. `playGuest()` = guest.
 - `credits-context` — simulated arcade credits (start 3, max 99), memory only.
-- Not in `contexts/`: the Bloques skin preference lives in `app/play/[id]/play-room.tsx`
-  (`localStorage` key `arcadevault.bloques.skin.v1`, see Games).
+- Not in `contexts/`: per-game skin preferences (`arcadevault.<slug>.skin.v1`, see Games), the
+  touch-controller toggle (`arcadevault.touch-controls.v1`) and the rotate hint
+  (`arcadevault.rotate-hint.v1`). All are read with `useSyncExternalStore`.
+- Small client hooks in `lib/`: `use-media-query.ts` (`useMediaQuery`, SSR-safe, server snapshot
+  `false`; used by the navbar) and `use-reveal.ts` (`useReveal`, one-shot scroll reveal; home and
+  About).
 
 ## Games
 
@@ -150,8 +161,9 @@ Playable games (id → engine): `asteroides` (Asteroids), `bloques` (Tetris), `r
 Asteroides, whose folder is `components/games/asteroids/` (`asteroids-game.tsx`).
 
 - `engine.ts` is framework-free: `create<Name>Engine(canvas, handlers, options?)` →
-  `{ start, stop, setPaused, restart }` (plus game-specific setters, e.g. Bloques `setSkin`),
-  pushes state via `onStateChange`, signals `onGameOver(finalScore)`; owns its RAF loop and key listeners.
+  `{ start, stop, setPaused, restart, setSkin }` (plus game-specific methods, e.g. Rompemuros
+  `movePaddleBy`), pushes state via `onStateChange`, signals `onGameOver(finalScore)`; owns its RAF
+  loop and key listeners.
   It does not draw game-over or auto-restart — React does.
 - `<slug>-game.tsx` is a thin `forwardRef` wrapper mounting the engine in a `useEffect` and exposing
   `restart()`, letterboxed inside `components/crt-frame.tsx` (16:10).
@@ -159,13 +171,18 @@ Asteroides, whose folder is `components/games/asteroids/` (`asteroids-game.tsx`)
   (**not** a generic registry yet) — a new game adds its own branches there. On game over it uses
   `components/game-over-ranking.tsx` to show rank + score; `hall-of-fame.tsx` shows general ranking,
   per-game boards and the player's history (“MIS PARTIDAS”).
-- **Bloques skins** (spec 08 §8): `BloquesSkin` = `retro | neon | pastel | pixel`, `BLOQUES_SKINS`
-  and `setSkin()` in `components/games/bloques/engine.ts` (redraws instantly, even paused);
-  `bloques-game.tsx` takes a controlled `skin` prop (same pattern as `paused`). The SKIN selector
-  sits in the `PlayRoom` top bar only when `isBloques`, persisted via `useSyncExternalStore`
-  (server/hydration snapshot is always `"retro"`). Don't read `localStorage` in a `useState`
-  initializer or `setState` in a mount effect — it causes a hydration error and trips the lint
-  rule `react-hooks/set-state-in-effect`. Client-only preference: no Supabase, no score impact.
+- **Skins** (addendum §8 of specs 06/08/10/11; registry in `references/games-skins.md`): every
+  engine exports `<Name>Skin`, `<NAME>_SKINS`, `<NAME>_SKIN_STORAGE_KEY`
+  (`arcadevault.<slug>.skin.v1`), takes `options.initialSkin` and has `setSkin()` (redraws
+  instantly, even paused); the wrapper takes a controlled `skin` prop (same pattern as `paused`).
+  Asteroides, Rompemuros and Serpiente have `clasico` (default) / `retro` / `neon` and use the
+  generic store `lib/skin-store.ts` (`createSkinStore` + `useSkin`). **Bloques is the exception**:
+  `retro` (default) / `neon` / `pastel` / `pixel` — no `clasico` yet — with its own hand-written
+  store and inline `<select>` in `play-room.tsx`. The selector is `components/skin-select.tsx` in
+  the `PlayRoom` top bar on desktop and chips in the ⋮ sheet on mobile. The server/hydration
+  snapshot is always the default skin: don't read `localStorage` in a `useState` initializer or
+  `setState` in a mount effect — it causes a hydration error and trips the lint rule
+  `react-hooks/set-state-in-effect`. Client-only preference: no Supabase, no score impact.
 - **Touch controller** (spec 13): `components/touch-controller/` dispatches synthetic
   `KeyboardEvent`s to the engines (per-game `TOUCH_LAYOUTS`; Rompemuros adds `movePaddleBy`).
   Shown only on `(pointer: coarse)`; preference in `localStorage` key `arcadevault.touch-controls.v1`.
@@ -182,7 +199,8 @@ Asteroides, whose folder is `components/games/asteroids/` (`asteroids-game.tsx`)
 - **`fixed` overlays in the play room must use `createPortal(…, document.body)`**: `<main>` keeps a
   `transform` from `animate-fade`, which makes it the containing block of `position: fixed`.
 - Pipeline for a new game: `game-planner` agent (decide which game) → `/add-game` (spec) →
-  `/spec-impl` (code). Games to-do: `references/games-suggestion-all.md`.
+  `/spec-impl` (code) → `skin-designer` (skins) and `mobile-porter` (touch + mobile play room).
+  Games to-do: `references/games-suggestion-all.md`.
 - Add a game with `/add-game`. Reference sources: `references/started-games/`
   (`02-asteroids`, `03-tetris`, `04-arkanoid`) — these are **git submodules** (`.gitmodules`,
   `ignore = dirty`); run `git submodule update --init` if empty and never commit changes inside
