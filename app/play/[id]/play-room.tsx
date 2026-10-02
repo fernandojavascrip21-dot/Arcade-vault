@@ -716,12 +716,13 @@ export function PlayRoom({ game }: { game: Game }) {
       {over
         ? createPortal(
             <div className="fixed inset-0 z-[70] grid animate-fade place-items-center bg-[rgba(4,4,9,.86)] p-5 backdrop-blur-sm mobile-landscape:p-3">
-              {/* En horizontal (spec 14) pasa a dos columnas: izquierda título,
-              puntuación y botones; derecha formulario o ranking con scroll
-              propio. Los contenedores de columna son `contents` fuera de
-              horizontal, así que vertical y escritorio no cambian. */}
-              <div className="grid max-h-[calc(100dvh-40px)] w-full max-w-[460px] justify-items-center overflow-y-auto gap-5 border border-magenta bg-[#0c0a12] px-7 py-9 text-center shadow-[0_0_60px_rgba(255,0,110,.4)] mobile-landscape:max-h-[calc(100dvh-24px)] mobile-landscape:max-w-[760px] mobile-landscape:grid-cols-2 mobile-landscape:grid-rows-[1fr_auto] mobile-landscape:items-start mobile-landscape:gap-x-6 mobile-landscape:gap-y-4 mobile-landscape:overflow-hidden mobile-landscape:p-5">
-                <div className="contents mobile-landscape:col-start-1 mobile-landscape:row-start-1 mobile-landscape:grid mobile-landscape:content-center mobile-landscape:justify-items-center mobile-landscape:gap-3 mobile-landscape:self-stretch">
+              {/* En móvil horizontal (spec 14) y en ventanas de escritorio
+              bajas (`desktop-short`, spec 15) pasa a dos columnas: izquierda
+              título, puntuación y botones; derecha formulario o ranking con
+              scroll propio. Los contenedores de columna son `contents` en el
+              resto, así que vertical y escritorio alto siguen en una columna. */}
+              <div className="grid max-h-[calc(100dvh-40px)] w-full max-w-[460px] justify-items-center overflow-y-auto gap-5 border border-magenta bg-[#0c0a12] px-7 py-9 text-center shadow-[0_0_60px_rgba(255,0,110,.4)] mobile-landscape:max-h-[calc(100dvh-24px)] mobile-landscape:max-w-[760px] mobile-landscape:grid-cols-2 mobile-landscape:grid-rows-[1fr_auto] mobile-landscape:items-start mobile-landscape:gap-x-6 mobile-landscape:gap-y-4 mobile-landscape:overflow-hidden mobile-landscape:p-5 desktop-short:max-w-[860px] desktop-short:grid-cols-2 desktop-short:grid-rows-[1fr_auto] desktop-short:items-start desktop-short:gap-x-8 desktop-short:overflow-hidden">
+                <div className="contents mobile-landscape:col-start-1 mobile-landscape:row-start-1 mobile-landscape:grid mobile-landscape:content-center mobile-landscape:justify-items-center mobile-landscape:gap-3 mobile-landscape:self-stretch desktop-short:col-start-1 desktop-short:row-start-1 desktop-short:grid desktop-short:content-center desktop-short:justify-items-center desktop-short:gap-5 desktop-short:self-stretch">
                   <div className="font-display text-xl tracking-wider text-magenta [text-shadow:0_0_18px_rgba(255,0,110,.7)]">
                     FIN DEL JUEGO
                   </div>
@@ -733,7 +734,7 @@ export function PlayRoom({ game }: { game: Game }) {
                   </div>
                 </div>
 
-                <div className="contents mobile-landscape:col-start-2 mobile-landscape:row-span-2 mobile-landscape:row-start-1 mobile-landscape:grid mobile-landscape:max-h-[calc(100dvh-64px)] mobile-landscape:w-full mobile-landscape:content-start mobile-landscape:justify-items-center mobile-landscape:gap-3 mobile-landscape:overflow-y-auto">
+                <div className="contents mobile-landscape:col-start-2 mobile-landscape:row-span-2 mobile-landscape:row-start-1 mobile-landscape:grid mobile-landscape:max-h-[calc(100dvh-64px)] mobile-landscape:w-full mobile-landscape:content-start mobile-landscape:justify-items-center mobile-landscape:gap-3 mobile-landscape:overflow-y-auto desktop-short:col-start-2 desktop-short:row-span-2 desktop-short:row-start-1 desktop-short:grid desktop-short:max-h-[calc(100dvh-112px)] desktop-short:w-full desktop-short:content-start desktop-short:justify-items-center desktop-short:gap-4 desktop-short:overflow-y-auto">
                   {!saved ? (
                     <form
                       className="grid w-full gap-3"
@@ -803,7 +804,7 @@ export function PlayRoom({ game }: { game: Game }) {
                   ) : null}
                 </div>
 
-                <div className="mt-1 grid w-full gap-2.5 mobile-landscape:col-start-1 mobile-landscape:row-start-2 mobile-landscape:mt-0">
+                <div className="mt-1 grid w-full gap-2.5 mobile-landscape:col-start-1 mobile-landscape:row-start-2 mobile-landscape:mt-0 desktop-short:col-start-1 desktop-short:row-start-2 desktop-short:mt-0">
                   <button
                     type="button"
                     onClick={replay}
