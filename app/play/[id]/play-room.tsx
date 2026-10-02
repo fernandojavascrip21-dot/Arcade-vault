@@ -157,7 +157,7 @@ function HudStat({
 }) {
   return (
     <div className="grid gap-1">
-      <span className="whitespace-nowrap text-[10px] tracking-[2px] text-[#6f7d88] mobile:text-[9px] mobile:tracking-[1px]">
+      <span className="whitespace-nowrap text-[10px] tracking-[2px] text-texto-tenue mobile:text-[9px] mobile:tracking-[1px]">
         {label}
       </span>
       <span
@@ -499,8 +499,10 @@ export function PlayRoom({ game }: { game: Game }) {
           móvil horizontal es `contents` para no romper el flex de <main>. */}
       <div className="desktop:mx-auto desktop:w-[var(--room-w)] desktop:max-w-full mobile-landscape:contents">
         {/* Barra única (spec 15): una fila con marcadores, JUGADOR (solo
-          escritorio), PAUSA y ⋮. SKIN, MANDO, TEMA y SALIR viven en el menú. */}
-        <div className="flex h-14 flex-nowrap items-center justify-between gap-3.5 border border-cian/30 bg-[rgba(8,10,16,.92)] px-4 mobile:h-auto mobile:gap-2 mobile:px-3 mobile:py-1">
+          escritorio), PAUSA y ⋮. SKIN, MANDO, TEMA y SALIR viven en el menú.
+          Fondo y textos con tokens de tema: con un fondo oscuro fijo, los
+          acentos del tema claro no llegaban a 3:1 de contraste. */}
+        <div className="flex h-14 flex-nowrap items-center justify-between gap-3.5 border border-cian/30 bg-background/90 px-4 mobile:h-auto mobile:gap-2 mobile:px-3 mobile:py-1">
           <div className="flex min-w-0 flex-nowrap items-center gap-x-[26px] mobile:gap-x-4">
             {hasBarStats ? (
               <>
@@ -528,10 +530,10 @@ export function PlayRoom({ game }: { game: Game }) {
                 hasBarStats ? "border-l border-cian/20 pl-[26px]" : ""
               }`}
             >
-              <span className="text-[10px] tracking-[2px] text-[#6f7d88]">
+              <span className="text-[10px] tracking-[2px] text-texto-tenue">
                 JUGADOR
               </span>
-              <span className="truncate text-sm text-[#cdd8de]">
+              <span className="truncate text-sm text-foreground">
                 {playerName}
               </span>
             </div>
@@ -685,7 +687,7 @@ export function PlayRoom({ game }: { game: Game }) {
 
         {/* Ayuda de teclado. En escritorio (spec 15) es una sola línea de 28 px
           que se corta con puntos suspensivos; el texto completo va en title. */}
-        <div className="mt-4 flex flex-wrap justify-between gap-2.5 text-[11px] tracking-[2px] text-[#46525e] mobile-landscape:hidden desktop:mt-0 desktop:h-7 desktop:flex-nowrap desktop:items-center desktop:tracking-[1px]">
+        <div className="mt-4 flex flex-wrap justify-between gap-2.5 text-[11px] tracking-[2px] text-texto-tenue mobile-landscape:hidden desktop:mt-0 desktop:h-7 desktop:flex-nowrap desktop:items-center desktop:tracking-[1px]">
           {/* Con el control táctil visible, la ayuda de teclado no aplica. */}
           {showTouch ? null : (
             <span

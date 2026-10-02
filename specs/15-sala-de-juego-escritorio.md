@@ -1,6 +1,6 @@
 # SPEC 15 — Sala de juego en escritorio (sin scroll, menú ⋮ y pantalla completa)
 
-> **Status:** Aprovado
+> **Status:** Implementado
 > **Depends on:** SPEC 09, SPEC 12, SPEC 13, SPEC 14
 > **Date:** 2026-10-01
 > **Objective:** Llevar a la sala `/play/[id]` en escritorio las ideas del spec 14: barra compacta de una fila con menú ⋮, CRT dimensionado por el alto libre para jugar sin scroll, modal FIN DEL JUEGO en dos columnas en ventanas bajas y modo pantalla completa.
@@ -216,6 +216,8 @@ Las claves de skins, `arcadevault.touch-controls.v1` y `arcadevault.rotate-hint.
 - **Con el mando táctil visible, el scroll es el de la página**, no interno del contenedor: el contenedor raíz crece con el contenido aunque tenga `desktop:h-dvh` (es un ítem flex de `<body>`). El tercer riesgo de §7 no se materializó.
 - **`useEffectEvent` en el cierre del menú** (paso 5): el efecto de `PlayMenuSheet` que escucha `resize` / `fullscreenchange` ya no depende de `onClose`. Al cambiar de pantalla completa, `useFullscreen` vuelve a renderizar `PlayRoom` de forma síncrona dentro del propio evento; el efecto se re-suscribía en mitad del despacho y el listener del menú no llegaba a ejecutarse, así que el panel se quedaba abierto con el ancla vieja.
 - **`lib/use-fullscreen.ts` exporta además `toggleFullscreen()` y `exitFullscreen()`** como funciones de módulo (identidad estable para el efecto de la tecla F y para la limpieza al desmontar).
+- **Barra y ayuda de teclado con tokens de tema** (tras el paso 8, 2026-10-01): la verificación midió dos contrastes por debajo de 3:1, ambos anteriores a este spec. Los iconos de ⋮ y pantalla completa daban 2.99:1 en tema claro, porque la barra tenía un fondo oscuro fijo (`bg-[rgba(8,10,16,.92)]`) que no cambiaba con el tema. La línea de ayuda daba 2.47:1 en tema oscuro (`text-[#46525e]`). Corrección: barra con `bg-background/90`, etiquetas con `text-texto-tenue`, nombre del jugador con `text-foreground` y ayuda con `text-texto-tenue`. En tema claro la barra pasa a ser clara, también en móvil. Medido después: en tema claro, iconos 4.95:1, PAUSA 4.3:1, etiquetas 3.43:1 y ayuda 3.45:1; en tema oscuro, todo ≥ 4.67:1. Los bordes de los botones (acento al 50 %) quedan en ≈ 2:1 en tema claro, igual que los del navbar; no se tocan porque el icono o el texto ya identifican el control.
+- **Sin verificar con Playwright** (paso 8): salir de pantalla completa con `Esc` (el navegador automatizado no lo emula) y la pausa al ocultar la pestaña con un cambio de pestaña real (se probó lanzando el evento `visibilitychange`).
 
 ## 7 — Riesgos identificados
 

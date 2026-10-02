@@ -7,10 +7,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What this is
 
 **Arcade Vault** — a platform for playing games online and competing for the highest score
-(see `README.md`). Specs 01–14 are all implemented (`specs/`, status `Implementado`): visual
+(see `README.md`). Specs 01–15 are all implemented (`specs/`, status `Implementado`): visual
 screens, landing, English routes, About/contact (Resend), Supabase integration, catalog +
 leaderboards, four playable canvas games, light/dark theme, player names with rankings, touch
-controls (13) and the responsive mobile play room (14).
+controls (13), the responsive mobile play room (14) and the desktop play room (15).
 UI copy is in Spanish; routes, file names and code identifiers are in English (except game
 ids/slugs, which are Spanish).
 
@@ -67,7 +67,7 @@ Subagents live in `.claude/agents/`:
   two-variant format.)
 - `skin-designer` (`model: inherit`) — audits that every game has at least the skins `clasico`
   (default), `retro` and `neon`, implements missing ones following the Bloques pattern (engine
-  palette table + `setSkin`, controlled `skin` prop, SKIN selector in `PlayRoom`), checks dark-mode
+  palette table + `setSkin`, controlled `skin` prop, SKIN chips in the `PlayRoom` ⋮ menu), checks dark-mode
   contrast (≥ 3:1), documents a dated addendum in each game's spec and runs lint/build. Keeps the
   per-game skin registry in `references/games-skins.md`. Must be given a game (or "todos");
   otherwise it stops without changing anything and asks which one — never picks one itself. Never
@@ -161,9 +161,10 @@ Asteroides, whose folder is `components/games/asteroids/` (`asteroids-game.tsx`)
   per-game boards and the player's history (“MIS PARTIDAS”).
 - **Bloques skins** (spec 08 §8): `BloquesSkin` = `retro | neon | pastel | pixel`, `BLOQUES_SKINS`
   and `setSkin()` in `components/games/bloques/engine.ts` (redraws instantly, even paused);
-  `bloques-game.tsx` takes a controlled `skin` prop (same pattern as `paused`). The SKIN selector
-  sits in the `PlayRoom` top bar only when `isBloques`, persisted via `useSyncExternalStore`
-  (server/hydration snapshot is always `"retro"`). Don't read `localStorage` in a `useState`
+  `bloques-game.tsx` takes a controlled `skin` prop (same pattern as `paused`). Skins are chosen
+  from the ⋮ OPCIONES menu (`skinControl` in `PlayRoom`; there is no SKIN selector in the top bar
+  since spec 15), persisted via `useSyncExternalStore` (server/hydration snapshot is always
+  `"retro"`). Don't read `localStorage` in a `useState`
   initializer or `setState` in a mount effect — it causes a hydration error and trips the lint
   rule `react-hooks/set-state-in-effect`. Client-only preference: no Supabase, no score impact.
 - **Touch controller** (spec 13): `components/touch-controller/` dispatches synthetic
@@ -173,12 +174,28 @@ Asteroides, whose folder is `components/games/asteroids/` (`asteroids-game.tsx`)
   ≤ 540 px tall) and `mobile-landscape:` in `app/globals.css`, mirrored as `MOBILE_QUERY` /
   `MOBILE_LANDSCAPE_QUERY` in `lib/responsive.ts` — keep both in sync. `mobile` is declared in block
   form and **before** `mobile-landscape` (a comma query list compiles to an invalid selector, and
-  later-registered variants win). On mobile the top bar collapses to stats + PAUSA + ⋮, which opens
-  `app/play/[id]/play-menu-sheet.tsx` (SKIN/MANDO/TEMA/SALIR; opening pauses). In landscape `/play`
+  later-registered variants win). On mobile the top bar is stats + PAUSA + ⋮, which opens
+  `app/play/[id]/play-menu-sheet.tsx` (SKIN/MANDO/TEMA/SALIR; opening pauses) as a bottom sheet. In landscape `/play`
   hides nav/footer, the zone is a 3-column grid (controller left · CRT · controller right, the
   controller uses `display: contents`) and the room fits without scroll. `CrtFrame` has a
   `compact` prop (play room only). `rotate-hint.tsx` (key `arcadevault.rotate-hint.v1`); rotating
   pauses a running game; `/play` sets `overscroll-behavior: none`.
+- **Desktop play room** (spec 15): variants `desktop:` (exact complement of `mobile:`, mirrored
+  as `DESKTOP_QUERY` in `lib/responsive.ts`), `desktop-short:` (also ≤ 800 px tall) and
+  `fullscreen-doc:` (`:root:fullscreen &`), registered **after** the mobile ones. One top bar for
+  every device: stats, JUGADOR (desktop only), PAUSA, fullscreen (desktop only) and ⋮; SKIN, MANDO
+  and SALIR live only in the menu, which on desktop is a 320 px panel anchored under ⋮ (`anchor`
+  prop computed in `openMenu`; closes on `resize`/`fullscreenchange` via `useEffectEvent`). The
+  room fits the window without scroll: on `/play/*` `site-chrome.tsx` sets `desktop:h-dvh`, hides
+  the footer and makes the content wrapper a **grid** (with a nested flex chain Chrome resolves
+  `cqh` to 0); `<main>` is a size container and bar + CRT + help share a column of width
+  `--room-w` (`ROOM_FIT` / `--room-overhead` in `play-room.tsx` — update the overhead if the bar
+  or help heights change). With the touch controller visible (tablets) it falls back to the
+  stacked layout with scroll (`ROOM_STACKED`). Fullscreen: `lib/use-fullscreen.ts`
+  (`useFullscreen`, `toggleFullscreen`, `exitFullscreen`), on `<html>` so the portals stay
+  visible; bar button + `F` key; the navbar hides on `/play/*`. A running game auto-pauses on
+  `fullscreenchange` and when the tab is hidden, and never resumes by itself. The game-over modal
+  is two columns in `mobile-landscape:` and `desktop-short:`.
 - **`fixed` overlays in the play room must use `createPortal(…, document.body)`**: `<main>` keeps a
   `transform` from `animate-fade`, which makes it the containing block of `position: fixed`.
 - Pipeline for a new game: `game-planner` agent (decide which game) → `/add-game` (spec) →
