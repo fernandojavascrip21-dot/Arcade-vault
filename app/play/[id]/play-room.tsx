@@ -53,7 +53,6 @@ import {
   SerpienteGame,
   type SerpienteGameHandle,
 } from "@/components/games/serpiente/serpiente-game";
-import { SkinSelect } from "@/components/skin-select";
 import { useCredits } from "@/contexts/credits-context";
 import { useSession } from "@/contexts/session-context";
 import {
@@ -123,6 +122,9 @@ function subscribeBloquesSkin(notify: () => void) {
   return () => bloquesSkinListeners.delete(notify);
 }
 
+const focusRing =
+  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cian";
+
 function HudStat({
   label,
   value,
@@ -133,7 +135,7 @@ function HudStat({
   className?: string;
 }) {
   return (
-    <div className="grid gap-1.5 mobile:gap-1">
+    <div className="grid gap-1">
       <span className="whitespace-nowrap text-[10px] tracking-[2px] text-[#6f7d88] mobile:text-[9px] mobile:tracking-[1px]">
         {label}
       </span>
@@ -166,7 +168,7 @@ export function PlayRoom({ game }: { game: Game }) {
   const rompemurosSkin = useSkin(rompemurosSkinStore);
   const serpienteSkin = useSkin(serpienteSkinStore);
   const [paused, setPaused] = useState(false);
-  // Hoja OPCIONES (menú ⋮) de la sala en móvil (spec 14).
+  // Menú OPCIONES (⋮) de la sala (specs 14 y 15).
   const [menuOpen, setMenuOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const [over, setOver] = useState(false);
@@ -190,6 +192,8 @@ export function PlayRoom({ game }: { game: Game }) {
   const rompemurosGameRef = useRef<RompemurosGameHandle>(null);
   const serpienteGameRef = useRef<SerpienteGameHandle>(null);
   const isRealGame = isAsteroids || isBloques || isRompemuros || isSerpiente;
+  // Bloques y Rompemuros pintan sus marcadores en el canvas, no en la barra.
+  const hasBarStats = !isBloques && !isRompemuros;
   // Control táctil (spec 13): solo en los 4 juegos reales.
   const touch = useTouchControls();
   const touchLayout = isRealGame ? TOUCH_LAYOUTS[game.id as TouchGameId] : null;
@@ -237,8 +241,7 @@ export function PlayRoom({ game }: { game: Game }) {
     setMenuOpen(true);
   };
 
-  // Skins del juego actual para la hoja OPCIONES (mismos stores que el
-  // selector SKIN de escritorio).
+  // Skins del juego actual para el menú OPCIONES.
   const skinControl = isAsteroids
     ? {
         value: asteroidsSkin,
@@ -396,9 +399,11 @@ export function PlayRoom({ game }: { game: Game }) {
 
   return (
     <main className="relative z-10 mx-auto w-full max-w-[1020px] flex-1 animate-fade px-[18px] pb-20 pt-8 mobile:px-3 mobile:pb-6 mobile:pt-3 mobile-landscape:flex mobile-landscape:min-h-dvh mobile-landscape:flex-col mobile-landscape:pb-[max(8px,env(safe-area-inset-bottom))] mobile-landscape:pl-[max(12px,env(safe-area-inset-left))] mobile-landscape:pr-[max(12px,env(safe-area-inset-right))] mobile-landscape:pt-2">
-      <div className="flex flex-wrap items-center justify-between gap-3.5 border border-cian/30 bg-[rgba(8,10,16,.92)] px-5 py-4 mobile:flex-nowrap mobile:gap-2 mobile:px-3 mobile:py-1">
-        <div className="flex flex-wrap gap-x-[26px] gap-y-3 mobile:flex-nowrap mobile:gap-x-4">
-          {!isBloques && !isRompemuros ? (
+      {/* Barra única (spec 15): una fila con marcadores, JUGADOR (solo
+          escritorio), PAUSA y ⋮. SKIN, MANDO, TEMA y SALIR viven en el menú. */}
+      <div className="flex h-14 flex-nowrap items-center justify-between gap-3.5 border border-cian/30 bg-[rgba(8,10,16,.92)] px-4 mobile:h-auto mobile:gap-2 mobile:px-3 mobile:py-1">
+        <div className="flex min-w-0 flex-nowrap items-center gap-x-[26px] mobile:gap-x-4">
+          {hasBarStats ? (
             <>
               <HudStat
                 label="PUNTUACIÓN"
@@ -419,93 +424,32 @@ export function PlayRoom({ game }: { game: Game }) {
               />
             </>
           ) : null}
-          <div className="grid gap-1.5 mobile:hidden">
+          <div
+            className={`grid min-w-0 gap-1 mobile:hidden ${
+              hasBarStats ? "border-l border-cian/20 pl-[26px]" : ""
+            }`}
+          >
             <span className="text-[10px] tracking-[2px] text-[#6f7d88]">
               JUGADOR
             </span>
-            <span className="text-sm text-[#cdd8de]">{playerName}</span>
+            <span className="truncate text-sm text-[#cdd8de]">
+              {playerName}
+            </span>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2.5 mobile:hidden">
-          {isAsteroids ? (
-            <SkinSelect
-              value={asteroidsSkin}
-              skins={ASTEROIDS_SKINS}
-              onChange={asteroidsSkinStore.write}
-            />
-          ) : null}
-          {isRompemuros ? (
-            <SkinSelect
-              value={rompemurosSkin}
-              skins={ROMPEMUROS_SKINS}
-              onChange={rompemurosSkinStore.write}
-            />
-          ) : null}
-          {isSerpiente ? (
-            <SkinSelect
-              value={serpienteSkin}
-              skins={SERPIENTE_SKINS}
-              onChange={serpienteSkinStore.write}
-            />
-          ) : null}
-          {isBloques ? (
-            <label className="flex items-center gap-1.5">
-              <span className="text-[10px] tracking-[2px] text-[#6f7d88]">
-                SKIN
-              </span>
-              <select
-                value={skin}
-                onChange={(e) =>
-                  handleSkinChange(e.target.value as BloquesSkin)
-                }
-                className="whitespace-nowrap border border-cian/40 bg-[#0a0a0f] px-2.5 py-1.5 font-display text-[9px] text-cian transition-colors hover:border-cian focus:border-cian focus:outline-none"
-              >
-                {BLOQUES_SKINS.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ) : null}
-          {isRealGame && touch.isCoarse ? (
-            <button
-              type="button"
-              onClick={touch.toggle}
-              aria-pressed={touch.visible}
-              className="whitespace-nowrap border border-cian/50 px-4 py-3 font-display text-[10px] text-cian transition-colors hover:bg-cian/10 active:scale-95"
-            >
-              {touch.visible ? "OCULTAR MANDO" : "MANDO"}
-            </button>
-          ) : null}
-          <button
-            type="button"
-            onClick={() => setPaused((p) => !p)}
-            className="whitespace-nowrap border border-amarillo/50 px-4 py-3 font-display text-[10px] text-amarillo transition-colors hover:bg-amarillo/10 active:scale-95"
-          >
-            {paused ? "SEGUIR" : "PAUSA"}
-          </button>
-          <button
-            type="button"
-            onClick={exit}
-            className="whitespace-nowrap border border-magenta/50 px-4 py-3 font-display text-[10px] text-magenta transition-colors hover:bg-magenta/15 active:scale-95"
-          >
-            SALIR
-          </button>
-        </div>
-        {/* Móvil: PAUSA solo icono + menú ⋮ (SKIN, MANDO, TEMA, SALIR). */}
-        <div className="ml-auto hidden shrink-0 items-center gap-2 mobile:flex">
+        <div className="ml-auto flex shrink-0 items-center gap-2">
           <button
             type="button"
             onClick={() => setPaused((p) => !p)}
             aria-label={paused ? "Seguir" : "Pausar"}
-            className="grid size-11 place-items-center border border-amarillo/50 text-amarillo transition-colors hover:bg-amarillo/10 active:scale-95"
+            className={`flex h-11 min-w-11 items-center justify-center gap-2 whitespace-nowrap border border-amarillo/50 px-4 font-display text-[10px] text-amarillo transition-colors hover:bg-amarillo/10 active:scale-95 mobile:px-0 ${focusRing}`}
           >
             {paused ? (
               <Play size={18} aria-hidden />
             ) : (
               <Pause size={18} aria-hidden />
             )}
+            <span className="mobile:hidden">{paused ? "SEGUIR" : "PAUSA"}</span>
           </button>
           <button
             ref={menuButtonRef}
@@ -514,7 +458,7 @@ export function PlayRoom({ game }: { game: Game }) {
             aria-label="Opciones de la partida"
             aria-haspopup="dialog"
             aria-expanded={menuOpen}
-            className="grid size-11 place-items-center border border-cian/50 text-cian transition-colors hover:bg-cian/10 active:scale-95"
+            className={`grid size-11 place-items-center border border-cian/50 text-cian transition-colors hover:bg-cian/10 active:scale-95 ${focusRing}`}
           >
             <EllipsisVertical size={18} aria-hidden />
           </button>
