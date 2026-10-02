@@ -1,6 +1,12 @@
 "use client";
 
-import { EllipsisVertical, Pause, Play } from "lucide-react";
+import {
+  EllipsisVertical,
+  Maximize,
+  Minimize,
+  Pause,
+  Play,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
@@ -53,7 +59,6 @@ import {
   SerpienteGame,
   type SerpienteGameHandle,
 } from "@/components/games/serpiente/serpiente-game";
-import { SkinSelect } from "@/components/skin-select";
 import { useCredits } from "@/contexts/credits-context";
 import { useSession } from "@/contexts/session-context";
 import {
@@ -64,6 +69,7 @@ import {
 } from "@/lib/player-name";
 import { createSkinStore, useSkin } from "@/lib/skin-store";
 import type { Game, SavedResult } from "@/lib/types";
+import { exitFullscreen, useFullscreen } from "@/lib/use-fullscreen";
 
 const SAVED_TEXT = "PUNTUACIÓN GUARDADA";
 
@@ -123,6 +129,23 @@ function subscribeBloquesSkin(notify: () => void) {
   return () => bloquesSkinListeners.delete(notify);
 }
 
+const focusRing =
+  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cian";
+
+// Sala sin scroll en escritorio (spec 15). `main` es contenedor de tamaño y
+// barra + CRT + ayuda comparten una columna de ancho --room-w, el mayor que
+// cabe en el alto libre: --room-overhead = barra (56) + separación (12) +
+// ayuda (28) + marco del CRT (28); ×1.6 por el 16:10 y +28px de marco.
+const ROOM_FIT =
+  "desktop:min-h-0 desktop:[container-type:size] desktop:[--room-w:min(100cqw,calc((100cqh_-_var(--room-overhead))*1.6_+_28px),1600px)]";
+const ROOM_OVERHEAD_GAME = "desktop:[--room-overhead:124px]";
+// Juegos del simulador: + botón SIMULAR FIN DE PARTIDA (24 + 50).
+const ROOM_OVERHEAD_SIMULATOR = "desktop:[--room-overhead:198px]";
+// Con el mando táctil visible (tablets) se conserva el apilado con scroll del
+// spec 13: la sala no se encoge y solo manda el ancho.
+const ROOM_STACKED =
+  "desktop:shrink-0 desktop:[container-type:inline-size] desktop:[--room-w:min(100cqw,1020px)]";
+
 function HudStat({
   label,
   value,
@@ -133,8 +156,8 @@ function HudStat({
   className?: string;
 }) {
   return (
-    <div className="grid gap-1.5 mobile:gap-1">
-      <span className="whitespace-nowrap text-[10px] tracking-[2px] text-[#6f7d88] mobile:text-[9px] mobile:tracking-[1px]">
+    <div className="grid gap-1">
+      <span className="whitespace-nowrap text-[10px] tracking-[2px] text-texto-tenue mobile:text-[9px] mobile:tracking-[1px]">
         {label}
       </span>
       <span
@@ -166,9 +189,14 @@ export function PlayRoom({ game }: { game: Game }) {
   const rompemurosSkin = useSkin(rompemurosSkinStore);
   const serpienteSkin = useSkin(serpienteSkinStore);
   const [paused, setPaused] = useState(false);
-  // Hoja OPCIONES (menú ⋮) de la sala en móvil (spec 14).
+  // Menú OPCIONES (⋮) de la sala (specs 14 y 15).
   const [menuOpen, setMenuOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
+  // Ancla del panel en escritorio (spec 15): bajo el ⋮, alineado a su derecha.
+  const [menuAnchor, setMenuAnchor] = useState<{
+    top: number;
+    right: number;
+  } | null>(null);
   const [over, setOver] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -190,6 +218,8 @@ export function PlayRoom({ game }: { game: Game }) {
   const rompemurosGameRef = useRef<RompemurosGameHandle>(null);
   const serpienteGameRef = useRef<SerpienteGameHandle>(null);
   const isRealGame = isAsteroids || isBloques || isRompemuros || isSerpiente;
+  // Bloques y Rompemuros pintan sus marcadores en el canvas, no en la barra.
+  const hasBarStats = !isBloques && !isRompemuros;
   // Control táctil (spec 13): solo en los 4 juegos reales.
   const touch = useTouchControls();
   const touchLayout = isRealGame ? TOUCH_LAYOUTS[game.id as TouchGameId] : null;
@@ -201,6 +231,34 @@ export function PlayRoom({ game }: { game: Game }) {
     },
     [],
   );
+
+  // Pantalla completa (spec 15): botón de la barra y tecla F. Ningún motor
+  // usa la F; no actúa con modificadores, con la tecla mantenida ni mientras
+  // se escribe en un campo. Esc sale por comportamiento nativo del navegador.
+  const fullscreen = useFullscreen();
+  const { supported: fullscreenSupported, toggle: toggleFullscreen } =
+    fullscreen;
+  useEffect(() => {
+    if (!fullscreenSupported) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.code !== "KeyF" || e.repeat) return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const target = e.target;
+      if (
+        target instanceof HTMLElement &&
+        (target.isContentEditable ||
+          ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName))
+      ) {
+        return;
+      }
+      toggleFullscreen();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [fullscreenSupported, toggleFullscreen]);
+
+  // Al salir de la sala no se deja el sitio en pantalla completa.
+  useEffect(() => () => exitFullscreen(), []);
 
   // Sin pull-to-refresh ni rebote en la sala (spec 14): un tirón accidental
   // durante la partida recargaría la página. Solo mientras /play está montada.
@@ -225,8 +283,37 @@ export function PlayRoom({ game }: { game: Game }) {
     return () => media.removeEventListener("change", onRotate);
   }, [isRealGame, over]);
 
+  // Pausa automática en escritorio (spec 15), mismo patrón que al girar: al
+  // entrar o salir de pantalla completa (el layout salta) y al ocultar la
+  // pestaña o minimizar. Nunca reanuda sola: el jugador pulsa SEGUIR.
+  useEffect(() => {
+    if (!isRealGame || over) return;
+    const onFullscreenChange = () => setPaused(true);
+    const onVisibilityChange = () => {
+      if (document.hidden) setPaused(true);
+    };
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", onFullscreenChange);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [isRealGame, over]);
+
   const playerName = user ?? "INVITADO";
-  const exit = () => router.push("/games");
+  const keyboardHelp = isAsteroids
+    ? "← → ROTAR · ↑ IMPULSO · ESPACIO DISPARAR · B BOMBA NOVA"
+    : isBloques
+      ? "← → MOVER · ↑ / X ROTAR · ↓ BAJAR · ESPACIO CAÍDA"
+      : isRompemuros
+        ? "← → / A D / RATÓN MOVER · ESPACIO / CLIC LANZAR · 1 2 3 DIFICULTAD · ESC / P PAUSA"
+        : isSerpiente
+          ? "← ↑ ↓ → / WASD MOVER · ESC / P PAUSA"
+          : "MUEVE CON EL RATÓN O ← →";
+  const exit = () => {
+    exitFullscreen();
+    router.push("/games");
+  };
 
   const handleSkinChange = (next: BloquesSkin) => writeBloquesSkin(next);
 
@@ -234,11 +321,17 @@ export function PlayRoom({ game }: { game: Game }) {
   // jugador pulsa SEGUIR (spec 14).
   const openMenu = () => {
     if (isRealGame && !over) setPaused(true);
+    const rect = menuButtonRef.current?.getBoundingClientRect();
+    if (rect) {
+      setMenuAnchor({
+        top: Math.round(rect.bottom + 8),
+        right: Math.round(document.documentElement.clientWidth - rect.right),
+      });
+    }
     setMenuOpen(true);
   };
 
-  // Skins del juego actual para la hoja OPCIONES (mismos stores que el
-  // selector SKIN de escritorio).
+  // Skins del juego actual para el menú OPCIONES.
   const skinControl = isAsteroids
     ? {
         value: asteroidsSkin,
@@ -395,264 +488,243 @@ export function PlayRoom({ game }: { game: Game }) {
   };
 
   return (
-    <main className="relative z-10 mx-auto w-full max-w-[1020px] flex-1 animate-fade px-[18px] pb-20 pt-8 mobile:px-3 mobile:pb-6 mobile:pt-3 mobile-landscape:flex mobile-landscape:min-h-dvh mobile-landscape:flex-col mobile-landscape:pb-[max(8px,env(safe-area-inset-bottom))] mobile-landscape:pl-[max(12px,env(safe-area-inset-left))] mobile-landscape:pr-[max(12px,env(safe-area-inset-right))] mobile-landscape:pt-2">
-      <div className="flex flex-wrap items-center justify-between gap-3.5 border border-cian/30 bg-[rgba(8,10,16,.92)] px-5 py-4 mobile:flex-nowrap mobile:gap-2 mobile:px-3 mobile:py-1">
-        <div className="flex flex-wrap gap-x-[26px] gap-y-3 mobile:flex-nowrap mobile:gap-x-4">
-          {!isBloques && !isRompemuros ? (
-            <>
-              <HudStat
-                label="PUNTUACIÓN"
-                value={score.toLocaleString("es-ES")}
-                className="text-amarillo [text-shadow:0_0_12px_rgba(245,255,0,.5)]"
-              />
-              {!isSerpiente ? (
+    <main
+      className={`relative z-10 mx-auto w-full max-w-[1600px] flex-1 animate-fade px-[18px] py-4 mobile:px-3 mobile:pb-6 mobile:pt-3 mobile-landscape:flex mobile-landscape:min-h-dvh mobile-landscape:flex-col mobile-landscape:pb-[max(8px,env(safe-area-inset-bottom))] mobile-landscape:pl-[max(12px,env(safe-area-inset-left))] mobile-landscape:pr-[max(12px,env(safe-area-inset-right))] mobile-landscape:pt-2 ${
+        showTouch
+          ? ROOM_STACKED
+          : `${ROOM_FIT} ${isRealGame ? ROOM_OVERHEAD_GAME : ROOM_OVERHEAD_SIMULATOR}`
+      }`}
+    >
+      {/* Columna de la sala: en escritorio mide --room-w y va centrada; en
+          móvil horizontal es `contents` para no romper el flex de <main>. */}
+      <div className="desktop:mx-auto desktop:w-[var(--room-w)] desktop:max-w-full mobile-landscape:contents">
+        {/* Barra única (spec 15): una fila con marcadores, JUGADOR (solo
+          escritorio), PAUSA y ⋮. SKIN, MANDO, TEMA y SALIR viven en el menú.
+          Fondo y textos con tokens de tema: con un fondo oscuro fijo, los
+          acentos del tema claro no llegaban a 3:1 de contraste. */}
+        <div className="flex h-14 flex-nowrap items-center justify-between gap-3.5 border border-cian/30 bg-background/90 px-4 mobile:h-auto mobile:gap-2 mobile:px-3 mobile:py-1">
+          <div className="flex min-w-0 flex-nowrap items-center gap-x-[26px] mobile:gap-x-4">
+            {hasBarStats ? (
+              <>
                 <HudStat
-                  label="VIDAS"
-                  value={"♥".repeat(lives)}
-                  className="text-magenta"
+                  label="PUNTUACIÓN"
+                  value={score.toLocaleString("es-ES")}
+                  className="text-amarillo [text-shadow:0_0_12px_rgba(245,255,0,.5)]"
                 />
-              ) : null}
-              <HudStat
-                label="NIVEL"
-                value={level.toString().padStart(2, "0")}
-                className="text-cian"
-              />
-            </>
-          ) : null}
-          <div className="grid gap-1.5 mobile:hidden">
-            <span className="text-[10px] tracking-[2px] text-[#6f7d88]">
-              JUGADOR
-            </span>
-            <span className="text-sm text-[#cdd8de]">{playerName}</span>
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-2.5 mobile:hidden">
-          {isAsteroids ? (
-            <SkinSelect
-              value={asteroidsSkin}
-              skins={ASTEROIDS_SKINS}
-              onChange={asteroidsSkinStore.write}
-            />
-          ) : null}
-          {isRompemuros ? (
-            <SkinSelect
-              value={rompemurosSkin}
-              skins={ROMPEMUROS_SKINS}
-              onChange={rompemurosSkinStore.write}
-            />
-          ) : null}
-          {isSerpiente ? (
-            <SkinSelect
-              value={serpienteSkin}
-              skins={SERPIENTE_SKINS}
-              onChange={serpienteSkinStore.write}
-            />
-          ) : null}
-          {isBloques ? (
-            <label className="flex items-center gap-1.5">
-              <span className="text-[10px] tracking-[2px] text-[#6f7d88]">
-                SKIN
+                {!isSerpiente ? (
+                  <HudStat
+                    label="VIDAS"
+                    value={"♥".repeat(lives)}
+                    className="text-magenta"
+                  />
+                ) : null}
+                <HudStat
+                  label="NIVEL"
+                  value={level.toString().padStart(2, "0")}
+                  className="text-cian"
+                />
+              </>
+            ) : null}
+            <div
+              className={`grid min-w-0 gap-1 mobile:hidden ${
+                hasBarStats ? "border-l border-cian/20 pl-[26px]" : ""
+              }`}
+            >
+              <span className="text-[10px] tracking-[2px] text-texto-tenue">
+                JUGADOR
               </span>
-              <select
-                value={skin}
-                onChange={(e) =>
-                  handleSkinChange(e.target.value as BloquesSkin)
-                }
-                className="whitespace-nowrap border border-cian/40 bg-[#0a0a0f] px-2.5 py-1.5 font-display text-[9px] text-cian transition-colors hover:border-cian focus:border-cian focus:outline-none"
-              >
-                {BLOQUES_SKINS.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ) : null}
-          {isRealGame && touch.isCoarse ? (
+              <span className="truncate text-sm text-foreground">
+                {playerName}
+              </span>
+            </div>
+          </div>
+          <div className="ml-auto flex shrink-0 items-center gap-2">
             <button
               type="button"
-              onClick={touch.toggle}
-              aria-pressed={touch.visible}
-              className="whitespace-nowrap border border-cian/50 px-4 py-3 font-display text-[10px] text-cian transition-colors hover:bg-cian/10 active:scale-95"
+              onClick={() => setPaused((p) => !p)}
+              aria-label={paused ? "Seguir" : "Pausar"}
+              className={`flex h-11 min-w-11 items-center justify-center gap-2 whitespace-nowrap border border-amarillo/50 px-4 font-display text-[10px] text-amarillo transition-colors hover:bg-amarillo/10 active:scale-95 mobile:px-0 ${focusRing}`}
             >
-              {touch.visible ? "OCULTAR MANDO" : "MANDO"}
+              {paused ? (
+                <Play size={18} aria-hidden />
+              ) : (
+                <Pause size={18} aria-hidden />
+              )}
+              <span className="mobile:hidden">
+                {paused ? "SEGUIR" : "PAUSA"}
+              </span>
             </button>
-          ) : null}
-          <button
-            type="button"
-            onClick={() => setPaused((p) => !p)}
-            className="whitespace-nowrap border border-amarillo/50 px-4 py-3 font-display text-[10px] text-amarillo transition-colors hover:bg-amarillo/10 active:scale-95"
-          >
-            {paused ? "SEGUIR" : "PAUSA"}
-          </button>
-          <button
-            type="button"
-            onClick={exit}
-            className="whitespace-nowrap border border-magenta/50 px-4 py-3 font-display text-[10px] text-magenta transition-colors hover:bg-magenta/15 active:scale-95"
-          >
-            SALIR
-          </button>
+            {/* Solo escritorio y solo si el navegador soporta la Fullscreen API. */}
+            {fullscreen.supported ? (
+              <button
+                type="button"
+                onClick={fullscreen.toggle}
+                aria-label={
+                  fullscreen.active
+                    ? "Salir de pantalla completa"
+                    : "Pantalla completa"
+                }
+                aria-pressed={fullscreen.active}
+                title={
+                  fullscreen.active
+                    ? "Salir de pantalla completa (F)"
+                    : "Pantalla completa (F)"
+                }
+                className={`grid size-11 place-items-center border border-cian/50 text-cian transition-colors hover:bg-cian/10 active:scale-95 mobile:hidden ${focusRing}`}
+              >
+                {fullscreen.active ? (
+                  <Minimize size={18} aria-hidden />
+                ) : (
+                  <Maximize size={18} aria-hidden />
+                )}
+              </button>
+            ) : null}
+            <button
+              ref={menuButtonRef}
+              type="button"
+              onClick={openMenu}
+              aria-label="Opciones de la partida"
+              aria-haspopup="dialog"
+              aria-expanded={menuOpen}
+              className={`grid size-11 place-items-center border border-cian/50 text-cian transition-colors hover:bg-cian/10 active:scale-95 ${focusRing}`}
+            >
+              <EllipsisVertical size={18} aria-hidden />
+            </button>
+          </div>
         </div>
-        {/* Móvil: PAUSA solo icono + menú ⋮ (SKIN, MANDO, TEMA, SALIR). */}
-        <div className="ml-auto hidden shrink-0 items-center gap-2 mobile:flex">
-          <button
-            type="button"
-            onClick={() => setPaused((p) => !p)}
-            aria-label={paused ? "Seguir" : "Pausar"}
-            className="grid size-11 place-items-center border border-amarillo/50 text-amarillo transition-colors hover:bg-amarillo/10 active:scale-95"
-          >
-            {paused ? (
-              <Play size={18} aria-hidden />
-            ) : (
-              <Pause size={18} aria-hidden />
-            )}
-          </button>
-          <button
-            ref={menuButtonRef}
-            type="button"
-            onClick={openMenu}
-            aria-label="Opciones de la partida"
-            aria-haspopup="dialog"
-            aria-expanded={menuOpen}
-            className="grid size-11 place-items-center border border-cian/50 text-cian transition-colors hover:bg-cian/10 active:scale-95"
-          >
-            <EllipsisVertical size={18} aria-hidden />
-          </button>
-        </div>
-      </div>
 
-      <PlayMenuSheet
-        open={menuOpen}
-        onClose={() => setMenuOpen(false)}
-        gameName={game.title}
-        paused={paused}
-        skins={skinControl}
-        touch={isRealGame && touch.isCoarse ? touch : undefined}
-        onExit={exit}
-        returnFocusRef={menuButtonRef}
-      />
+        <PlayMenuSheet
+          open={menuOpen}
+          onClose={() => setMenuOpen(false)}
+          gameName={game.title}
+          paused={paused}
+          skins={skinControl}
+          touch={isRealGame && touch.isCoarse ? touch : undefined}
+          onExit={exit}
+          returnFocusRef={menuButtonRef}
+          anchor={menuAnchor}
+        />
 
-      <RotateHint enabled={isRealGame && touch.isCoarse} />
+        <RotateHint enabled={isRealGame && touch.isCoarse} />
 
-      {/* Zona de juego. En horizontal (spec 14) es un grid de 3 columnas:
+        {/* Zona de juego. En horizontal (spec 14) es un grid de 3 columnas:
           mando izquierdo · CRT · mando derecho. --crt-w es el ancho del CRT
           que llena el alto libre: 92px = barra (54) + paddings/gap (24) +
           marco compacto (14); ×1.6 por el 16:10 y +14px de marco. */}
-      <div
-        className={`mobile-landscape:mt-2 mobile-landscape:grid mobile-landscape:min-h-0 mobile-landscape:flex-1 mobile-landscape:items-center mobile-landscape:gap-4 mobile-landscape:[--crt-w:calc((100dvh_-_92px)*1.6_+_14px)] ${
-          showTouch
-            ? "mobile-landscape:grid-cols-[minmax(150px,1fr)_minmax(0,var(--crt-w))_minmax(150px,1fr)]"
-            : "mobile-landscape:grid-cols-[1fr_minmax(0,var(--crt-w))_1fr]"
-        }`}
-      >
-        <CrtFrame
-          background={
-            isAsteroids || isBloques || isRompemuros || isSerpiente
-              ? "#000"
-              : game.thumb
-          }
-          label=""
-          compact
-          className="mt-6 mobile:mt-3 mobile-landscape:col-start-2 mobile-landscape:row-start-1 mobile-landscape:mt-0 mobile-landscape:w-full"
-          art={
-            isAsteroids ? (
-              <AsteroidsGame
-                ref={gameRef}
-                paused={paused}
-                skin={asteroidsSkin}
-                onStateChange={handleAsteroidsStateChange}
-                onGameOver={handleAsteroidsGameOver}
-              />
-            ) : isBloques ? (
-              <BloquesGame
-                ref={bloquesGameRef}
-                paused={paused}
-                skin={skin}
-                onStateChange={handleBloquesStateChange}
-                onGameOver={handleBloquesGameOver}
-              />
-            ) : isRompemuros ? (
-              <RompemurosGame
-                ref={rompemurosGameRef}
-                paused={paused}
-                skin={rompemurosSkin}
-                onStateChange={handleRompemurosStateChange}
-                onGameOver={handleRompemurosGameOver}
-              />
-            ) : isSerpiente ? (
-              <SerpienteGame
-                ref={serpienteGameRef}
-                paused={paused}
-                skin={serpienteSkin}
-                onStateChange={handleSerpienteStateChange}
-                onGameOver={handleSerpienteGameOver}
-              />
-            ) : undefined
-          }
+        <div
+          className={`mobile-landscape:mt-2 mobile-landscape:grid mobile-landscape:min-h-0 mobile-landscape:flex-1 mobile-landscape:items-center mobile-landscape:gap-4 mobile-landscape:[--crt-w:calc((100dvh_-_92px)*1.6_+_14px)] ${
+            showTouch
+              ? "mobile-landscape:grid-cols-[minmax(150px,1fr)_minmax(0,var(--crt-w))_minmax(150px,1fr)]"
+              : "mobile-landscape:grid-cols-[1fr_minmax(0,var(--crt-w))_1fr]"
+          }`}
         >
-          {paused ? (
-            <div className="grid h-full place-items-center bg-[rgba(4,4,10,.78)]">
-              <div className="font-display text-xl tracking-[2px] text-amarillo [text-shadow:0_0_20px_rgba(245,255,0,.6)]">
-                EN PAUSA
-              </div>
-            </div>
-          ) : null}
-        </CrtFrame>
-
-        {showTouch && touchLayout ? (
-          <TouchController
-            layout={touchLayout}
-            disabled={paused || over}
-            onPaddleMove={
-              isRompemuros
-                ? (delta) => rompemurosGameRef.current?.movePaddleBy(delta)
-                : undefined
+          <CrtFrame
+            background={
+              isAsteroids || isBloques || isRompemuros || isSerpiente
+                ? "#000"
+                : game.thumb
             }
-          />
+            label=""
+            compact
+            className="mt-3 mobile-landscape:col-start-2 mobile-landscape:row-start-1 mobile-landscape:mt-0 mobile-landscape:w-full"
+            art={
+              isAsteroids ? (
+                <AsteroidsGame
+                  ref={gameRef}
+                  paused={paused}
+                  skin={asteroidsSkin}
+                  onStateChange={handleAsteroidsStateChange}
+                  onGameOver={handleAsteroidsGameOver}
+                />
+              ) : isBloques ? (
+                <BloquesGame
+                  ref={bloquesGameRef}
+                  paused={paused}
+                  skin={skin}
+                  onStateChange={handleBloquesStateChange}
+                  onGameOver={handleBloquesGameOver}
+                />
+              ) : isRompemuros ? (
+                <RompemurosGame
+                  ref={rompemurosGameRef}
+                  paused={paused}
+                  skin={rompemurosSkin}
+                  onStateChange={handleRompemurosStateChange}
+                  onGameOver={handleRompemurosGameOver}
+                />
+              ) : isSerpiente ? (
+                <SerpienteGame
+                  ref={serpienteGameRef}
+                  paused={paused}
+                  skin={serpienteSkin}
+                  onStateChange={handleSerpienteStateChange}
+                  onGameOver={handleSerpienteGameOver}
+                />
+              ) : undefined
+            }
+          >
+            {paused ? (
+              <div className="grid h-full place-items-center bg-[rgba(4,4,10,.78)]">
+                <div className="font-display text-xl tracking-[2px] text-amarillo [text-shadow:0_0_20px_rgba(245,255,0,.6)]">
+                  EN PAUSA
+                </div>
+              </div>
+            ) : null}
+          </CrtFrame>
+
+          {showTouch && touchLayout ? (
+            <TouchController
+              layout={touchLayout}
+              disabled={paused || over}
+              onPaddleMove={
+                isRompemuros
+                  ? (delta) => rompemurosGameRef.current?.movePaddleBy(delta)
+                  : undefined
+              }
+            />
+          ) : null}
+        </div>
+
+        {/* Ayuda de teclado. En escritorio (spec 15) es una sola línea de 28 px
+          que se corta con puntos suspensivos; el texto completo va en title. */}
+        <div className="mt-4 flex flex-wrap justify-between gap-2.5 text-[11px] tracking-[2px] text-texto-tenue mobile-landscape:hidden desktop:mt-0 desktop:h-7 desktop:flex-nowrap desktop:items-center desktop:tracking-[1px]">
+          {/* Con el control táctil visible, la ayuda de teclado no aplica. */}
+          {showTouch ? null : (
+            <span
+              title={keyboardHelp}
+              className="desktop:min-w-0 desktop:truncate"
+            >
+              {keyboardHelp}
+            </span>
+          )}
+          <span className="ml-auto desktop:hidden">ARCADE VAULT CRT-19</span>
+        </div>
+
+        {!isRealGame ? (
+          <div className="mt-6 flex justify-center desktop:h-[50px] desktop:items-center">
+            <button
+              type="button"
+              onClick={simulateGameOver}
+              className="whitespace-nowrap border border-cian/50 bg-cian/5 px-6 py-4 font-display text-[10px] tracking-wider text-cian transition-colors hover:bg-cian/15 active:scale-95"
+            >
+              SIMULAR FIN DE PARTIDA
+            </button>
+          </div>
         ) : null}
       </div>
-
-      <div className="mt-4 flex flex-wrap justify-between gap-2.5 text-[11px] tracking-[2px] text-[#46525e] mobile-landscape:hidden">
-        {/* Con el control táctil visible, la ayuda de teclado no aplica. */}
-        {showTouch ? null : (
-          <span>
-            {isAsteroids
-              ? "← → ROTAR · ↑ IMPULSO · ESPACIO DISPARAR · B BOMBA NOVA"
-              : isBloques
-                ? "← → MOVER · ↑ / X ROTAR · ↓ BAJAR · ESPACIO CAÍDA"
-                : isRompemuros
-                  ? "← → / A D / RATÓN MOVER · ESPACIO / CLIC LANZAR · 1 2 3 DIFICULTAD · ESC / P PAUSA"
-                  : isSerpiente
-                    ? "← ↑ ↓ → / WASD MOVER · ESC / P PAUSA"
-                    : "MUEVE CON EL RATÓN O ← →"}
-          </span>
-        )}
-        <span className="ml-auto">ARCADE VAULT CRT-19</span>
-      </div>
-
-      {!isAsteroids && !isBloques && !isRompemuros && !isSerpiente ? (
-        <div className="mt-6 flex justify-center">
-          <button
-            type="button"
-            onClick={simulateGameOver}
-            className="whitespace-nowrap border border-cian/50 bg-cian/5 px-6 py-4 font-display text-[10px] tracking-wider text-cian transition-colors hover:bg-cian/15 active:scale-95"
-          >
-            SIMULAR FIN DE PARTIDA
-          </button>
-        </div>
-      ) : null}
 
       {/* Portal a <body>: el <main> tiene `transform` (animate-fade) y sería el
           bloque contenedor del `fixed`; así el modal se centra en la pantalla. */}
       {over
         ? createPortal(
             <div className="fixed inset-0 z-[70] grid animate-fade place-items-center bg-[rgba(4,4,9,.86)] p-5 backdrop-blur-sm mobile-landscape:p-3">
-              {/* En horizontal (spec 14) pasa a dos columnas: izquierda título,
-              puntuación y botones; derecha formulario o ranking con scroll
-              propio. Los contenedores de columna son `contents` fuera de
-              horizontal, así que vertical y escritorio no cambian. */}
-              <div className="grid max-h-[calc(100dvh-40px)] w-full max-w-[460px] justify-items-center overflow-y-auto gap-5 border border-magenta bg-[#0c0a12] px-7 py-9 text-center shadow-[0_0_60px_rgba(255,0,110,.4)] mobile-landscape:max-h-[calc(100dvh-24px)] mobile-landscape:max-w-[760px] mobile-landscape:grid-cols-2 mobile-landscape:grid-rows-[1fr_auto] mobile-landscape:items-start mobile-landscape:gap-x-6 mobile-landscape:gap-y-4 mobile-landscape:overflow-hidden mobile-landscape:p-5">
-                <div className="contents mobile-landscape:col-start-1 mobile-landscape:row-start-1 mobile-landscape:grid mobile-landscape:content-center mobile-landscape:justify-items-center mobile-landscape:gap-3 mobile-landscape:self-stretch">
+              {/* En móvil horizontal (spec 14) y en ventanas de escritorio
+              bajas (`desktop-short`, spec 15) pasa a dos columnas: izquierda
+              título, puntuación y botones; derecha formulario o ranking con
+              scroll propio. Los contenedores de columna son `contents` en el
+              resto, así que vertical y escritorio alto siguen en una columna. */}
+              <div className="grid max-h-[calc(100dvh-40px)] w-full max-w-[460px] justify-items-center overflow-y-auto gap-5 border border-magenta bg-[#0c0a12] px-7 py-9 text-center shadow-[0_0_60px_rgba(255,0,110,.4)] mobile-landscape:max-h-[calc(100dvh-24px)] mobile-landscape:max-w-[760px] mobile-landscape:grid-cols-2 mobile-landscape:grid-rows-[1fr_auto] mobile-landscape:items-start mobile-landscape:gap-x-6 mobile-landscape:gap-y-4 mobile-landscape:overflow-hidden mobile-landscape:p-5 desktop-short:max-w-[860px] desktop-short:grid-cols-2 desktop-short:grid-rows-[1fr_auto] desktop-short:items-start desktop-short:gap-x-8 desktop-short:overflow-hidden">
+                <div className="contents mobile-landscape:col-start-1 mobile-landscape:row-start-1 mobile-landscape:grid mobile-landscape:content-center mobile-landscape:justify-items-center mobile-landscape:gap-3 mobile-landscape:self-stretch desktop-short:col-start-1 desktop-short:row-start-1 desktop-short:grid desktop-short:content-center desktop-short:justify-items-center desktop-short:gap-5 desktop-short:self-stretch">
                   <div className="font-display text-xl tracking-wider text-magenta [text-shadow:0_0_18px_rgba(255,0,110,.7)]">
                     FIN DEL JUEGO
                   </div>
@@ -664,7 +736,7 @@ export function PlayRoom({ game }: { game: Game }) {
                   </div>
                 </div>
 
-                <div className="contents mobile-landscape:col-start-2 mobile-landscape:row-span-2 mobile-landscape:row-start-1 mobile-landscape:grid mobile-landscape:max-h-[calc(100dvh-64px)] mobile-landscape:w-full mobile-landscape:content-start mobile-landscape:justify-items-center mobile-landscape:gap-3 mobile-landscape:overflow-y-auto">
+                <div className="contents mobile-landscape:col-start-2 mobile-landscape:row-span-2 mobile-landscape:row-start-1 mobile-landscape:grid mobile-landscape:max-h-[calc(100dvh-64px)] mobile-landscape:w-full mobile-landscape:content-start mobile-landscape:justify-items-center mobile-landscape:gap-3 mobile-landscape:overflow-y-auto desktop-short:col-start-2 desktop-short:row-span-2 desktop-short:row-start-1 desktop-short:grid desktop-short:max-h-[calc(100dvh-112px)] desktop-short:w-full desktop-short:content-start desktop-short:justify-items-center desktop-short:gap-4 desktop-short:overflow-y-auto">
                   {!saved ? (
                     <form
                       className="grid w-full gap-3"
@@ -734,7 +806,7 @@ export function PlayRoom({ game }: { game: Game }) {
                   ) : null}
                 </div>
 
-                <div className="mt-1 grid w-full gap-2.5 mobile-landscape:col-start-1 mobile-landscape:row-start-2 mobile-landscape:mt-0">
+                <div className="mt-1 grid w-full gap-2.5 mobile-landscape:col-start-1 mobile-landscape:row-start-2 mobile-landscape:mt-0 desktop-short:col-start-1 desktop-short:row-start-2 desktop-short:mt-0">
                   <button
                     type="button"
                     onClick={replay}

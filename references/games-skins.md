@@ -28,7 +28,7 @@ Leyenda: 🟢 cumple · 🟡 parcial · 🔴 sin skins.
   scanlines), `neon` (NEÓN, glow). Paletas en `SKIN_PALETTES` y glow/scanlines en
   `SKIN_RENDERERS` de `components/games/asteroids/engine.ts`; `setSkin()` redibuja incluso en
   pausa.
-- **Selector:** `components/skin-select.tsx` en la barra superior de `PlayRoom` (`isAsteroids`),
+- **Selector:** chips SKIN del menú ⋮ OPCIONES de `PlayRoom` (`skinControl`, `isAsteroids`),
   store genérico `lib/skin-store.ts` (`createSkinStore` + `useSkin`, snapshot de servidor
   `"clasico"`).
 - **Clave localStorage:** `arcadevault.asteroides.skin.v1`
@@ -49,8 +49,8 @@ Leyenda: 🟢 cumple · 🟡 parcial · 🔴 sin skins.
   fósforo verde en 5 intensidades + scanlines), `neon` (NEÓN, glow). Paletas en `SKIN_PALETTES`
   y trazo en `SKIN_RENDERERS` de `components/games/rompemuros/engine.ts` (RETRO/NEÓN dibujan
   formas con los mismos tamaños que los sprites); `setSkin()` redibuja incluso en pausa.
-- **Selector:** `components/skin-select.tsx` en la barra superior de `PlayRoom`
-  (`isRompemuros`), store genérico `lib/skin-store.ts` (snapshot de servidor `"clasico"`).
+- **Selector:** chips SKIN del menú ⋮ OPCIONES de `PlayRoom` (`skinControl`,
+  `isRompemuros`), store genérico `lib/skin-store.ts` (snapshot de servidor `"clasico"`).
 - **Clave localStorage:** `arcadevault.rompemuros.skin.v1`
 - **Spec:** `specs/10-juego-arkanoid-real.md` §8 (addendum "skins visuales", 2026-09-30).
 - **Nota:** en CLÁSICO el ladrillo gris del spritesheet (`#323142`) queda en 1.65:1 sobre
@@ -63,8 +63,8 @@ Leyenda: 🟢 cumple · 🟡 parcial · 🔴 sin skins.
   cian, cabeza amarilla, fruta magenta, con glow). Paletas en `SKIN_PALETTES` y trazo en
   `SKIN_RENDERERS` (`body`/`head`/`fruit`) de `components/games/serpiente/engine.ts`;
   `setSkin()` redibuja incluso en pausa.
-- **Selector:** `components/skin-select.tsx` en la barra superior de `PlayRoom`
-  (`isSerpiente`), store genérico `lib/skin-store.ts` (snapshot de servidor `"clasico"`).
+- **Selector:** chips SKIN del menú ⋮ OPCIONES de `PlayRoom` (`skinControl`,
+  `isSerpiente`), store genérico `lib/skin-store.ts` (snapshot de servidor `"clasico"`).
 - **Clave localStorage:** `arcadevault.serpiente.skin.v1`
 - **Spec:** `specs/11-juego-serpiente-real.md` §8 (addendum "skins visuales", 2026-09-30).
 - **Nota:** en CLÁSICO el círculo de fallback de la fruta (solo si `fruits.png` no carga) llega

@@ -30,14 +30,24 @@ const scanlinesStyle: CSSProperties = {
 // navegación, aviso de moneda y footer. Las páginas renderizan su propio <main>.
 export function SiteChrome({ children }: { children: ReactNode }) {
   const { coinMsg } = useCredits();
+  const isPlay = usePathname().startsWith("/play/");
   // En /play con el móvil en horizontal, footer y aviso de moneda se ocultan
   // para que la sala quepa en el alto de la pantalla (spec 14).
-  const hideInLandscape = usePathname().startsWith("/play/")
-    ? "mobile-landscape:hidden"
+  const hideInLandscape = isPlay ? "mobile-landscape:hidden" : "";
+  // En /play en escritorio (spec 15) la sala ocupa justo el alto de la
+  // ventana: contenedor a 100dvh, contenido encogible y sin footer. El
+  // contenido es una rejilla (no flex): con el alto heredado de una cadena
+  // flex anidada, Chrome resuelve `cqh` a 0 dentro de <main>.
+  const playRoot = isPlay ? "desktop:h-dvh" : "";
+  const playContent = isPlay
+    ? "desktop:grid desktop:min-h-0 desktop:grid-rows-[minmax(0,1fr)]"
     : "";
+  const playFooter = isPlay ? "desktop:hidden" : "";
 
   return (
-    <div className="relative flex min-h-screen flex-1 flex-col overflow-x-hidden">
+    <div
+      className={`relative flex min-h-screen flex-1 flex-col overflow-x-hidden ${playRoot}`}
+    >
       <div
         aria-hidden
         className="pointer-events-none fixed inset-0 z-0 animate-grid"
@@ -64,10 +74,12 @@ export function SiteChrome({ children }: { children: ReactNode }) {
         </div>
       ) : null}
 
-      <div className="relative z-10 flex flex-1 flex-col">{children}</div>
+      <div className={`relative z-10 flex flex-1 flex-col ${playContent}`}>
+        {children}
+      </div>
 
       <footer
-        className={`relative z-10 border-t border-foreground/10 px-[22px] pb-10 pt-[26px] text-center text-[11px] tracking-[3px] text-texto-debil ${hideInLandscape}`}
+        className={`relative z-10 border-t border-foreground/10 px-[22px] pb-10 pt-[26px] text-center text-[11px] tracking-[3px] text-texto-debil ${hideInLandscape} ${playFooter}`}
       >
         ARCADE VAULT · 1986–2026 · INSERTA MONEDA
       </footer>

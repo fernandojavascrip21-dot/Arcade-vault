@@ -71,8 +71,9 @@ Antes de tocar nada, lee:
   `--magenta`, `--amarillo`, `--rango-*`…) y cómo se redefinen en modo claro.
 - Todos los motores y wrappers: `components/games/*/engine.ts` y `components/games/*/*-game.tsx`
   (ojo: Asteroides vive en `components/games/asteroids/`).
-- `app/play/[id]/play-room.tsx` — ramas `game.id === "<slug>"`, el selector SKIN actual de
-  Bloques y su store `useSyncExternalStore`.
+- `app/play/[id]/play-room.tsx` — ramas `game.id === "<slug>"`, el objeto `skinControl` que
+  alimenta los chips SKIN del menú ⋮ OPCIONES (`play-menu-sheet.tsx`) y el store
+  `useSyncExternalStore` de Bloques.
 - Los specs de cada juego: `specs/06-juego-asteroides-real.md`, `specs/08-juego-tetris-real.md`,
   `specs/10-juego-arkanoid-real.md`, `specs/11-juego-serpiente-real.md` (y cualquier spec de juego
   posterior).
@@ -114,8 +115,8 @@ sincronizan con `engineRef.current?.setSkin(skin)` en un efecto.
 
 **En `app/play/[id]/play-room.tsx`:**
 
-- Selector SKIN en la barra superior para cada juego con skins (mismo estilo visual que el de
-  Bloques).
+- Rama del juego en `skinControl` para que sus skins salgan en los chips SKIN del menú ⋮
+  OPCIONES (desde el spec 15 no hay selector SKIN en la barra superior).
 - Persistencia en `localStorage` vía `useSyncExternalStore`, con snapshot de servidor/hidratación
   siempre `"clasico"`. **Generaliza** el store actual de Bloques (lectura/escritura/suscripción
   parametrizadas por clave y lista de ids válidos) en lugar de copiarlo cuatro veces; si el

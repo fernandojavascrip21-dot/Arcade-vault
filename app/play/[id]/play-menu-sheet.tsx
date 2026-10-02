@@ -1,13 +1,22 @@
 "use client";
 
 import { X } from "lucide-react";
-import { useEffect, useRef, type KeyboardEvent, type RefObject } from "react";
+import {
+  useEffect,
+  useEffectEvent,
+  useRef,
+  type CSSProperties,
+  type KeyboardEvent,
+  type RefObject,
+} from "react";
 import { createPortal } from "react-dom";
 
 import { ThemeToggleButton } from "@/components/nav-bar";
+import { DESKTOP_QUERY } from "@/lib/responsive";
 
-// Hoja inferior "OPCIONES" de la sala de juego en móvil (spec 14): reúne lo
-// que en escritorio vive en la barra superior (SKIN, MANDO, SALIR) más el tema.
+// Menú "OPCIONES" de la sala de juego: SKIN, MANDO, TEMA y SALIR. En móvil es
+// una hoja inferior (spec 14); en escritorio, un panel anclado bajo el botón ⋮
+// (spec 15). Mismo árbol: solo cambia la colocación por CSS.
 // Tiene el aire del menú de servicio de un mueble arcade: línea de estado,
 // cursor parpadeante y opciones marcadas con ▸.
 
@@ -32,6 +41,7 @@ export function PlayMenuSheet({
   touch,
   onExit,
   returnFocusRef,
+  anchor,
 }: {
   open: boolean;
   onClose: () => void;
@@ -42,6 +52,9 @@ export function PlayMenuSheet({
   touch?: { visible: boolean; toggle: () => void };
   onExit: () => void;
   returnFocusRef: RefObject<HTMLButtonElement | null>;
+  // Esquina inferior derecha del botón ⋮, en px de viewport. Solo se usa en
+  // `desktop:`; la calcula PlayRoom al abrir.
+  anchor?: { top: number; right: number } | null;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -53,7 +66,34 @@ export function PlayMenuSheet({
     return () => returnTo?.focus();
   }, [open, returnFocusRef]);
 
+  // En escritorio el panel está anclado al ⋮: si la ventana cambia de tamaño
+  // o de pantalla completa, el ancla deja de valer y se cierra. En móvil la
+  // hoja no depende del ancla (y la barra del navegador dispara `resize`).
+  // useEffectEvent: el efecto no puede depender de `onClose`. El cambio de
+  // pantalla completa vuelve a renderizar PlayRoom de forma síncrona dentro
+  // del propio evento, y re-suscribirse ahí se salta este listener.
+  const closeIfAnchored = useEffectEvent(() => {
+    if (window.matchMedia(DESKTOP_QUERY).matches) onClose();
+  });
+  useEffect(() => {
+    if (!open) return;
+    const onLayoutChange = () => closeIfAnchored();
+    window.addEventListener("resize", onLayoutChange);
+    document.addEventListener("fullscreenchange", onLayoutChange);
+    return () => {
+      window.removeEventListener("resize", onLayoutChange);
+      document.removeEventListener("fullscreenchange", onLayoutChange);
+    };
+  }, [open]);
+
   if (!open) return null;
+
+  const anchorStyle = anchor
+    ? ({
+        "--menu-top": `${anchor.top}px`,
+        "--menu-right": `${anchor.right}px`,
+      } as CSSProperties)
+    : undefined;
 
   const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key === "Escape") {
@@ -104,7 +144,7 @@ export function PlayMenuSheet({
   // sería el bloque contenedor de este `fixed`, no la pantalla.
   return createPortal(
     <div
-      className="fixed inset-0 z-[65] animate-fade bg-[rgba(4,4,9,.72)] motion-reduce:animate-none"
+      className="fixed inset-0 z-[65] animate-fade bg-[rgba(4,4,9,.72)] motion-reduce:animate-none desktop:bg-transparent"
       onClick={onClose}
     >
       <div
@@ -114,7 +154,8 @@ export function PlayMenuSheet({
         aria-labelledby="play-menu-title"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={handleKeyDown}
-        className="absolute inset-x-0 bottom-0 mx-auto grid max-h-[calc(100dvh-16px)] w-full max-w-[520px] animate-sheet content-start gap-5 overflow-y-auto border-x border-t-2 border-cian/70 border-t-cian bg-background px-5 pb-[max(20px,env(safe-area-inset-bottom))] pt-4 shadow-[0_-10px_50px_rgba(0,245,255,.22)] motion-reduce:animate-none mobile-landscape:max-w-[420px]"
+        style={anchorStyle}
+        className="absolute inset-x-0 bottom-0 mx-auto grid max-h-[calc(100dvh-16px)] w-full max-w-[520px] animate-sheet content-start gap-5 overflow-y-auto border-x border-t-2 border-cian/70 border-t-cian bg-background px-5 pb-[max(20px,env(safe-area-inset-bottom))] pt-4 shadow-[0_-10px_50px_rgba(0,245,255,.22)] motion-reduce:animate-none mobile-landscape:max-w-[420px] desktop:inset-x-auto desktop:bottom-auto desktop:right-[var(--menu-right,18px)] desktop:top-[var(--menu-top,72px)] desktop:mx-0 desktop:max-h-[calc(100dvh-var(--menu-top,72px)-16px)] desktop:w-80 desktop:animate-fade desktop:border-b desktop:pb-5 desktop:shadow-[0_14px_50px_rgba(0,245,255,.22)] desktop:motion-reduce:animate-none"
       >
         <header className="flex items-start justify-between gap-3">
           <div className="grid gap-2 pt-1">
