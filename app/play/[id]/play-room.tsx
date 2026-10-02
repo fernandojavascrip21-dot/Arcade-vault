@@ -283,6 +283,23 @@ export function PlayRoom({ game }: { game: Game }) {
     return () => media.removeEventListener("change", onRotate);
   }, [isRealGame, over]);
 
+  // Pausa automática en escritorio (spec 15), mismo patrón que al girar: al
+  // entrar o salir de pantalla completa (el layout salta) y al ocultar la
+  // pestaña o minimizar. Nunca reanuda sola: el jugador pulsa SEGUIR.
+  useEffect(() => {
+    if (!isRealGame || over) return;
+    const onFullscreenChange = () => setPaused(true);
+    const onVisibilityChange = () => {
+      if (document.hidden) setPaused(true);
+    };
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", onFullscreenChange);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [isRealGame, over]);
+
   const playerName = user ?? "INVITADO";
   const keyboardHelp = isAsteroids
     ? "← → ROTAR · ↑ IMPULSO · ESPACIO DISPARAR · B BOMBA NOVA"
