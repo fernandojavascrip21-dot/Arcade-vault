@@ -1,6 +1,12 @@
 "use client";
 
-import { EllipsisVertical, Pause, Play } from "lucide-react";
+import {
+  EllipsisVertical,
+  Maximize,
+  Minimize,
+  Pause,
+  Play,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
@@ -63,6 +69,7 @@ import {
 } from "@/lib/player-name";
 import { createSkinStore, useSkin } from "@/lib/skin-store";
 import type { Game, SavedResult } from "@/lib/types";
+import { exitFullscreen, useFullscreen } from "@/lib/use-fullscreen";
 
 const SAVED_TEXT = "PUNTUACIÓN GUARDADA";
 
@@ -225,6 +232,34 @@ export function PlayRoom({ game }: { game: Game }) {
     [],
   );
 
+  // Pantalla completa (spec 15): botón de la barra y tecla F. Ningún motor
+  // usa la F; no actúa con modificadores, con la tecla mantenida ni mientras
+  // se escribe en un campo. Esc sale por comportamiento nativo del navegador.
+  const fullscreen = useFullscreen();
+  const { supported: fullscreenSupported, toggle: toggleFullscreen } =
+    fullscreen;
+  useEffect(() => {
+    if (!fullscreenSupported) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.code !== "KeyF" || e.repeat) return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const target = e.target;
+      if (
+        target instanceof HTMLElement &&
+        (target.isContentEditable ||
+          ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName))
+      ) {
+        return;
+      }
+      toggleFullscreen();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [fullscreenSupported, toggleFullscreen]);
+
+  // Al salir de la sala no se deja el sitio en pantalla completa.
+  useEffect(() => () => exitFullscreen(), []);
+
   // Sin pull-to-refresh ni rebote en la sala (spec 14): un tirón accidental
   // durante la partida recargaría la página. Solo mientras /play está montada.
   useEffect(() => {
@@ -258,7 +293,10 @@ export function PlayRoom({ game }: { game: Game }) {
         : isSerpiente
           ? "← ↑ ↓ → / WASD MOVER · ESC / P PAUSA"
           : "MUEVE CON EL RATÓN O ← →";
-  const exit = () => router.push("/games");
+  const exit = () => {
+    exitFullscreen();
+    router.push("/games");
+  };
 
   const handleSkinChange = (next: BloquesSkin) => writeBloquesSkin(next);
 
@@ -497,6 +535,31 @@ export function PlayRoom({ game }: { game: Game }) {
                 {paused ? "SEGUIR" : "PAUSA"}
               </span>
             </button>
+            {/* Solo escritorio y solo si el navegador soporta la Fullscreen API. */}
+            {fullscreen.supported ? (
+              <button
+                type="button"
+                onClick={fullscreen.toggle}
+                aria-label={
+                  fullscreen.active
+                    ? "Salir de pantalla completa"
+                    : "Pantalla completa"
+                }
+                aria-pressed={fullscreen.active}
+                title={
+                  fullscreen.active
+                    ? "Salir de pantalla completa (F)"
+                    : "Pantalla completa (F)"
+                }
+                className={`grid size-11 place-items-center border border-cian/50 text-cian transition-colors hover:bg-cian/10 active:scale-95 mobile:hidden ${focusRing}`}
+              >
+                {fullscreen.active ? (
+                  <Minimize size={18} aria-hidden />
+                ) : (
+                  <Maximize size={18} aria-hidden />
+                )}
+              </button>
+            ) : null}
             <button
               ref={menuButtonRef}
               type="button"

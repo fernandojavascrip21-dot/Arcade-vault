@@ -214,6 +214,8 @@ Las claves de skins, `arcadevault.touch-controls.v1` y `arcadevault.rotate-hint.
 - **El navbar mide 75 px, no 63**: los anchos reales de la columna son 810 px en 1280×720, 887 px en 1366×768, 938 px en 1280×800 y 1386 px en 1920×1080. Los umbrales de §5 se cumplen.
 - **`main` no pasa a `flex flex-col` en `desktop:`**: la columna `--room-w` es un bloque normal dentro de `main` y no lo necesita.
 - **Con el mando táctil visible, el scroll es el de la página**, no interno del contenedor: el contenedor raíz crece con el contenido aunque tenga `desktop:h-dvh` (es un ítem flex de `<body>`). El tercer riesgo de §7 no se materializó.
+- **`useEffectEvent` en el cierre del menú** (paso 5): el efecto de `PlayMenuSheet` que escucha `resize` / `fullscreenchange` ya no depende de `onClose`. Al cambiar de pantalla completa, `useFullscreen` vuelve a renderizar `PlayRoom` de forma síncrona dentro del propio evento; el efecto se re-suscribía en mitad del despacho y el listener del menú no llegaba a ejecutarse, así que el panel se quedaba abierto con el ancla vieja.
+- **`lib/use-fullscreen.ts` exporta además `toggleFullscreen()` y `exitFullscreen()`** como funciones de módulo (identidad estable para el efecto de la tecla F y para la limpieza al desmontar).
 
 ## 7 — Riesgos identificados
 

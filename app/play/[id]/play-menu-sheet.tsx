@@ -3,6 +3,7 @@
 import { X } from "lucide-react";
 import {
   useEffect,
+  useEffectEvent,
   useRef,
   type CSSProperties,
   type KeyboardEvent,
@@ -68,18 +69,22 @@ export function PlayMenuSheet({
   // En escritorio el panel está anclado al ⋮: si la ventana cambia de tamaño
   // o de pantalla completa, el ancla deja de valer y se cierra. En móvil la
   // hoja no depende del ancla (y la barra del navegador dispara `resize`).
+  // useEffectEvent: el efecto no puede depender de `onClose`. El cambio de
+  // pantalla completa vuelve a renderizar PlayRoom de forma síncrona dentro
+  // del propio evento, y re-suscribirse ahí se salta este listener.
+  const closeIfAnchored = useEffectEvent(() => {
+    if (window.matchMedia(DESKTOP_QUERY).matches) onClose();
+  });
   useEffect(() => {
     if (!open) return;
-    const closeIfAnchored = () => {
-      if (window.matchMedia(DESKTOP_QUERY).matches) onClose();
-    };
-    window.addEventListener("resize", closeIfAnchored);
-    document.addEventListener("fullscreenchange", closeIfAnchored);
+    const onLayoutChange = () => closeIfAnchored();
+    window.addEventListener("resize", onLayoutChange);
+    document.addEventListener("fullscreenchange", onLayoutChange);
     return () => {
-      window.removeEventListener("resize", closeIfAnchored);
-      document.removeEventListener("fullscreenchange", closeIfAnchored);
+      window.removeEventListener("resize", onLayoutChange);
+      document.removeEventListener("fullscreenchange", onLayoutChange);
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
 

@@ -70,11 +70,12 @@ export function NavBar() {
 
   return (
     <>
-      {/* En /play con el móvil en horizontal se oculta (spec 14): cada píxel
-          de alto va al CRT; se sale con SALIR del menú ⋮. */}
+      {/* En /play con el móvil en horizontal (spec 14) y en pantalla completa
+          (spec 15) se oculta: cada píxel de alto va al CRT; se sale con SALIR
+          del menú ⋮. */}
       <nav
         className={`sticky top-0 z-40 flex items-center justify-between gap-4 border-b border-cian/30 bg-background/90 px-[22px] py-3.5 shadow-[0_6px_30px_rgba(0,0,0,.6)] backdrop-blur-md ${
-          isPlay ? "mobile-landscape:hidden" : ""
+          isPlay ? "mobile-landscape:hidden fullscreen-doc:hidden" : ""
         }`}
       >
         <Link
