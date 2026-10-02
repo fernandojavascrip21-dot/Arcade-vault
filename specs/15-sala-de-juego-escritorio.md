@@ -206,6 +206,11 @@ Las claves de skins, `arcadevault.touch-controls.v1` y `arcadevault.rotate-hint.
 
 ---
 
+### Ajustes durante la implementación (2026-10-01)
+
+- **`DESKTOP_QUERY` en `lib/responsive.ts`** (paso 3), contra lo previsto en §2: el cierre del menú por `resize` solo debe actuar cuando el panel está anclado. En móvil la barra del navegador dispara `resize` al aparecer y desaparecer y cerraría la hoja inferior, rompiendo "móvil idéntico al spec 14". El listener comprueba `matchMedia(DESKTOP_QUERY)` dentro del manejador.
+- **El panel se separa 8 px del botón ⋮** (`top = rect.bottom + 8`) y usa valores por defecto `--menu-top: 72px` / `--menu-right: 18px` si no hay ancla.
+
 ## 7 — Riesgos identificados
 
 | Riesgo                                                                                                                                                          | Mitigación                                                                                                                                                                             |

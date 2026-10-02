@@ -171,6 +171,11 @@ export function PlayRoom({ game }: { game: Game }) {
   // Menú OPCIONES (⋮) de la sala (specs 14 y 15).
   const [menuOpen, setMenuOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
+  // Ancla del panel en escritorio (spec 15): bajo el ⋮, alineado a su derecha.
+  const [menuAnchor, setMenuAnchor] = useState<{
+    top: number;
+    right: number;
+  } | null>(null);
   const [over, setOver] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -238,6 +243,13 @@ export function PlayRoom({ game }: { game: Game }) {
   // jugador pulsa SEGUIR (spec 14).
   const openMenu = () => {
     if (isRealGame && !over) setPaused(true);
+    const rect = menuButtonRef.current?.getBoundingClientRect();
+    if (rect) {
+      setMenuAnchor({
+        top: Math.round(rect.bottom + 8),
+        right: Math.round(document.documentElement.clientWidth - rect.right),
+      });
+    }
     setMenuOpen(true);
   };
 
@@ -474,6 +486,7 @@ export function PlayRoom({ game }: { game: Game }) {
         touch={isRealGame && touch.isCoarse ? touch : undefined}
         onExit={exit}
         returnFocusRef={menuButtonRef}
+        anchor={menuAnchor}
       />
 
       <RotateHint enabled={isRealGame && touch.isCoarse} />
