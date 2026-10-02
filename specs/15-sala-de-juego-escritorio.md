@@ -210,6 +210,10 @@ Las claves de skins, `arcadevault.touch-controls.v1` y `arcadevault.rotate-hint.
 
 - **`DESKTOP_QUERY` en `lib/responsive.ts`** (paso 3), contra lo previsto en §2: el cierre del menú por `resize` solo debe actuar cuando el panel está anclado. En móvil la barra del navegador dispara `resize` al aparecer y desaparecer y cerraría la hoja inferior, rompiendo "móvil idéntico al spec 14". El listener comprueba `matchMedia(DESKTOP_QUERY)` dentro del manejador.
 - **El panel se separa 8 px del botón ⋮** (`top = rect.bottom + 8`) y usa valores por defecto `--menu-top: 72px` / `--menu-right: 18px` si no hay ancla.
+- **Rejilla en lugar de `min-h-0` flex en `site-chrome.tsx`** (paso 4): el envoltorio de `children` en `/play/*` es `desktop:grid desktop:grid-rows-[minmax(0,1fr)] desktop:min-h-0`. Con el alto de `main` heredado de una cadena flex anidada, Chrome resuelve `cqh` a 0 y la columna colapsaba (el primer riesgo de §7). Con la rejilla el alto es definido y no hizo falta la alternativa de `--nav-h`.
+- **El navbar mide 75 px, no 63**: los anchos reales de la columna son 810 px en 1280×720, 887 px en 1366×768, 938 px en 1280×800 y 1386 px en 1920×1080. Los umbrales de §5 se cumplen.
+- **`main` no pasa a `flex flex-col` en `desktop:`**: la columna `--room-w` es un bloque normal dentro de `main` y no lo necesita.
+- **Con el mando táctil visible, el scroll es el de la página**, no interno del contenedor: el contenedor raíz crece con el contenido aunque tenga `desktop:h-dvh` (es un ítem flex de `<body>`). El tercer riesgo de §7 no se materializó.
 
 ## 7 — Riesgos identificados
 
