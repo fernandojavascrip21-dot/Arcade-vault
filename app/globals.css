@@ -18,6 +18,15 @@
 }
 @custom-variant mobile-landscape (@media (orientation: landscape) and (max-height: 540px));
 
+/* Variantes de la sala de juego en escritorio (spec 15). Se registran DESPUÉS
+   de las de móvil y en este orden, para que las más específicas ganen.
+   - desktop: complemento exacto de `mobile` (incluye tablets).
+   - desktop-short: ventanas anchas y bajas (1366×768, 1280×720).
+   - fullscreen-doc: <html> en pantalla completa por la Fullscreen API. */
+@custom-variant desktop (@media (width >= 768px) and (height > 540px));
+@custom-variant desktop-short (@media (width >= 768px) and (height > 540px) and (height <= 800px));
+@custom-variant fullscreen-doc (:root:fullscreen &);
+
 :root {
   /* Tokens base del scaffold — se conservan, solo se ajustan los valores a la maqueta. */
   --background: #0a0a0f;
