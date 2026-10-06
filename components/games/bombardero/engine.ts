@@ -19,6 +19,8 @@ const PLANE_SPEED_X_BASE = 200; // px/s en nivel 1
 const PLANE_SPEED_X_STEP = 15; // por nivel superado
 const PLANE_SPEED_X_MAX = 380;
 const PLANE_TURN_MARGIN = 40; // px desde el borde donde rebota
+const INVULNERABLE_MS = 1500;
+const BLINK_MS = 100; // parpadeo mientras es invulnerable
 const MAX_DT_MS = 50; // tope para no saltar tras pausas o cambios de pestaña
 
 const BOMB_RADIUS = 6;
@@ -31,11 +33,13 @@ const POINTS_PER_BLOCK = 15;
 const LOW_ALTITUDE_Y = 480; // y >= esto al soltar la bomba = "vuelo bajo"
 const LOW_ALTITUDE_BONUS_MULTIPLIER = 2;
 const BONUS_BUILDING_CLEARED = 100;
+const BONUS_LEVEL_CLEARED = 200; // multiplicado por el nivel completado
 
 const PARTICLE_LIFE_MS = 500;
 const PARTICLE_GRAVITY = 900; // px/s²
 const DEBRIS_PARTICLES = 8;
 const DUST_PARTICLES = 4;
+const CRASH_PARTICLES = 12;
 
 // Generación de la ciudad (spec 16 §2).
 const BASE_HEIGHT_MIN = 4;
@@ -126,11 +130,15 @@ function generateCity(level: number): number[] {
   for (let i = 0; i < COLUMNS; i++) {
     if (Math.random() < gapChance) heights[i] = 0;
   }
+  // El avión gira a PLANE_TURN_MARGIN del borde y las bombas caen rectas:
+  // las columnas de los extremos son inalcanzables, así que van vacías.
+  heights[0] = 0;
+  heights[COLUMNS - 1] = 0;
   if (
     level >= SKYSCRAPER_FROM_LEVEL &&
     !heights.some((h) => h === MAX_BLOCKS)
   ) {
-    heights[randomInt(0, COLUMNS - 1)] = MAX_BLOCKS;
+    heights[randomInt(1, COLUMNS - 2)] = MAX_BLOCKS;
   }
   return heights;
 }
@@ -158,7 +166,7 @@ interface Plane {
   y: number;
   vx: number;
   vy: number;
-  invulnerableUntil: number;
+  invulnerableMs: number; // ms restantes sin colisión (parpadea)
 }
 
 interface Bomb {
@@ -223,6 +231,7 @@ export function createBombarderoEngine(
   let bombs: Bomb[] = [];
   let particles: Particle[] = [];
   let bombCooldown = 0; // ms hasta poder soltar otra bomba
+  let gameOver = false;
   let lastTime = 0;
   let rafId = 0;
   let running = false;
@@ -234,7 +243,7 @@ export function createBombarderoEngine(
       y: PLANE_Y_START,
       vx: planeSpeedX(level),
       vy: 0,
-      invulnerableUntil: 0,
+      invulnerableMs: 0,
     };
   }
 
@@ -291,6 +300,13 @@ export function createBombarderoEngine(
   }
 
   function drawPlane() {
+    if (gameOver) return;
+    if (
+      plane.invulnerableMs > 0 &&
+      Math.floor(plane.invulnerableMs / BLINK_MS) % 2 === 0
+    ) {
+      return;
+    }
     const facing = plane.vx < 0 ? -1 : 1;
     const tilt = plane.vy < 0 ? -PLANE_TILT : plane.vy > 0 ? PLANE_TILT : 0;
     const halfW = PLANE_WIDTH / 2;
@@ -428,17 +444,88 @@ export function createBombarderoEngine(
     plane.y = clamp(plane.y + plane.vy * dt, PLANE_Y_MIN, PLANE_Y_MAX);
   }
 
+  function planeHitsCity(): boolean {
+    const bottom = plane.y + PLANE_HEIGHT;
+    const first = clamp(Math.floor(plane.x / COLUMN_WIDTH), 0, COLUMNS - 1);
+    const last = clamp(
+      Math.floor((plane.x + PLANE_WIDTH - 1) / COLUMN_WIDTH),
+      0,
+      COLUMNS - 1,
+    );
+    for (let col = first; col <= last; col++) {
+      if (heights[col] === 0) continue;
+      if (GROUND_Y - heights[col] * BLOCK_HEIGHT <= bottom) return true;
+    }
+    return false;
+  }
+
+  function crash() {
+    spawnParticles(
+      plane.x + PLANE_WIDTH / 2,
+      plane.y + PLANE_HEIGHT / 2,
+      CRASH_PARTICLES,
+      260,
+      DEBRIS_COLORS,
+    );
+    lives -= 1;
+    if (lives <= 0) {
+      endGame();
+      return;
+    }
+    // Solo reaparece el avión: la ciudad ya bombardeada no se regenera.
+    plane = createPlane();
+    plane.invulnerableMs = INVULNERABLE_MS;
+  }
+
+  function endGame() {
+    if (gameOver) return;
+    gameOver = true;
+    bombs = [];
+    emitState();
+    handlers.onGameOver(score);
+  }
+
+  function nextLevel() {
+    score += BONUS_LEVEL_CLEARED * level;
+    level += 1;
+    heights = generateCity(level);
+    // Las bombas en vuelo apuntaban a la ciudad anterior.
+    bombs = [];
+    plane.vx = Math.sign(plane.vx || 1) * planeSpeedX(level);
+    // La ciudad nueva puede aparecer sobre el avión: margen para remontar
+    // sin perder una vida por el cambio de nivel.
+    plane.invulnerableMs = INVULNERABLE_MS;
+  }
+
   function update(dt: number) {
+    updateParticles(dt);
+    if (gameOver) return;
     updatePlane(dt);
     updateBombs(dt);
-    updateParticles(dt);
+    if (heights.every((h) => h === 0)) nextLevel();
+    if (plane.invulnerableMs > 0) {
+      plane.invulnerableMs = Math.max(0, plane.invulnerableMs - dt * 1000);
+    } else if (planeHitsCity()) {
+      crash();
+    }
     emitState();
   }
 
+  function setPausedState(value: boolean) {
+    if (paused === value) return;
+    paused = value;
+    emitState(); // también cuando cambia por Escape/P interno
+  }
+
   function handleKeyDown(e: KeyboardEvent) {
+    if (e.key === "Escape" || e.key === "p" || e.key === "P") {
+      e.preventDefault();
+      if (!gameOver) setPausedState(!paused);
+      return;
+    }
     if (e.key === " " || e.code === "Space") {
       e.preventDefault();
-      if (!paused) dropBomb();
+      if (!paused && !gameOver) dropBomb();
       return;
     }
     const climb = KEY_TO_CLIMB[e.key];
@@ -485,15 +572,14 @@ export function createBombarderoEngine(
       cancelAnimationFrame(rafId);
     },
     setPaused(value: boolean) {
-      if (paused === value) return;
-      paused = value;
-      emitState();
+      setPausedState(value);
     },
     restart() {
       score = 0;
       lives = LIVES_START;
       level = 1;
       paused = false;
+      gameOver = false;
       climbUp = false;
       climbDown = false;
       bombs = [];
