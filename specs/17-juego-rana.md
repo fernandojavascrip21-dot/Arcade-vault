@@ -47,7 +47,7 @@ No hay `game.js` de referencia en `references/started-games/` ni assets en `refe
   - **Nivel**: se completa al ocupar las 5 casas. Se suma el bono, `level += 1`, las casas se vacían, la rana reaparece y los carriles aceleran. Sin pantalla de transición.
   - **Puntuación** (entero creciente, compatible con `scores`):
     - `POINTS_PER_ROW = 10` por cada fila nueva alcanzada por la rana actual (la marca se reinicia en cada aparición; retroceder y volver a subir no puntúa).
-    - `POINTS_HOME = 50` por cada rana en casa.
+    - `POINTS_HOME = 50` por cada rana en casa. La fila 0 también cuenta como fila nueva, así que entrar en una casa suma 60 puntos en total (10 + 50).
     - `BONUS_LEVEL = 500 × level` al completar las 5 casas.
     - Ningún punto por tiempo sobrante.
   - **Controles**: `← ↑ ↓ →` / `WASD` saltar, `Escape` / `P` pausa interna sincronizada con `PlayRoom` (mismo patrón que `SerpienteState.paused`). El motor lee `e.key` y hace `preventDefault` en las teclas de juego. No usa `F` (pantalla completa, spec 15).
@@ -225,7 +225,7 @@ Reglas internas del motor:
 - [ ] Sobre un tronco o tortuga la rana se desplaza con él; saltar al agua sin plataforma resta 1 vida.
 - [ ] Ser arrastrada fuera del canvas resta 1 vida.
 - [ ] Tocar un vehículo resta 1 vida.
-- [ ] Entrar en una bahía libre suma 50 puntos, deja una rana dibujada en la casa y hace aparecer una rana nueva en la salida.
+- [ ] Entrar en una bahía libre suma 60 puntos (10 de la fila nueva + 50 de la casa), deja una rana dibujada en la casa y hace aparecer una rana nueva en la salida.
 - [ ] Saltar al seto o a una bahía ocupada resta 1 vida.
 - [ ] La barra de tiempo se vacía en 30 s, se pone roja por debajo de 10 s y agotarla resta 1 vida; llegar a casa con tiempo sobrante no suma puntos.
 - [ ] El reloj no avanza en pausa.
@@ -261,6 +261,7 @@ Reglas internas del motor:
 - **Sí:** este spec incluye motor, sala, fila de catálogo y carátula; skins y móvil quedan para `skin-designer` y `mobile-porter`. — decisión del usuario.
 - **Sí:** `desc`, `long` y `thumb` redactados por el agente. — decisión del agente (pendiente de revisar).
 - **Sí:** valores numéricos de `LANES`, puntos (10 / 50 / 500 × nivel), `SPEED_STEP`, `HOP_MS`, `DEATH_MS`, hitboxes y tolerancia de bahía. Motivo: punto de partida ajustable en `/spec-impl` sin cambiar la mecánica. — decisión del agente (pendiente de revisar).
+- **Sí:** entrar en una casa suma 60 puntos: los 10 de la fila 0 como fila nueva más los 50 de `POINTS_HOME`. Motivo: el spec admitía dos lecturas (50 o 60); se aclaró durante `/spec-impl` (2026-10-05). — decisión del usuario.
 - **Sí:** bahías de 2 columnas con tolerancia de 48 px. Motivo: en un tablero de 20 columnas una bahía de 1 celda sería demasiado estrecha para una rana con `x` continua tras el río. — decisión del agente (pendiente de revisar).
 - **Sí:** la posición lógica cambia al iniciar el salto y la animación es solo visual. Motivo: colisiones deterministas y sin estados intermedios. — decisión del agente (pendiente de revisar).
 - **Sí:** ignorar las pulsaciones durante un salto, sin cola de entrada. Motivo: con 100 ms de salto una cola provoca saltos no deseados. — decisión del agente (pendiente de revisar).

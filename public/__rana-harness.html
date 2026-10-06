@@ -22,11 +22,15 @@ const HOME_INSET_Y = 8; // seto visible sobre cada bahía
 const HOME_TOLERANCE = 48; // px entre centro de rana y centro de bahía
 const HOP_MS = 100;
 const HOP_STRETCH = 0.18; // la rana crece a mitad de salto
+const DEATH_MS = 600;
 const FROG_TIME_MS = 30000;
 const TIMER_WARN_MS = 10000;
+const FROG_HITBOX_INSET = 10;
+const VEHICLE_HITBOX_INSET = 4;
 const LIVES_START = 3;
 const POINTS_PER_ROW = 10;
 const POINTS_HOME = 50;
+const BONUS_LEVEL = 500; // multiplicado por el nivel completado
 const SPEED_STEP = 0.12; // por nivel superado
 const SPEED_MAX_MULT = 2.2;
 const MAX_DT_MS = 50; // tope para no saltar tras pausas o cambios de pestaña
@@ -57,6 +61,8 @@ const PALETTE = {
     frog: "#5fe04a",
     frogBelly: "#b6ff7a",
     frogEye: "#0b1a10",
+    frogDead: "#ff2d6f",
+    frogDeadBelly: "#ffd6e4",
     log: "#8a5a2b",
     logEdge: "#b47a3c",
     logGrain: "#5c3a1a",
@@ -120,6 +126,7 @@ function createRanaEngine(canvas, handlers) {
     let lives = LIVES_START;
     let level = 1;
     let paused = false;
+    let gameOver = false;
     let lastTime = 0;
     let rafId = 0;
     let running = false;
@@ -137,6 +144,7 @@ function createRanaEngine(canvas, handlers) {
             hopMs: 0,
             fromX: x,
             fromRow: ROW_START,
+            deadMs: 0,
         };
     }
     function emitState() {
@@ -272,12 +280,12 @@ function createRanaEngine(canvas, handlers) {
         });
     }
     // Rana vista desde arriba; con ángulo 0 mira hacia la fila de casas.
-    function drawFrog(cx, cy, scale = 1, angle = 0) {
+    function drawFrog(cx, cy, scale = 1, angle = 0, dead = false) {
         g.save();
         g.translate(cx, cy);
         g.rotate(angle);
         g.scale(scale, scale);
-        g.fillStyle = PALETTE.frog;
+        g.fillStyle = dead ? PALETTE.frogDead : PALETTE.frog;
         g.fillRect(-16, -14, 32, 30); // cuerpo
         g.fillRect(-16, -22, 10, 10); // ojos
         g.fillRect(6, -22, 10, 10);
@@ -285,7 +293,7 @@ function createRanaEngine(canvas, handlers) {
         g.fillRect(16, -10, 8, 10);
         g.fillRect(-24, 8, 8, 14); // patas traseras
         g.fillRect(16, 8, 8, 14);
-        g.fillStyle = PALETTE.frogBelly;
+        g.fillStyle = dead ? PALETTE.frogDeadBelly : PALETTE.frogBelly;
         g.fillRect(-8, -4, 16, 14);
         g.fillStyle = PALETTE.frogEye;
         g.fillRect(-14, -22, 5, 5);
@@ -293,6 +301,11 @@ function createRanaEngine(canvas, handlers) {
         g.restore();
     }
     function drawActiveFrog() {
+        if (frog.deadMs > 0 || gameOver) {
+            // Rana congelada donde murió; se encoge mientras dura la animación.
+            drawFrog(frog.x + CELL_W / 2, frog.row * CELL_H + CELL_H / 2, 0.6 + 0.4 * (frog.deadMs / DEATH_MS), DIRECTION_ANGLE[frog.facing], true);
+            return;
+        }
         const t = 1 - frog.hopMs / HOP_MS; // 0 = origen, 1 = destino
         const x = frog.fromX + (frog.x - frog.fromX) * t;
         const y = (frog.fromRow + (frog.row - frog.fromRow) * t) * CELL_H;
@@ -318,12 +331,16 @@ function createRanaEngine(canvas, handlers) {
             offsets[index] = mod(offsets[index] + lane.speed * mult * lane.dir * dt, LOOP);
         });
     }
+    // Índice en LANES del carril de la fila de la rana, o -1 en filas sin carril.
+    function frogLane() {
+        return LANES.findIndex((lane) => lane.row === frog.row);
+    }
     // Índice en LANES del carril cuya plataforma queda bajo el centro de la
     // rana, o -1 si no está en el río o no tiene ninguna debajo.
     function platformUnderFrog() {
         if (!isRiver(frog.row))
             return -1;
-        const index = LANES.findIndex((lane) => lane.row === frog.row);
+        const index = frogLane();
         const center = frog.x + CELL_W / 2;
         const width = LANES[index].length * CELL_W;
         const covered = laneObjects(index).some((x) => center >= x && center <= x + width);
@@ -333,6 +350,35 @@ function createRanaEngine(canvas, handlers) {
     function freeHomeAt(center) {
         return HOME_COLS.findIndex((col, i) => !homes[i] &&
             Math.abs(center - (col * CELL_W + HOME_WIDTH / 2)) <= HOME_TOLERANCE);
+    }
+    function hitByVehicle() {
+        const index = frogLane();
+        if (index < 0 || isRiver(frog.row))
+            return false;
+        const width = LANES[index].length * CELL_W;
+        const left = frog.x + FROG_HITBOX_INSET;
+        const right = frog.x + CELL_W - FROG_HITBOX_INSET;
+        return laneObjects(index).some((x) => right > x + VEHICLE_HITBOX_INSET &&
+            left < x + width - VEHICLE_HITBOX_INSET);
+    }
+    function die() {
+        if (frog.deadMs > 0)
+            return;
+        frog.deadMs = DEATH_MS;
+        frog.hopMs = 0;
+        lives -= 1;
+    }
+    function endGame() {
+        if (gameOver)
+            return;
+        gameOver = true;
+        emitState();
+        handlers.onGameOver(score);
+    }
+    function nextLevel() {
+        score += BONUS_LEVEL * level;
+        level += 1;
+        homes = HOME_COLS.map(() => false);
     }
     function spawnFrog() {
         frog = createFrog();
@@ -354,11 +400,19 @@ function createRanaEngine(canvas, handlers) {
             return;
         if (row === ROW_HOME) {
             const home = freeHomeAt(x + CELL_W / 2);
-            if (home < 0)
+            if (home < 0) {
+                // Seto o bahía ocupada: la rana muere donde cae.
+                frog.x = x;
+                frog.row = row;
+                frog.facing = direction;
+                die();
                 return;
+            }
             reachRow(row);
             score += POINTS_HOME;
             homes[home] = true;
+            if (homes.every(Boolean))
+                nextLevel();
             spawnFrog();
             return;
         }
@@ -385,9 +439,17 @@ function createRanaEngine(canvas, handlers) {
         frog.hopMs = HOP_MS;
         reachRow(row);
     }
-    function update(dt) {
-        const riding = platformUnderFrog();
-        updateLanes(dt);
+    // Animación de muerte: la rana no se mueve ni corre el reloj; el tráfico sí.
+    function updateDeath(dt) {
+        frog.deadMs = Math.max(0, frog.deadMs - dt * 1000);
+        if (frog.deadMs > 0)
+            return;
+        if (lives <= 0)
+            endGame();
+        else
+            spawnFrog();
+    }
+    function updateFrog(dt, riding) {
         if (riding >= 0) {
             const lane = LANES[riding];
             const dx = lane.speed * speedMult(level) * lane.dir * dt;
@@ -396,15 +458,43 @@ function createRanaEngine(canvas, handlers) {
                 frog.fromX += dx;
         }
         frog.hopMs = Math.max(0, frog.hopMs - dt * 1000);
+        timeLeft = Math.max(0, timeLeft - dt * 1000);
+        const center = frog.x + CELL_W / 2;
+        const drowned = isRiver(frog.row) && platformUnderFrog() < 0;
+        const carriedOut = center < 0 || center > RANA_WIDTH;
+        if (drowned || carriedOut || hitByVehicle() || timeLeft <= 0)
+            die();
+    }
+    function update(dt) {
+        if (gameOver)
+            return;
+        const riding = frog.deadMs > 0 ? -1 : platformUnderFrog();
+        updateLanes(dt);
+        if (frog.deadMs > 0)
+            updateDeath(dt);
+        else
+            updateFrog(dt, riding);
         emitState();
     }
+    function setPausedState(value) {
+        if (paused === value)
+            return;
+        paused = value;
+        emitState(); // también cuando cambia por Escape/P interno
+    }
     function handleKeyDown(e) {
+        if (e.key === "Escape" || e.key === "p" || e.key === "P") {
+            e.preventDefault();
+            if (!gameOver)
+                setPausedState(!paused);
+            return;
+        }
         const direction = KEY_TO_DIRECTION[e.key];
         if (!direction)
             return;
         e.preventDefault();
         // Un salto por pulsación: mantener la tecla no repite.
-        if (e.repeat || paused)
+        if (e.repeat || paused || gameOver || frog.deadMs > 0)
             return;
         hop(direction);
     }
@@ -434,16 +524,14 @@ function createRanaEngine(canvas, handlers) {
             cancelAnimationFrame(rafId);
         },
         setPaused(value) {
-            if (paused === value)
-                return;
-            paused = value;
-            emitState();
+            setPausedState(value);
         },
         restart() {
             score = 0;
             lives = LIVES_START;
             level = 1;
             paused = false;
+            gameOver = false;
             offsets = createOffsets();
             homes = HOME_COLS.map(() => false);
             frog = createFrog();
