@@ -66,7 +66,7 @@ Subagents live in `.claude/agents/`:
   into **two** full numeric `Draft` specs with different mechanic resolutions (same id/category,
   same shape as specs 06/08/10/11) at `specs/game-jam/<slug>-a.md` and `<slug>-b.md`. No code, no
   Supabase. Review both, pick one, approve it, and renumber into `specs/NN-slug.md` before
-  `/spec-impl`. (`specs/game-jam/bombardero.md` is an earlier single-spec draft from before the
+  `/spec-impl`. (`specs/16-juego-bombardero.md` started as an earlier single-spec draft there, from before the
   two-variant format.)
 - `skin-designer` (`model: sonnet`) — audits that every game has at least the skins `clasico`
   (default), `retro` and `neon`, implements missing ones following the skin contract (engine

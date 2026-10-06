@@ -1,6 +1,6 @@
-# SPEC BOMBARDERO — Motor del juego Bombardero
+# SPEC 16 — Motor del juego Bombardero
 
-> **Status:** Draft
+> **Status:** Aprovado
 > **Depends on:** SPEC 01, SPEC 06, SPEC 07, SPEC 11
 > **Date:** 2026-09-29
 > **Objective:** Crear desde cero el motor del juego BOMBARDERO (un biplano que arrasa a bombazos una ciudad generada de forma procedural en cada partida) e integrarlo en `/play/bombardero`, con su fila nueva `bombardero` en la tabla `games`.
