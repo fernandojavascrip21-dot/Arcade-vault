@@ -12,6 +12,14 @@ const PLANE_WIDTH = 56;
 const PLANE_HEIGHT = 22;
 const PLANE_X_START = 96;
 const PLANE_Y_START = 120;
+const PLANE_Y_MIN = 60;
+const PLANE_Y_MAX = 760;
+const PLANE_VERTICAL_SPEED = 220; // px/s mientras se mantiene ↑/↓
+const PLANE_SPEED_X_BASE = 200; // px/s en nivel 1
+const PLANE_SPEED_X_STEP = 15; // por nivel superado
+const PLANE_SPEED_X_MAX = 380;
+const PLANE_TURN_MARGIN = 40; // px desde el borde donde rebota
+const MAX_DT_MS = 50; // tope para no saltar tras pausas o cambios de pestaña
 
 const LIVES_START = 3;
 
@@ -44,6 +52,22 @@ const BUILDING_TIERS: Array<{ upTo: number; color: string }> = [
   { upTo: 14, color: "#4a1f7a" },
   { upTo: MAX_BLOCKS, color: "#0f5a6a" },
 ];
+
+const KEY_TO_CLIMB: Record<string, "up" | "down"> = {
+  ArrowUp: "up",
+  ArrowDown: "down",
+  w: "up",
+  s: "down",
+  W: "up",
+  S: "down",
+};
+
+function planeSpeedX(level: number): number {
+  return Math.min(
+    PLANE_SPEED_X_MAX,
+    PLANE_SPEED_X_BASE + (level - 1) * PLANE_SPEED_X_STEP,
+  );
+}
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
@@ -156,11 +180,14 @@ export function createBombarderoEngine(
   sky.addColorStop(1, SKY_BOTTOM);
 
   let heights: number[] = [];
-  let plane: Plane = createPlane();
   let score = 0;
   let lives = LIVES_START;
   let level = 1;
+  let plane: Plane = createPlane(); // después de `level`: fija su velocidad
   let paused = false;
+  let climbUp = false;
+  let climbDown = false;
+  let lastTime = 0;
   let rafId = 0;
   let running = false;
   let lastEmitted: BombarderoState | null = null;
@@ -169,7 +196,7 @@ export function createBombarderoEngine(
     return {
       x: PLANE_X_START,
       y: PLANE_Y_START,
-      vx: 0,
+      vx: planeSpeedX(level),
       vy: 0,
       invulnerableUntil: 0,
     };
@@ -261,8 +288,47 @@ export function createBombarderoEngine(
     drawPlane();
   }
 
-  function loop() {
+  function updatePlane(dt: number) {
+    // Avance automático de pasada en pasada: rebota cerca de cada borde.
+    plane.x += plane.vx * dt;
+    const maxX = BOMBARDERO_WIDTH - PLANE_TURN_MARGIN - PLANE_WIDTH;
+    if (plane.x >= maxX) {
+      plane.x = maxX;
+      plane.vx = -Math.abs(plane.vx);
+    } else if (plane.x <= PLANE_TURN_MARGIN) {
+      plane.x = PLANE_TURN_MARGIN;
+      plane.vx = Math.abs(plane.vx);
+    }
+    plane.vy =
+      (climbDown ? PLANE_VERTICAL_SPEED : 0) -
+      (climbUp ? PLANE_VERTICAL_SPEED : 0);
+    plane.y = clamp(plane.y + plane.vy * dt, PLANE_Y_MIN, PLANE_Y_MAX);
+  }
+
+  function update(dt: number) {
+    updatePlane(dt);
+  }
+
+  function handleKeyDown(e: KeyboardEvent) {
+    const climb = KEY_TO_CLIMB[e.key];
+    if (!climb) return;
+    e.preventDefault();
+    if (climb === "up") climbUp = true;
+    else climbDown = true;
+  }
+
+  function handleKeyUp(e: KeyboardEvent) {
+    const climb = KEY_TO_CLIMB[e.key];
+    if (!climb) return;
+    if (climb === "up") climbUp = false;
+    else climbDown = false;
+  }
+
+  function loop(now: number) {
     if (!running) return;
+    const dt = Math.min(now - lastTime, MAX_DT_MS) / 1000;
+    lastTime = now;
+    if (!paused) update(dt);
     draw();
     rafId = requestAnimationFrame(loop);
   }
@@ -273,11 +339,18 @@ export function createBombarderoEngine(
     start() {
       if (running) return;
       running = true;
+      window.addEventListener("keydown", handleKeyDown);
+      window.addEventListener("keyup", handleKeyUp);
+      lastTime = performance.now();
       emitState();
       rafId = requestAnimationFrame(loop);
     },
     stop() {
       running = false;
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+      climbUp = false;
+      climbDown = false;
       cancelAnimationFrame(rafId);
     },
     setPaused(value: boolean) {
@@ -290,6 +363,8 @@ export function createBombarderoEngine(
       lives = LIVES_START;
       level = 1;
       paused = false;
+      climbUp = false;
+      climbDown = false;
       heights = generateCity(level);
       plane = createPlane();
       emitState();
