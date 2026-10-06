@@ -52,27 +52,106 @@ const GAP_CHANCE_MIN = 0.04;
 const SKYSCRAPER_FROM_LEVEL = 3;
 
 // Dibujado.
-const SKY_TOP = "#0a0e1a";
-const SKY_BOTTOM = "#241238";
-const STAR_COLOR = "#ffffff";
 const STAR_COUNT = 90;
 const STAR_MAX_Y = 520;
-const GROUND_COLOR = "#aab2bd";
-const WINDOW_COLOR = "#f5d94a";
 const WINDOW_SIZE = 8;
-const PLANE_COLOR = "#00f5ff";
 const PLANE_TILT = (12 * Math.PI) / 180;
-const BOMB_COLOR = "#f5ff00";
-const DEBRIS_COLORS = ["#ff8a00", "#f5d94a"];
-const DUST_COLOR = "#8a93a0";
 
-// Color del edificio según su altura actual en bloques.
-const BUILDING_TIERS: Array<{ upTo: number; color: string }> = [
-  { upTo: 4, color: "#3a4a5a" },
-  { upTo: 9, color: "#6a1f45" },
-  { upTo: 14, color: "#4a1f7a" },
-  { upTo: MAX_BLOCKS, color: "#0f5a6a" },
+export type BombarderoSkin = "clasico" | "retro" | "neon";
+
+export const BOMBARDERO_SKINS: Array<{ id: BombarderoSkin; label: string }> = [
+  { id: "clasico", label: "CLÁSICO" },
+  { id: "retro", label: "RETRO" },
+  { id: "neon", label: "NEÓN" },
 ];
+
+export const BOMBARDERO_SKIN_STORAGE_KEY = "arcadevault.bombardero.skin.v1";
+
+interface BombarderoPalette {
+  skyTop: string;
+  skyBottom: string;
+  star: string;
+  ground: string;
+  window: string;
+  plane: string;
+  bomb: string;
+  debris: string[];
+  dust: string;
+  // Color del edificio según su altura actual en bloques.
+  tiers: Array<{ upTo: number; color: string }>;
+}
+
+// CLÁSICO conserva exactamente los colores originales del motor.
+const SKIN_PALETTES: Record<BombarderoSkin, BombarderoPalette> = {
+  clasico: {
+    skyTop: "#0a0e1a",
+    skyBottom: "#241238",
+    star: "#ffffff",
+    ground: "#aab2bd",
+    window: "#f5d94a",
+    plane: "#00f5ff",
+    bomb: "#f5ff00",
+    debris: ["#ff8a00", "#f5d94a"],
+    dust: "#8a93a0",
+    tiers: [
+      { upTo: 4, color: "#3a4a5a" },
+      { upTo: 9, color: "#6a1f45" },
+      { upTo: 14, color: "#4a1f7a" },
+      { upTo: MAX_BLOCKS, color: "#0f5a6a" },
+    ],
+  },
+  // Fósforo verde: se distingue por intensidad (avión > bomba > escombros >
+  // edificios), ventanas apagadas (oscuras) sobre el muro.
+  retro: {
+    skyTop: "#020a04",
+    skyBottom: "#04140a",
+    star: "#1f9e45",
+    ground: "#33ff66",
+    window: "#021208",
+    plane: "#e0ffe8",
+    bomb: "#b8ffcc",
+    debris: ["#33ff66", "#8dffa8"],
+    dust: "#2bbf55",
+    tiers: [
+      { upTo: 4, color: "#1f9e45" },
+      { upTo: 9, color: "#1c9040" },
+      { upTo: 14, color: "#1a8539" },
+      { upTo: MAX_BLOCKS, color: "#177a31" },
+    ],
+  },
+  neon: {
+    skyTop: "#05050a",
+    skyBottom: "#0a0a14",
+    star: "#ffffff",
+    ground: "#00f5ff",
+    window: "#f5ff00",
+    plane: "#00f5ff",
+    bomb: "#f5ff00",
+    debris: ["#ff8a00", "#ff2d95"],
+    dust: "#8a93c0",
+    tiers: [
+      { upTo: 4, color: "#3a5cff" },
+      { upTo: 9, color: "#c4208f" },
+      { upTo: 14, color: "#8a3cff" },
+      { upTo: MAX_BLOCKS, color: "#2a6bd0" },
+    ],
+  },
+};
+
+// Trazo por skin: glow de avión/bombas/suelo y scanlines sobre todo el frame.
+interface BombarderoRenderer {
+  glow: number; // shadowBlur de avión, bombas y suelo (0 = sin glow)
+  scanlines: boolean;
+}
+
+const SKIN_RENDERERS: Record<BombarderoSkin, BombarderoRenderer> = {
+  clasico: { glow: 0, scanlines: false },
+  retro: { glow: 0, scanlines: true },
+  neon: { glow: 12, scanlines: false },
+};
+
+const SCANLINE_STEP = 3;
+const SCANLINE_COLOR = "rgba(0,0,0,.18)";
 
 const KEY_TO_CLIMB: Record<string, "up" | "down"> = {
   ArrowUp: "up",
@@ -198,6 +277,7 @@ export interface BombarderoHandlers {
 }
 
 export interface BombarderoEngine {
+  setSkin(skin: BombarderoSkin): void;
   start(): void;
   stop(): void;
   setPaused(paused: boolean): void;
@@ -207,6 +287,7 @@ export interface BombarderoEngine {
 export function createBombarderoEngine(
   canvas: HTMLCanvasElement,
   handlers: BombarderoHandlers,
+  options?: { initialSkin?: BombarderoSkin },
 ): BombarderoEngine {
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Canvas 2D no disponible");
@@ -216,9 +297,29 @@ export function createBombarderoEngine(
   canvas.height = BOMBARDERO_HEIGHT;
 
   const stars = createStars();
-  const sky = g.createLinearGradient(0, 0, 0, GROUND_Y);
-  sky.addColorStop(0, SKY_TOP);
-  sky.addColorStop(1, SKY_BOTTOM);
+  let skin: BombarderoSkin = options?.initialSkin ?? "clasico";
+  let palette = SKIN_PALETTES[skin];
+  let renderer = SKIN_RENDERERS[skin];
+  // El degradado depende de la skin: se recrea en cada cambio.
+  let sky = createSky();
+
+  function createSky(): CanvasGradient {
+    const gradient = g.createLinearGradient(0, 0, 0, GROUND_Y);
+    gradient.addColorStop(0, palette.skyTop);
+    gradient.addColorStop(1, palette.skyBottom);
+    return gradient;
+  }
+
+  function beginGlow(color: string) {
+    if (renderer.glow === 0) return;
+    g.shadowColor = color;
+    g.shadowBlur = renderer.glow;
+  }
+
+  function endGlow() {
+    g.shadowBlur = 0;
+    g.shadowColor = "transparent";
+  }
 
   let heights: number[] = [];
   let score = 0;
@@ -266,15 +367,15 @@ export function createBombarderoEngine(
   function drawSky() {
     g.fillStyle = sky;
     g.fillRect(0, 0, BOMBARDERO_WIDTH, GROUND_Y);
-    g.fillStyle = STAR_COLOR;
+    g.fillStyle = palette.star;
     for (const star of stars) {
       g.fillRect(star.x, star.y, star.size, star.size);
     }
   }
 
   function buildingColor(blocks: number): string {
-    const tier = BUILDING_TIERS.find((t) => blocks <= t.upTo);
-    return (tier ?? BUILDING_TIERS[BUILDING_TIERS.length - 1]).color;
+    const tier = palette.tiers.find((t) => blocks <= t.upTo);
+    return (tier ?? palette.tiers[palette.tiers.length - 1]).color;
   }
 
   function drawCity() {
@@ -286,7 +387,7 @@ export function createBombarderoEngine(
       g.fillStyle = buildingColor(blocks);
       g.fillRect(x + 1, top, COLUMN_WIDTH - 2, blocks * BLOCK_HEIGHT);
       // Ventanas: dos por bloque, encendidas según un patrón fijo por celda.
-      g.fillStyle = WINDOW_COLOR;
+      g.fillStyle = palette.window;
       for (let block = 0; block < blocks; block++) {
         const y = GROUND_Y - (block + 1) * BLOCK_HEIGHT + 6;
         for (let side = 0; side < 2; side++) {
@@ -295,8 +396,10 @@ export function createBombarderoEngine(
         }
       }
     }
-    g.fillStyle = GROUND_COLOR;
+    g.fillStyle = palette.ground;
+    beginGlow(palette.ground);
     g.fillRect(0, GROUND_Y, BOMBARDERO_WIDTH, GROUND_HEIGHT);
+    endGlow();
   }
 
   function drawPlane() {
@@ -315,7 +418,8 @@ export function createBombarderoEngine(
     g.translate(plane.x + halfW, plane.y + halfH);
     g.scale(facing, 1);
     g.rotate(tilt);
-    g.fillStyle = PLANE_COLOR;
+    g.fillStyle = palette.plane;
+    beginGlow(palette.plane);
     // Fuselaje: triángulo con el morro hacia delante.
     g.beginPath();
     g.moveTo(halfW, 2);
@@ -331,16 +435,19 @@ export function createBombarderoEngine(
     g.lineTo(-halfW + 12, halfH - 2);
     g.closePath();
     g.fill();
+    endGlow();
     g.restore();
   }
 
   function drawBombs() {
-    g.fillStyle = BOMB_COLOR;
+    g.fillStyle = palette.bomb;
+    beginGlow(palette.bomb);
     for (const bomb of bombs) {
       g.beginPath();
       g.arc(bomb.x, bomb.y, BOMB_RADIUS, 0, Math.PI * 2);
       g.fill();
     }
+    endGlow();
   }
 
   function drawParticles() {
@@ -358,6 +465,15 @@ export function createBombarderoEngine(
     drawBombs();
     drawPlane();
     drawParticles();
+    drawScanlines();
+  }
+
+  function drawScanlines() {
+    if (!renderer.scanlines) return;
+    g.fillStyle = SCANLINE_COLOR;
+    for (let y = 0; y < BOMBARDERO_HEIGHT; y += SCANLINE_STEP) {
+      g.fillRect(0, y, BOMBARDERO_WIDTH, 1);
+    }
   }
 
   function spawnParticles(
@@ -396,13 +512,13 @@ export function createBombarderoEngine(
   function hitColumn(bomb: Bomb, impactY: number) {
     if (heights[bomb.col] === 0) {
       // Suelo sin edificio: nube de polvo, sin puntos.
-      spawnParticles(bomb.x, impactY, DUST_PARTICLES, 90, [DUST_COLOR]);
+      spawnParticles(bomb.x, impactY, DUST_PARTICLES, 90, [palette.dust]);
       return;
     }
     heights[bomb.col] -= 1;
     score += POINTS_PER_BLOCK * (bomb.low ? LOW_ALTITUDE_BONUS_MULTIPLIER : 1);
     if (heights[bomb.col] === 0) score += BONUS_BUILDING_CLEARED;
-    spawnParticles(bomb.x, impactY, DEBRIS_PARTICLES, 220, DEBRIS_COLORS);
+    spawnParticles(bomb.x, impactY, DEBRIS_PARTICLES, 220, palette.debris);
   }
 
   function updateBombs(dt: number) {
@@ -465,7 +581,7 @@ export function createBombarderoEngine(
       plane.y + PLANE_HEIGHT / 2,
       CRASH_PARTICLES,
       260,
-      DEBRIS_COLORS,
+      palette.debris,
     );
     lives -= 1;
     if (lives <= 0) {
@@ -554,6 +670,14 @@ export function createBombarderoEngine(
   heights = generateCity(level);
 
   return {
+    setSkin(next: BombarderoSkin) {
+      if (next === skin) return;
+      skin = next;
+      palette = SKIN_PALETTES[skin];
+      renderer = SKIN_RENDERERS[skin];
+      sky = createSky();
+      draw(); // redibuja al instante, también en pausa
+    },
     start() {
       if (running) return;
       running = true;

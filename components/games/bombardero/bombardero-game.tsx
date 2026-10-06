@@ -7,6 +7,7 @@ import {
   BOMBARDERO_WIDTH,
   createBombarderoEngine,
   type BombarderoEngine,
+  type BombarderoSkin,
   type BombarderoState,
 } from "./engine";
 
@@ -16,6 +17,7 @@ export interface BombarderoGameHandle {
 
 interface BombarderoGameProps {
   paused: boolean;
+  skin: BombarderoSkin;
   onStateChange: (state: BombarderoState) => void;
   onGameOver: (finalScore: number) => void;
 }
@@ -25,7 +27,7 @@ interface BombarderoGameProps {
 export const BombarderoGame = forwardRef<
   BombarderoGameHandle,
   BombarderoGameProps
->(function BombarderoGame({ paused, onStateChange, onGameOver }, ref) {
+>(function BombarderoGame({ paused, skin, onStateChange, onGameOver }, ref) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<BombarderoEngine | null>(null);
 
@@ -44,10 +46,16 @@ export const BombarderoGame = forwardRef<
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const engine = createBombarderoEngine(canvas, {
-      onStateChange: (state) => onStateChangeRef.current(state),
-      onGameOver: (finalScore) => onGameOverRef.current(finalScore),
-    });
+    const engine = createBombarderoEngine(
+      canvas,
+      {
+        onStateChange: (state) => onStateChangeRef.current(state),
+        onGameOver: (finalScore) => onGameOverRef.current(finalScore),
+      },
+      // Valor de `skin` en el primer render: el efecto solo corre al montar;
+      // los cambios posteriores los aplica el efecto de `setSkin` de abajo.
+      { initialSkin: skin },
+    );
     engineRef.current = engine;
     engine.start();
 
@@ -55,11 +63,16 @@ export const BombarderoGame = forwardRef<
       engine.stop();
       engineRef.current = null;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     engineRef.current?.setPaused(paused);
   }, [paused]);
+
+  useEffect(() => {
+    engineRef.current?.setSkin(skin);
+  }, [skin]);
 
   useImperativeHandle(ref, () => ({
     restart() {

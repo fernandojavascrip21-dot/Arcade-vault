@@ -59,7 +59,11 @@ import {
   SerpienteGame,
   type SerpienteGameHandle,
 } from "@/components/games/serpiente/serpiente-game";
-import { type BombarderoState } from "@/components/games/bombardero/engine";
+import {
+  BOMBARDERO_SKINS,
+  BOMBARDERO_SKIN_STORAGE_KEY,
+  type BombarderoState,
+} from "@/components/games/bombardero/engine";
 import {
   BombarderoGame,
   type BombarderoGameHandle,
@@ -96,6 +100,13 @@ const rompemurosSkinStore = createSkinStore(
 const serpienteSkinStore = createSkinStore(
   SERPIENTE_SKIN_STORAGE_KEY,
   SERPIENTE_SKINS,
+  "clasico",
+);
+
+// Skin de Bombardero (spec 16 §8): store genérico de lib/skin-store.ts.
+const bombarderoSkinStore = createSkinStore(
+  BOMBARDERO_SKIN_STORAGE_KEY,
+  BOMBARDERO_SKINS,
   "clasico",
 );
 
@@ -193,6 +204,7 @@ export function PlayRoom({ game }: { game: Game }) {
   const asteroidsSkin = useSkin(asteroidsSkinStore);
   const rompemurosSkin = useSkin(rompemurosSkinStore);
   const serpienteSkin = useSkin(serpienteSkinStore);
+  const bombarderoSkin = useSkin(bombarderoSkinStore);
   const [paused, setPaused] = useState(false);
   // Menú OPCIONES (⋮) de la sala (specs 14 y 15).
   const [menuOpen, setMenuOpen] = useState(false);
@@ -371,7 +383,14 @@ export function PlayRoom({ game }: { game: Game }) {
               onChange: (id: string) =>
                 serpienteSkinStore.write(id as typeof serpienteSkin),
             }
-          : undefined;
+          : isBombardero
+            ? {
+                value: bombarderoSkin,
+                options: BOMBARDERO_SKINS,
+                onChange: (id: string) =>
+                  bombarderoSkinStore.write(id as typeof bombarderoSkin),
+              }
+            : undefined;
 
   // Sin motor de juego: simula el final de una partida con una puntuación
   // pseudoaleatoria para poder recorrer el flujo de guardado.
@@ -698,6 +717,7 @@ export function PlayRoom({ game }: { game: Game }) {
                 <BombarderoGame
                   ref={bombarderoGameRef}
                   paused={paused}
+                  skin={bombarderoSkin}
                   onStateChange={handleBombarderoStateChange}
                   onGameOver={handleBombarderoGameOver}
                 />

@@ -239,6 +239,120 @@ Reglas internas del motor:
 
 ---
 
+## 8 — Addendum (2026-10-05): skins visuales
+
+**Objetivo:** dar a Bombardero las tres skins mínimas de la plataforma — CLÁSICO (default, colores
+actuales sin cambios), RETRO (fósforo verde) y NEÓN (colores saturados con glow) — con el patrón
+de Bloques (spec 08 §8): tabla de paletas + renderers por skin en el motor, `setSkin()`, prop
+controlada `skin` y chips SKIN del menú ⋮ OPCIONES de `PlayRoom`.
+
+**Contrato ampliado** (`components/games/bombardero/engine.ts`):
+
+```ts
+export type BombarderoSkin = "clasico" | "retro" | "neon";
+
+export const BOMBARDERO_SKINS: Array<{ id: BombarderoSkin; label: string }>; // CLÁSICO, RETRO, NEÓN
+export const BOMBARDERO_SKIN_STORAGE_KEY = "arcadevault.bombardero.skin.v1";
+
+export function createBombarderoEngine(
+  canvas: HTMLCanvasElement,
+  handlers: BombarderoHandlers,
+  options?: { initialSkin?: BombarderoSkin }, // default "clasico"
+): BombarderoEngine; // + setSkin(skin): no-op si no cambia; redibuja al instante, incluso en pausa
+```
+
+**Decisiones:**
+
+- **Sí:** las constantes de color sueltas (`SKY_TOP`, `SKY_BOTTOM`, `STAR_COLOR`, `GROUND_COLOR`,
+  `WINDOW_COLOR`, `PLANE_COLOR`, `BOMB_COLOR`, `DEBRIS_COLORS`, `DUST_COLOR`, `BUILDING_TIERS`)
+  pasan a `SKIN_PALETTES` con los mismos valores en `clasico`. Mecánica, constantes numéricas,
+  puntuación y generación de la ciudad no cambian.
+- **Sí:** el degradado del cielo se recrea en cada `setSkin` (antes se creaba una vez al montar).
+- **Sí:** el trazo por skin vive en `SKIN_RENDERERS` (`glow`, `scanlines`); tras cada entidad con
+  glow se restablecen `shadowBlur`/`shadowColor`.
+- **Sí:** RETRO = fósforo verde sobre `#020a04`→`#04140a`; avión `#e0ffe8` > bomba `#b8ffcc` >
+  escombros `#33ff66`/`#8dffa8` > edificios (4 verdes `#1f9e45`…`#177a31`); ventanas apagadas
+  (`#021208`) en lugar de amarillas; suelo `#33ff66`; scanlines de 1 px cada 3 px
+  (`rgba(0,0,0,.18)`) — decisión del agente (pendiente de revisar).
+- **Sí:** NEÓN sobre `#05050a`→`#0a0a14`: avión cian `#00f5ff` (= `--cian`), bomba amarilla
+  `#f5ff00` (= `--amarillo`), escombros naranja/magenta, edificios azul/magenta/violeta/azul
+  medio, ventanas amarillas; glow `shadowBlur` 12 solo en avión, bombas y suelo (no en
+  ventanas ni partículas, para no emborronar) — decisión del agente (pendiente de revisar).
+- **Sí:** en NEÓN se sustituye el teal `#0f5a6a` del último tramo por azul `#2a6bd0` para que el
+  avión cian no se pierda contra el edificio — decisión del agente (pendiente de revisar).
+- **Sí:** persistencia en `localStorage` (`arcadevault.bombardero.skin.v1`) con el store genérico
+  `lib/skin-store.ts`, snapshot de servidor siempre `"clasico"`. "JUGAR DE NUEVO" no reinicia la
+  skin.
+- **No:** corregir el contraste de los edificios de CLÁSICO (1.45–2.21:1 contra el cielo).
+  Motivo: CLÁSICO es idéntico al original — decisión del agente (pendiente de revisar).
+- **No:** tocar Supabase, puntuación, mecánica ni tamaño del canvas.
+
+**Contrastes medidos** (WCAG, peor caso contra el cielo de la skin, arriba/abajo del degradado):
+
+| Skin    | Edificios (peor) | Avión              | Bomba              | Escombros (peor) | Polvo | Peor caso                  |
+| ------- | ---------------- | ------------------ | ------------------ | ---------------- | ----- | -------------------------- |
+| clasico | `#4a1f7a` 1.45¹  | `#00f5ff` 12.72:1  | `#f5ff00` 15.74:1  | 7.29:1           | 5.55  | edificio 1.45:1¹           |
+| retro   | `#177a31` 3.48:1 | `#e0ffe8` 17.70:1  | `#b8ffcc` 16.41:1  | 14.09:1          | 7.83  | edificio 3.48:1            |
+| neon    | `#c4208f` 3.70:1 | `#00f5ff` 14.54:1  | `#f5ff00` 17.99:1  | 5.68:1           | 6.58  | edificio 3.70:1            |
+
+¹ Excepción aceptada (CLÁSICO no altera el original).
+
+Avión vs. edificios: RETRO 3.25:1, NEÓN 3.72:1. Bomba vs. edificios en RETRO 3.02:1. Ventanas vs.
+edificio: RETRO 3.54:1, NEÓN 4.60:1. Distinción avión/bomba: RETRO por intensidad y forma
+(bomba/avión 1.08:1, distinguibles solo por forma y movimiento), NEÓN por tono cian/amarillo.
+
+**Criterios de aceptación añadidos:**
+
+- [ ] Los chips SKIN (CLÁSICO/RETRO/NEÓN) aparecen en el menú ⋮ OPCIONES de `/play/bombardero`,
+      con CLÁSICO por defecto.
+- [ ] CLÁSICO se ve idéntico a antes del addendum.
+- [ ] Cambiar de skin redibuja al instante cielo, ciudad, avión y bombas, también en pausa.
+- [ ] La skin persiste tras recargar y tras "JUGAR DE NUEVO", sin error de hidratación.
+- [ ] Mecánica, puntuación y generación de la ciudad no cambian con ninguna skin.
+- [ ] Todo elemento jugable de RETRO y NEÓN tiene contraste ≥ 3:1 contra su fondo.
+
+---
+
+## 9 — Addendum (2026-10-05): soporte móvil
+
+Mapeo del mando (misma forma que la tabla de spec 13 §2):
+
+| Juego         | D-pad            | Deslizador | Acciones           |
+| ------------- | ---------------- | ---------- | ------------------ |
+| `bombardero`  | ↑ subir · ↓ bajar | —          | BOMBA (`Espacio`)  |
+
+Izquierda y derecha quedan atenuadas (el avión avanza solo). Sin `repeat`: el motor lee estado de
+tecla (`keydown`/`keyup` mantenidos), así que mantener ↑/↓ funciona sin DAS/ARR. El motor lee
+`e.key` (`ArrowUp`/`ArrowDown`/` `), que ya emite el teclado sintético. Pausa: botón PAUSA de la
+barra (no hay tecla en el mando).
+
+```ts
+// components/touch-controller/layouts.ts
+bombardero: {
+  dpad: { up: "ArrowUp", down: "ArrowDown" },
+  actions: [{ id: "bomb", label: "BOMBA", code: "Space", icon: "bomb" }],
+},
+```
+
+**Decisiones:**
+
+- Reutilizar el icono `bomb` existente para BOMBA: Sí. Motivo: ya está en `ActionIcon`/`GLYPHS`; no
+  hace falta icono nuevo — decisión del agente (pendiente de revisar).
+- Motor sin cambios: Sí. Motivo: todo se expresa con teclas — decisión del agente (pendiente de
+  revisar).
+- Pieza de mando nueva: No. Motivo: D-pad + un botón bastan.
+
+**Criterios de aceptación añadidos:**
+
+- [ ] `/play/bombardero` en `pointer: coarse` muestra el mando con ↑/↓ activos, ←/→ atenuados y BOMBA.
+- [ ] Mantener ↑ o ↓ sube o baja el avión de forma continua; soltar lo detiene.
+- [ ] BOMBA suelta una bomba por toque.
+- [ ] A 360 px la barra del HUD cabe en una fila y los controles miden ≥ 44×44 px.
+- [ ] En horizontal el mando cabe en las columnas laterales sin scroll.
+- [ ] En escritorio (`pointer: fine`) no aparece el mando ni el botón MANDO.
+
+---
+
 ## Lo que **no** entra en este spec
 
 - Sonido, controles táctiles, selección de dificultad elegible.
