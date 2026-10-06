@@ -49,6 +49,9 @@ Skills live in `.agents/skills/` and are symlinked from `.claude/skills/`.
 
 - `/spec` — design a feature spec (`specs/NN-slug.md`, state `Draft`). No code.
 - `/spec-impl NN-slug` — implement an approved spec.
+- `/spec-impl-game NN-slug` — project-specific variant of `/spec-impl` for game specs: follows the
+  live `/spec-impl` phases, then runs `skin-designer` and, once it has finished, `mobile-porter` on
+  the new game (sequential, never in parallel — both edit `play-room.tsx`).
 - `/add-game` — project-specific variant of `/spec` for integrating a new game (port from
   `references/started-games/` or from scratch). Produces the spec only; `/spec-impl` does the work.
 - `/frontend-design` — **always use it when designing user interfaces** (project rule).
@@ -215,7 +218,8 @@ Asteroides, whose folder is `components/games/asteroids/` (`asteroids-game.tsx`)
 - **`fixed` overlays in the play room must use `createPortal(…, document.body)`**: `<main>` keeps a
   `transform` from `animate-fade`, which makes it the containing block of `position: fixed`.
 - Pipeline for a new game: `game-planner` agent (decide which game) → `/add-game` (spec) →
-  `/spec-impl` (code) → `skin-designer` (skins) and `mobile-porter` (touch + mobile play room).
+  `/spec-impl-game` (code, then `skin-designer` for skins and `mobile-porter` for touch + mobile
+  play room, in that order). The same three steps by hand: `/spec-impl`, then each agent.
   Games to-do: `references/games-suggestion-all.md`.
 - Add a game with `/add-game`. Reference sources: `references/started-games/`
   (`02-asteroids`, `03-tetris`, `04-arkanoid`) — these are **git submodules** (`.gitmodules`,
