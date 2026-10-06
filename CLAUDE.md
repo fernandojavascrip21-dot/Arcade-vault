@@ -160,7 +160,7 @@ Pages are Server Components that fetch data and pass it to `*-client.tsx` / clie
 ## Games
 
 Playable games (id → engine): `asteroides` (Asteroids), `bloques` (Tetris), `rompemuros` (Arkanoid),
-`serpiente` (Snake), under `components/games/<slug>/{engine.ts,<slug>-game.tsx}` — except
+`serpiente` (Snake), `rana` (Frogger), under `components/games/<slug>/{engine.ts,<slug>-game.tsx}` — except
 Asteroides, whose folder is `components/games/asteroids/` (`asteroids-game.tsx`).
 
 - `engine.ts` is framework-free: `create<Name>Engine(canvas, handlers, options?)` →
@@ -174,11 +174,11 @@ Asteroides, whose folder is `components/games/asteroids/` (`asteroids-game.tsx`)
   (**not** a generic registry yet) — a new game adds its own branches there. On game over it uses
   `components/game-over-ranking.tsx` to show rank + score; `hall-of-fame.tsx` shows general ranking,
   per-game boards and the player's history (“MIS PARTIDAS”).
-- **Skins** (addendum §8 of specs 06/08/10/11/16; registry in `references/games-skins.md`): every
+- **Skins** (addendum §8 of specs 06/08/10/11/16/17; registry in `references/games-skins.md`): every
   engine exports `<Name>Skin`, `<NAME>_SKINS`, `<NAME>_SKIN_STORAGE_KEY`
   (`arcadevault.<slug>.skin.v1`), takes `options.initialSkin` and has `setSkin()` (redraws
   instantly, even paused); the wrapper takes a controlled `skin` prop (same pattern as `paused`).
-  Asteroides, Rompemuros, Serpiente and Bombardero have `clasico` (default) / `retro` / `neon` and use the
+  Asteroides, Rompemuros, Serpiente, Bombardero and Rana have `clasico` (default) / `retro` / `neon` and use the
   generic store `lib/skin-store.ts` (`createSkinStore` + `useSkin`). **Bloques is the exception**:
   `retro` (default) / `neon` / `pastel` / `pixel` — no `clasico` yet — with its own hand-written
   store in `play-room.tsx`. Skins are chosen from the ⋮ OPCIONES menu (`skinControl` in

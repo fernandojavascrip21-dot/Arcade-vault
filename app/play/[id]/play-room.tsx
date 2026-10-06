@@ -68,6 +68,15 @@ import {
   BombarderoGame,
   type BombarderoGameHandle,
 } from "@/components/games/bombardero/bombardero-game";
+import {
+  RANA_SKINS,
+  RANA_SKIN_STORAGE_KEY,
+  type RanaState,
+} from "@/components/games/rana/engine";
+import {
+  RanaGame,
+  type RanaGameHandle,
+} from "@/components/games/rana/rana-game";
 import { useCredits } from "@/contexts/credits-context";
 import { useSession } from "@/contexts/session-context";
 import {
@@ -107,6 +116,13 @@ const serpienteSkinStore = createSkinStore(
 const bombarderoSkinStore = createSkinStore(
   BOMBARDERO_SKIN_STORAGE_KEY,
   BOMBARDERO_SKINS,
+  "clasico",
+);
+
+// Skin de Rana (spec 17 §8): store genérico de lib/skin-store.ts.
+const ranaSkinStore = createSkinStore(
+  RANA_SKIN_STORAGE_KEY,
+  RANA_SKINS,
   "clasico",
 );
 
@@ -205,6 +221,7 @@ export function PlayRoom({ game }: { game: Game }) {
   const rompemurosSkin = useSkin(rompemurosSkinStore);
   const serpienteSkin = useSkin(serpienteSkinStore);
   const bombarderoSkin = useSkin(bombarderoSkinStore);
+  const ranaSkin = useSkin(ranaSkinStore);
   const [paused, setPaused] = useState(false);
   // Menú OPCIONES (⋮) de la sala (specs 14 y 15).
   const [menuOpen, setMenuOpen] = useState(false);
@@ -231,13 +248,20 @@ export function PlayRoom({ game }: { game: Game }) {
   const isRompemuros = game.id === "rompemuros";
   const isSerpiente = game.id === "serpiente";
   const isBombardero = game.id === "bombardero";
+  const isRana = game.id === "rana";
   const gameRef = useRef<AsteroidsGameHandle>(null);
   const bloquesGameRef = useRef<BloquesGameHandle>(null);
   const rompemurosGameRef = useRef<RompemurosGameHandle>(null);
   const serpienteGameRef = useRef<SerpienteGameHandle>(null);
   const bombarderoGameRef = useRef<BombarderoGameHandle>(null);
+  const ranaGameRef = useRef<RanaGameHandle>(null);
   const isRealGame =
-    isAsteroids || isBloques || isRompemuros || isSerpiente || isBombardero;
+    isAsteroids ||
+    isBloques ||
+    isRompemuros ||
+    isSerpiente ||
+    isBombardero ||
+    isRana;
   // Bloques y Rompemuros pintan sus marcadores en el canvas, no en la barra.
   const hasBarStats = !isBloques && !isRompemuros;
   // Control táctil (spec 13): solo en los juegos reales que tienen layout.
@@ -333,7 +357,9 @@ export function PlayRoom({ game }: { game: Game }) {
           ? "← ↑ ↓ → / WASD MOVER · ESC / P PAUSA"
           : isBombardero
             ? "↑ / W SUBIR · ↓ / S BAJAR · ESPACIO SOLTAR BOMBA · ESC / P PAUSA"
-            : "MUEVE CON EL RATÓN O ← →";
+            : isRana
+              ? "← ↑ ↓ → / WASD SALTAR · ESC / P PAUSA"
+              : "MUEVE CON EL RATÓN O ← →";
   const exit = () => {
     exitFullscreen();
     router.push("/games");
@@ -390,7 +416,14 @@ export function PlayRoom({ game }: { game: Game }) {
                 onChange: (id: string) =>
                   bombarderoSkinStore.write(id as typeof bombarderoSkin),
               }
-            : undefined;
+            : isRana
+              ? {
+                  value: ranaSkin,
+                  options: RANA_SKINS,
+                  onChange: (id: string) =>
+                    ranaSkinStore.write(id as typeof ranaSkin),
+                }
+              : undefined;
 
   // Sin motor de juego: simula el final de una partida con una puntuación
   // pseudoaleatoria para poder recorrer el flujo de guardado.
@@ -457,6 +490,19 @@ export function PlayRoom({ game }: { game: Game }) {
   };
 
   const handleBombarderoGameOver = (finalScore: number) => {
+    setScore(finalScore);
+    setPaused(false);
+    setOver(true);
+  };
+
+  const handleRanaStateChange = (state: RanaState) => {
+    setScore(state.score);
+    setLives(state.lives);
+    setLevel(state.level);
+    setPaused(state.paused);
+  };
+
+  const handleRanaGameOver = (finalScore: number) => {
     setScore(finalScore);
     setPaused(false);
     setOver(true);
@@ -531,6 +577,11 @@ export function PlayRoom({ game }: { game: Game }) {
     }
     if (isBombardero) {
       bombarderoGameRef.current?.restart();
+      setLives(3);
+      setLevel(1);
+    }
+    if (isRana) {
+      ranaGameRef.current?.restart();
       setLives(3);
       setLevel(1);
     }
@@ -673,7 +724,8 @@ export function PlayRoom({ game }: { game: Game }) {
               isBloques ||
               isRompemuros ||
               isSerpiente ||
-              isBombardero
+              isBombardero ||
+              isRana
                 ? "#000"
                 : game.thumb
             }
@@ -720,6 +772,14 @@ export function PlayRoom({ game }: { game: Game }) {
                   skin={bombarderoSkin}
                   onStateChange={handleBombarderoStateChange}
                   onGameOver={handleBombarderoGameOver}
+                />
+              ) : isRana ? (
+                <RanaGame
+                  ref={ranaGameRef}
+                  paused={paused}
+                  skin={ranaSkin}
+                  onStateChange={handleRanaStateChange}
+                  onGameOver={handleRanaGameOver}
                 />
               ) : undefined
             }
