@@ -18,6 +18,7 @@ const START_COL = 10;
 const HOME_COLS = [1, 5, 9, 13, 17]; // primera columna de cada bahía
 const HOME_WIDTH = 2 * CELL_W;
 const HOME_INSET_Y = 8; // seto visible sobre cada bahía
+const HOME_TOLERANCE = 48; // px entre centro de rana y centro de bahía
 
 const HOP_MS = 100;
 const HOP_STRETCH = 0.18; // la rana crece a mitad de salto
@@ -25,6 +26,7 @@ const FROG_TIME_MS = 30000;
 const TIMER_WARN_MS = 10000;
 const LIVES_START = 3;
 const POINTS_PER_ROW = 10;
+const POINTS_HOME = 50;
 const SPEED_STEP = 0.12; // por nivel superado
 const SPEED_MAX_MULT = 2.2;
 const MAX_DT_MS = 50; // tope para no saltar tras pausas o cambios de pestaña
@@ -91,6 +93,10 @@ const PALETTE = {
 
 function mod(value: number, size: number): number {
   return ((value % size) + size) % size;
+}
+
+function isRiver(row: number): boolean {
+  return row > ROW_HOME && row < ROW_MEDIAN;
 }
 
 function speedMult(level: number): number {
@@ -401,29 +407,89 @@ export function createRanaEngine(
     });
   }
 
+  // Índice en LANES del carril cuya plataforma queda bajo el centro de la
+  // rana, o -1 si no está en el río o no tiene ninguna debajo.
+  function platformUnderFrog(): number {
+    if (!isRiver(frog.row)) return -1;
+    const index = LANES.findIndex((lane) => lane.row === frog.row);
+    const center = frog.x + CELL_W / 2;
+    const width = LANES[index].length * CELL_W;
+    const covered = laneObjects(index).some(
+      (x) => center >= x && center <= x + width,
+    );
+    return covered ? index : -1;
+  }
+
+  // Bahía libre en la que entra una rana con ese centro, o -1.
+  function freeHomeAt(center: number): number {
+    return HOME_COLS.findIndex(
+      (col, i) =>
+        !homes[i] &&
+        Math.abs(center - (col * CELL_W + HOME_WIDTH / 2)) <= HOME_TOLERANCE,
+    );
+  }
+
+  function spawnFrog() {
+    frog = createFrog();
+    timeLeft = FROG_TIME_MS;
+  }
+
+  function reachRow(row: number) {
+    if (row >= frog.bestRow) return;
+    frog.bestRow = row;
+    score += POINTS_PER_ROW;
+  }
+
   function hop(direction: Direction) {
     if (frog.hopMs > 0) return; // sin cola de entrada
     const row =
       frog.row + (direction === "up" ? -1 : direction === "down" ? 1 : 0);
-    const x =
+    let x =
       frog.x +
       (direction === "left" ? -CELL_W : direction === "right" ? CELL_W : 0);
-    if (row > ROW_START || row <= ROW_HOME) return;
-    if (x < 0 || x > (COLS - 1) * CELL_W) return;
+    if (row > ROW_START) return;
+
+    if (row === ROW_HOME) {
+      const home = freeHomeAt(x + CELL_W / 2);
+      if (home < 0) return;
+      reachRow(row);
+      score += POINTS_HOME;
+      homes[home] = true;
+      spawnFrog();
+      return;
+    }
+
+    if (isRiver(row)) {
+      // En el río la x es continua: basta con que el centro siga a la vista.
+      const center = x + CELL_W / 2;
+      if (center < 0 || center > RANA_WIDTH) return;
+    } else {
+      // De vuelta a tierra, la rana se ajusta a la columna más cercana.
+      if (isRiver(frog.row)) {
+        const col = Math.round(x / CELL_W);
+        x = Math.min(COLS - 1, Math.max(0, col)) * CELL_W;
+      }
+      if (x < 0 || x > (COLS - 1) * CELL_W) return;
+    }
+
     frog.fromX = frog.x;
     frog.fromRow = frog.row;
     frog.x = x;
     frog.row = row;
     frog.facing = direction;
     frog.hopMs = HOP_MS;
-    if (row < frog.bestRow) {
-      frog.bestRow = row;
-      score += POINTS_PER_ROW;
-    }
+    reachRow(row);
   }
 
   function update(dt: number) {
+    const riding = platformUnderFrog();
     updateLanes(dt);
+    if (riding >= 0) {
+      const lane = LANES[riding];
+      const dx = lane.speed * speedMult(level) * lane.dir * dt;
+      frog.x += dx;
+      if (isRiver(frog.fromRow)) frog.fromX += dx;
+    }
     frog.hopMs = Math.max(0, frog.hopMs - dt * 1000);
     emitState();
   }
