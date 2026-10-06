@@ -1,6 +1,7 @@
 export const RANA_WIDTH = 1280;
 export const RANA_HEIGHT = 800;
 
+const COLS = 20;
 const ROWS = 13;
 const CELL_W = 64; // 1280 / 20
 const CELL_H = 60; // 13 * 60 = 780
@@ -18,9 +19,12 @@ const HOME_COLS = [1, 5, 9, 13, 17]; // primera columna de cada bahía
 const HOME_WIDTH = 2 * CELL_W;
 const HOME_INSET_Y = 8; // seto visible sobre cada bahía
 
+const HOP_MS = 100;
+const HOP_STRETCH = 0.18; // la rana crece a mitad de salto
 const FROG_TIME_MS = 30000;
 const TIMER_WARN_MS = 10000;
 const LIVES_START = 3;
+const POINTS_PER_ROW = 10;
 const SPEED_STEP = 0.12; // por nivel superado
 const SPEED_MAX_MULT = 2.2;
 const MAX_DT_MS = 50; // tope para no saltar tras pausas o cambios de pestaña
@@ -93,9 +97,39 @@ function speedMult(level: number): number {
   return Math.min(SPEED_MAX_MULT, 1 + (level - 1) * SPEED_STEP);
 }
 
+type Direction = "up" | "down" | "left" | "right";
+
+const KEY_TO_DIRECTION: Record<string, Direction> = {
+  ArrowUp: "up",
+  w: "up",
+  W: "up",
+  ArrowDown: "down",
+  s: "down",
+  S: "down",
+  ArrowLeft: "left",
+  a: "left",
+  A: "left",
+  ArrowRight: "right",
+  d: "right",
+  D: "right",
+};
+
+const DIRECTION_ANGLE: Record<Direction, number> = {
+  up: 0,
+  right: Math.PI / 2,
+  down: Math.PI,
+  left: -Math.PI / 2,
+};
+
 interface Frog {
   x: number; // px, borde izquierdo de su celda
   row: number;
+  bestRow: number; // fila más alta alcanzada por esta rana
+  facing: Direction;
+  // Animación del salto: la posición lógica ya es la de destino.
+  hopMs: number; // ms que quedan de salto; 0 = quieta
+  fromX: number;
+  fromRow: number;
 }
 
 export interface RanaState {
@@ -146,7 +180,16 @@ export function createRanaEngine(
   }
 
   function createFrog(): Frog {
-    return { x: START_COL * CELL_W, row: ROW_START };
+    const x = START_COL * CELL_W;
+    return {
+      x,
+      row: ROW_START,
+      bestRow: ROW_START,
+      facing: "up",
+      hopMs: 0,
+      fromX: x,
+      fromRow: ROW_START,
+    };
   }
 
   function emitState() {
@@ -293,10 +336,11 @@ export function createRanaEngine(
     });
   }
 
-  // Rana vista desde arriba, mirando hacia la fila de casas.
-  function drawFrog(cx: number, cy: number, scale = 1) {
+  // Rana vista desde arriba; con ángulo 0 mira hacia la fila de casas.
+  function drawFrog(cx: number, cy: number, scale = 1, angle = 0) {
     g.save();
     g.translate(cx, cy);
+    g.rotate(angle);
     g.scale(scale, scale);
     g.fillStyle = PALETTE.frog;
     g.fillRect(-16, -14, 32, 30); // cuerpo
@@ -312,6 +356,18 @@ export function createRanaEngine(
     g.fillRect(-14, -22, 5, 5);
     g.fillRect(9, -22, 5, 5);
     g.restore();
+  }
+
+  function drawActiveFrog() {
+    const t = 1 - frog.hopMs / HOP_MS; // 0 = origen, 1 = destino
+    const x = frog.fromX + (frog.x - frog.fromX) * t;
+    const y = (frog.fromRow + (frog.row - frog.fromRow) * t) * CELL_H;
+    drawFrog(
+      x + CELL_W / 2,
+      y + CELL_H / 2,
+      1 + HOP_STRETCH * Math.sin(Math.PI * t),
+      DIRECTION_ANGLE[frog.facing],
+    );
   }
 
   function drawTimer() {
@@ -331,7 +387,7 @@ export function createRanaEngine(
   function draw() {
     drawBoard();
     drawLanes();
-    drawFrog(frog.x + CELL_W / 2, frog.row * CELL_H + CELL_H / 2);
+    drawActiveFrog();
     drawTimer();
   }
 
@@ -345,9 +401,40 @@ export function createRanaEngine(
     });
   }
 
+  function hop(direction: Direction) {
+    if (frog.hopMs > 0) return; // sin cola de entrada
+    const row =
+      frog.row + (direction === "up" ? -1 : direction === "down" ? 1 : 0);
+    const x =
+      frog.x +
+      (direction === "left" ? -CELL_W : direction === "right" ? CELL_W : 0);
+    if (row > ROW_START || row <= ROW_HOME) return;
+    if (x < 0 || x > (COLS - 1) * CELL_W) return;
+    frog.fromX = frog.x;
+    frog.fromRow = frog.row;
+    frog.x = x;
+    frog.row = row;
+    frog.facing = direction;
+    frog.hopMs = HOP_MS;
+    if (row < frog.bestRow) {
+      frog.bestRow = row;
+      score += POINTS_PER_ROW;
+    }
+  }
+
   function update(dt: number) {
     updateLanes(dt);
+    frog.hopMs = Math.max(0, frog.hopMs - dt * 1000);
     emitState();
+  }
+
+  function handleKeyDown(e: KeyboardEvent) {
+    const direction = KEY_TO_DIRECTION[e.key];
+    if (!direction) return;
+    e.preventDefault();
+    // Un salto por pulsación: mantener la tecla no repite.
+    if (e.repeat || paused) return;
+    hop(direction);
   }
 
   function loop(now: number) {
@@ -363,12 +450,14 @@ export function createRanaEngine(
     start() {
       if (running) return;
       running = true;
+      window.addEventListener("keydown", handleKeyDown);
       lastTime = performance.now();
       emitState();
       rafId = requestAnimationFrame(loop);
     },
     stop() {
       running = false;
+      window.removeEventListener("keydown", handleKeyDown);
       cancelAnimationFrame(rafId);
     },
     setPaused(value: boolean) {
