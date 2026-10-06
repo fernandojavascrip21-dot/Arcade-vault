@@ -15,9 +15,9 @@ C5 estética · C6 catálogo · C7 esfuerzo (5 = bajo) · C8 propiedad intelectu
 
 | Estado         | Juegos | Qué significa                                                      |
 | -------------- | ------ | ------------------------------------------------------------------ |
-| ✅ Hechos      | 4      | Jugables en la plataforma (motor en `components/games/`).          |
+| ✅ Hechos      | 5      | Jugables en la plataforma (motor en `components/games/`).          |
 | ⏳ Pendientes  | 4      | Aprobados, en orden de prioridad; el siguiente pasa a `/add-game`. |
-| ❌ Descartados | 3      | Evaluados y rechazados; no se vuelven a proponer.                  |
+| ❌ Descartados | 2      | Evaluados y rechazados; no se vuelven a proponer.                  |
 | 💡 Sugerencias | 19     | Propuestas nuevas del `game-planner`, aún sin aprobar.             |
 
 ## To-do de juegos
@@ -31,6 +31,7 @@ Fuente de los hechos: `references/implementd-game.md` (tabla `games` de Supabase
 - [x] 🟢 **BLOQUES** (`bloques`) · Puzzle · Tetris — Encaja las piezas que caen sin dejar huecos. · `components/games/bloques/`
 - [x] 🟢 **ROMPEMUROS** (`rompemuros`) · Acción · Arkanoid — Destruye la muralla con la pala y la bola. · `components/games/rompemuros/`
 - [x] 🟢 **SERPIENTE** (`serpiente`) · Clásico · Snake — Crece sin morderte la cola. · `components/games/serpiente/`
+- [x] 🟢 **RANA** (`rana`) · Acción · Frogger — Cruza la autopista y el río sin perder el salto. · `components/games/rana/` (rescatada de Descartados en el spec 17: pasa a Acción y puntúa sin bono de tiempo)
 
 ### ⏳ Pendientes
 
@@ -42,7 +43,6 @@ Fuente de los hechos: `references/implementd-game.md` (tabla `games` de Supabase
 ### ❌ Descartados
 
 - 🔴 ~~DEFENSA~~ (`defensa`) · 34/40 — apuntar con teclado es lento.
-- 🔴 ~~RANA~~ (`rana`) · 33/40 — satura Clásico y la puntuación depende del tiempo.
 - 🔴 ~~RAQUETA~~ (`raqueta`) · 31/40 — duplica ROMPEMUROS; marcador no apto para rankings.
 
 ### 💡 Sugerencias del game-planner (sin aprobar)

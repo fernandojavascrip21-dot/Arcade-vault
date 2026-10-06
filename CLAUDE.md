@@ -160,7 +160,7 @@ Pages are Server Components that fetch data and pass it to `*-client.tsx` / clie
 ## Games
 
 Playable games (id → engine): `asteroides` (Asteroids), `bloques` (Tetris), `rompemuros` (Arkanoid),
-`serpiente` (Snake), under `components/games/<slug>/{engine.ts,<slug>-game.tsx}` — except
+`serpiente` (Snake), `rana` (Frogger), under `components/games/<slug>/{engine.ts,<slug>-game.tsx}` — except
 Asteroides, whose folder is `components/games/asteroids/` (`asteroids-game.tsx`).
 
 - `engine.ts` is framework-free: `create<Name>Engine(canvas, handlers, options?)` →

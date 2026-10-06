@@ -10,6 +10,7 @@ Fuente: tabla `games` de Supabase, contrastada con `components/games/`.
 | `bloques`    | BLOQUES    | Puzzle    | Tetris                | `components/games/bloques/`    |
 | `rompemuros` | ROMPEMUROS | Acción    | Arkanoid              | `components/games/rompemuros/` |
 | `serpiente`  | SERPIENTE  | Clásico   | Snake                 | `components/games/serpiente/`  |
+| `rana`       | RANA       | Acción    | Frogger               | `components/games/rana/`       |
 
 ### ASTEROIDES
 
@@ -34,6 +35,12 @@ Fuente: tabla `games` de Supabase, contrastada con `components/games/`.
 - **Categoría:** Clásico
 - **Descripción:** Crece sin morderte la cola.
 - **Detalle:** Guía a la serpiente por la rejilla y come cada punto que aparece. Con cada bocado el cuerpo se alarga y el margen de error se reduce. Un solo choque contra el muro o contra ti mismo termina la partida.
+
+### RANA
+
+- **Categoría:** Acción
+- **Descripción:** Cruza la autopista y el río sin perder el salto.
+- **Detalle:** Lleva a cada rana desde la orilla hasta su casa al otro lado. Primero cinco carriles de tráfico que no frenan; después un río que solo se cruza saltando entre troncos y tortugas. Llena las cinco casas para subir de nivel: todo se acelera y sigues con las mismas tres vidas.
 
 ## Solo en el catálogo (sin motor de juego todavía)
 
