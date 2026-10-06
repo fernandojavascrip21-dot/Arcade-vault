@@ -40,8 +40,10 @@ Leyenda: 🟢 cumple · 🟡 parcial · 🔴 sin skins.
 ### BLOQUES
 
 - **Skins:** `retro` (RETRO, default), `neon` (NEÓN), `pastel` (PASTEL), `pixel` (PIXEL ART).
+- **Selector:** chips SKIN del menú ⋮ OPCIONES de `PlayRoom` (`skinControl`, `isBloques`), con
+  un store propio escrito a mano en `play-room.tsx` (no usa `lib/skin-store.ts`).
 - **Clave localStorage:** `arcadevault.bloques.skin.v1`
-- **Spec:** `specs/08-juego-tetris-real.md` §8 (addendum "skins visuales").
+- **Spec:** `specs/08-juego-tetris-real.md` §8 (addendum "skins visuales", 2026-09-29).
 - **Pendiente:** la `retro` actual pasa a ser `clasico` (default); diseñar un `retro` nuevo
   (fósforo/CRT). `pastel` y `pixel` se conservan como extras.
 
@@ -88,8 +90,8 @@ Leyenda: 🟢 cumple · 🟡 parcial · 🔴 sin skins.
 
 ### RANA
 
-- **Skins:** `clasico` (CLÁSICO, default — colores originales), `retro` (RETRO, fósforo verde en
-  4 intensidades + scanlines), `neon` (NEÓN, rana lima, glow en rana/plataformas/vehículos/barra).
+- **Skins:** `clasico` (CLÁSICO, default — paleta con la que se implementó el spec 17), `retro`
+  (RETRO, fósforo verde en 4 intensidades + scanlines), `neon` (NEÓN, rana lima, glow en rana/plataformas/vehículos/barra).
   Paletas en `SKIN_PALETTES` y trazo en `SKIN_RENDERERS` (`glow`, `scanlines`) de
   `components/games/rana/engine.ts`; `setSkin()` redibuja incluso en pausa y con partida terminada.
 - **Selector:** chips SKIN del menú ⋮ OPCIONES de `PlayRoom` (`skinControl`, `isRana`), store
@@ -97,12 +99,15 @@ Leyenda: 🟢 cumple · 🟡 parcial · 🔴 sin skins.
 - **Clave localStorage:** `arcadevault.rana.skin.v1`
 - **Spec:** `specs/17-juego-rana.md` §8 (addendum "skins visuales", 2026-10-05).
 - **Nota:** en CLÁSICO tronco/agua (2.40:1), rana/tortuga (2.54:1) y rana muerta/tortuga (1.22:1)
-  quedan bajo 3:1; se acepta porque CLÁSICO no altera el original.
+  quedan bajo 3:1. `skin-designer` no los corrigió para dejar CLÁSICO como estaba, pero aquí no
+  hay un original externo que preservar (la paleta nació en el spec 17): ajuste pendiente de
+  decisión.
 
 ## Contrastes medidos (modo oscuro)
 
 Peor caso por skin (color jugable vs. fondo de la skin). Lo completa `skin-designer` al
-implementar.
+implementar. En `rana` el peor caso es la rana sobre una plataforma, así que la columna Fondo es
+el color de esa plataforma. `bloques` no tiene contrastes medidos.
 
 | Juego        | Skin      | Peor color                                 | Fondo     | Contraste                                |
 | ------------ | --------- | ------------------------------------------ | --------- | ---------------------------------------- |
@@ -118,6 +123,6 @@ implementar.
 | `bombardero` | `clasico` | `#4a1f7a` (edificio)                       | `#241238` | 1.45:1 (excepción: original sin cambios) |
 | `bombardero` | `retro`   | `#177a31` (edificio)                       | `#04140a` | 3.48:1                                   |
 | `bombardero` | `neon`    | `#c4208f` (edificio)                       | `#0a0a14` | 3.70:1                                   |
-| `rana`       | `clasico` | `#ff2d6f` (rana muerta) sobre `#d9442e`    | `#d9442e` | 1.22:1 (excepción: original sin cambios) |
-| `rana`       | `retro`   | `#e0ffe8` (rana) sobre tortuga `#1f9e45`   | `#1f9e45` | 3.25:1                                   |
-| `rana`       | `neon`    | `#ccff33` (rana) sobre borde tronco        | `#cc7000` | 3.04:1                                   |
+| `rana`       | `clasico` | `#ff2d6f` (rana muerta)                    | `#d9442e` | 1.22:1 (sobre tortuga; pendiente)        |
+| `rana`       | `retro`   | `#e0ffe8` (rana)                           | `#1f9e45` | 3.25:1 (sobre tortuga)                   |
+| `rana`       | `neon`    | `#ccff33` (rana)                           | `#cc7000` | 3.04:1 (sobre el borde del tronco)       |
