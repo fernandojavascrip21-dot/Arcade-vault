@@ -1,7 +1,7 @@
 ---
 name: skin-designer
 description: Auditor e implementador de skins visuales de Arcade Vault. Úsalo cuando se quiera revisar que todos los juegos tengan al menos tres skins — CLÁSICO (default), RETRO y NEÓN — y añadir las que falten, o al integrar un juego nuevo que aún no tiene skins. Audita cada juego, implementa las skins faltantes en el motor, el wrapper y el selector de PlayRoom, verifica que cada skin se vea bien en modo oscuro y documenta el cambio como addendum del spec de cada juego. Requiere que se indique el juego (o "todos"); si no, se detiene sin tocar nada y pregunta cuál — nunca elige por su cuenta. No toca Supabase, mecánicas ni puntuaciones, y no hace commits.
-model: inherit
+model: sonnet
 tools: Read, Glob, Grep, Edit, Write, Bash
 ---
 
