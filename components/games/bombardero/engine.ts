@@ -21,7 +21,21 @@ const PLANE_SPEED_X_MAX = 380;
 const PLANE_TURN_MARGIN = 40; // px desde el borde donde rebota
 const MAX_DT_MS = 50; // tope para no saltar tras pausas o cambios de pestaña
 
+const BOMB_RADIUS = 6;
+const BOMB_SPEED_Y = 320; // px/s, constante
+const BOMB_COOLDOWN_MS = 280;
+const BOMB_MAX_ACTIVE = 6;
+
 const LIVES_START = 3;
+const POINTS_PER_BLOCK = 15;
+const LOW_ALTITUDE_Y = 480; // y >= esto al soltar la bomba = "vuelo bajo"
+const LOW_ALTITUDE_BONUS_MULTIPLIER = 2;
+const BONUS_BUILDING_CLEARED = 100;
+
+const PARTICLE_LIFE_MS = 500;
+const PARTICLE_GRAVITY = 900; // px/s²
+const DEBRIS_PARTICLES = 8;
+const DUST_PARTICLES = 4;
 
 // Generación de la ciudad (spec 16 §2).
 const BASE_HEIGHT_MIN = 4;
@@ -44,6 +58,9 @@ const WINDOW_COLOR = "#f5d94a";
 const WINDOW_SIZE = 8;
 const PLANE_COLOR = "#00f5ff";
 const PLANE_TILT = (12 * Math.PI) / 180;
+const BOMB_COLOR = "#f5ff00";
+const DEBRIS_COLORS = ["#ff8a00", "#f5d94a"];
+const DUST_COLOR = "#8a93a0";
 
 // Color del edificio según su altura actual en bloques.
 const BUILDING_TIERS: Array<{ upTo: number; color: string }> = [
@@ -144,6 +161,22 @@ interface Plane {
   invulnerableUntil: number;
 }
 
+interface Bomb {
+  x: number;
+  y: number;
+  col: number; // columna de impacto, fijada al soltarla
+  low: boolean; // soltada en vuelo bajo: sus puntos por bloque valen doble
+}
+
+interface Particle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  life: number; // ms restantes
+  color: string;
+}
+
 export interface BombarderoState {
   score: number;
   lives: number;
@@ -187,6 +220,9 @@ export function createBombarderoEngine(
   let paused = false;
   let climbUp = false;
   let climbDown = false;
+  let bombs: Bomb[] = [];
+  let particles: Particle[] = [];
+  let bombCooldown = 0; // ms hasta poder soltar otra bomba
   let lastTime = 0;
   let rafId = 0;
   let running = false;
@@ -282,10 +318,97 @@ export function createBombarderoEngine(
     g.restore();
   }
 
+  function drawBombs() {
+    g.fillStyle = BOMB_COLOR;
+    for (const bomb of bombs) {
+      g.beginPath();
+      g.arc(bomb.x, bomb.y, BOMB_RADIUS, 0, Math.PI * 2);
+      g.fill();
+    }
+  }
+
+  function drawParticles() {
+    for (const particle of particles) {
+      g.globalAlpha = Math.min(1, particle.life / (PARTICLE_LIFE_MS / 2));
+      g.fillStyle = particle.color;
+      g.fillRect(particle.x - 2, particle.y - 2, 4, 4);
+    }
+    g.globalAlpha = 1;
+  }
+
   function draw() {
     drawSky();
     drawCity();
+    drawBombs();
     drawPlane();
+    drawParticles();
+  }
+
+  function spawnParticles(
+    x: number,
+    y: number,
+    count: number,
+    speed: number,
+    colors: string[],
+  ) {
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const velocity = speed * (0.4 + Math.random() * 0.6);
+      particles.push({
+        x,
+        y,
+        vx: Math.cos(angle) * velocity,
+        vy: Math.sin(angle) * velocity - speed * 0.5,
+        life: PARTICLE_LIFE_MS,
+        color: colors[i % colors.length],
+      });
+    }
+  }
+
+  function dropBomb() {
+    if (bombCooldown > 0 || bombs.length >= BOMB_MAX_ACTIVE) return;
+    const x = plane.x + PLANE_WIDTH / 2;
+    bombs.push({
+      x,
+      y: plane.y + PLANE_HEIGHT,
+      col: clamp(Math.floor(x / COLUMN_WIDTH), 0, COLUMNS - 1),
+      low: plane.y >= LOW_ALTITUDE_Y,
+    });
+    bombCooldown = BOMB_COOLDOWN_MS;
+  }
+
+  function hitColumn(bomb: Bomb, impactY: number) {
+    if (heights[bomb.col] === 0) {
+      // Suelo sin edificio: nube de polvo, sin puntos.
+      spawnParticles(bomb.x, impactY, DUST_PARTICLES, 90, [DUST_COLOR]);
+      return;
+    }
+    heights[bomb.col] -= 1;
+    score += POINTS_PER_BLOCK * (bomb.low ? LOW_ALTITUDE_BONUS_MULTIPLIER : 1);
+    if (heights[bomb.col] === 0) score += BONUS_BUILDING_CLEARED;
+    spawnParticles(bomb.x, impactY, DEBRIS_PARTICLES, 220, DEBRIS_COLORS);
+  }
+
+  function updateBombs(dt: number) {
+    bombCooldown = Math.max(0, bombCooldown - dt * 1000);
+    const falling: Bomb[] = [];
+    for (const bomb of bombs) {
+      bomb.y += BOMB_SPEED_Y * dt;
+      const impactY = GROUND_Y - heights[bomb.col] * BLOCK_HEIGHT;
+      if (bomb.y + BOMB_RADIUS >= impactY) hitColumn(bomb, impactY);
+      else falling.push(bomb);
+    }
+    bombs = falling;
+  }
+
+  function updateParticles(dt: number) {
+    for (const particle of particles) {
+      particle.vy += PARTICLE_GRAVITY * dt;
+      particle.x += particle.vx * dt;
+      particle.y += particle.vy * dt;
+      particle.life -= dt * 1000;
+    }
+    particles = particles.filter((particle) => particle.life > 0);
   }
 
   function updatePlane(dt: number) {
@@ -307,9 +430,17 @@ export function createBombarderoEngine(
 
   function update(dt: number) {
     updatePlane(dt);
+    updateBombs(dt);
+    updateParticles(dt);
+    emitState();
   }
 
   function handleKeyDown(e: KeyboardEvent) {
+    if (e.key === " " || e.code === "Space") {
+      e.preventDefault();
+      if (!paused) dropBomb();
+      return;
+    }
     const climb = KEY_TO_CLIMB[e.key];
     if (!climb) return;
     e.preventDefault();
@@ -365,6 +496,9 @@ export function createBombarderoEngine(
       paused = false;
       climbUp = false;
       climbDown = false;
+      bombs = [];
+      particles = [];
+      bombCooldown = 0;
       heights = generateCity(level);
       plane = createPlane();
       emitState();
