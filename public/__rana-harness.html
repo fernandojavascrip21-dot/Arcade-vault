@@ -21,6 +21,9 @@ const HOME_INSET_Y = 8; // seto visible sobre cada bahía
 const FROG_TIME_MS = 30000;
 const TIMER_WARN_MS = 10000;
 const LIVES_START = 3;
+const SPEED_STEP = 0.12; // por nivel superado
+const SPEED_MAX_MULT = 2.2;
+const MAX_DT_MS = 50; // tope para no saltar tras pausas o cambios de pestaña
 const LANES = [
     { row: 1, kind: "log", length: 4, count: 3, speed: 80, dir: 1 },
     { row: 2, kind: "turtle", length: 2, count: 4, speed: 100, dir: -1 },
@@ -70,6 +73,9 @@ const PALETTE = {
 function mod(value, size) {
     return ((value % size) + size) % size;
 }
+function speedMult(level) {
+    return Math.min(SPEED_MAX_MULT, 1 + (level - 1) * SPEED_STEP);
+}
 function createRanaEngine(canvas, handlers) {
     const ctx = canvas.getContext("2d");
     if (!ctx)
@@ -85,6 +91,8 @@ function createRanaEngine(canvas, handlers) {
     let lives = LIVES_START;
     let level = 1;
     let paused = false;
+    let lastTime = 0;
+    let rafId = 0;
     let running = false;
     let lastEmitted = null;
     function createOffsets() {
@@ -259,16 +267,38 @@ function createRanaEngine(canvas, handlers) {
         drawFrog(frog.x + CELL_W / 2, frog.row * CELL_H + CELL_H / 2);
         drawTimer();
     }
+    function updateLanes(dt) {
+        const mult = speedMult(level);
+        LANES.forEach((lane, index) => {
+            offsets[index] = mod(offsets[index] + lane.speed * mult * lane.dir * dt, LOOP);
+        });
+    }
+    function update(dt) {
+        updateLanes(dt);
+        emitState();
+    }
+    function loop(now) {
+        if (!running)
+            return;
+        const dt = Math.min(now - lastTime, MAX_DT_MS) / 1000;
+        lastTime = now;
+        if (!paused)
+            update(dt);
+        draw();
+        rafId = requestAnimationFrame(loop);
+    }
     return {
         start() {
             if (running)
                 return;
             running = true;
+            lastTime = performance.now();
             emitState();
-            draw();
+            rafId = requestAnimationFrame(loop);
         },
         stop() {
             running = false;
+            cancelAnimationFrame(rafId);
         },
         setPaused(value) {
             if (paused === value)
@@ -286,7 +316,6 @@ function createRanaEngine(canvas, handlers) {
             frog = createFrog();
             timeLeft = FROG_TIME_MS;
             emitState();
-            draw();
         },
     };
 }

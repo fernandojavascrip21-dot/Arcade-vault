@@ -21,6 +21,9 @@ const HOME_INSET_Y = 8; // seto visible sobre cada bahía
 const FROG_TIME_MS = 30000;
 const TIMER_WARN_MS = 10000;
 const LIVES_START = 3;
+const SPEED_STEP = 0.12; // por nivel superado
+const SPEED_MAX_MULT = 2.2;
+const MAX_DT_MS = 50; // tope para no saltar tras pausas o cambios de pestaña
 
 type LaneKind = "car" | "truck" | "log" | "turtle";
 
@@ -86,6 +89,10 @@ function mod(value: number, size: number): number {
   return ((value % size) + size) % size;
 }
 
+function speedMult(level: number): number {
+  return Math.min(SPEED_MAX_MULT, 1 + (level - 1) * SPEED_STEP);
+}
+
 interface Frog {
   x: number; // px, borde izquierdo de su celda
   row: number;
@@ -129,6 +136,8 @@ export function createRanaEngine(
   let lives = LIVES_START;
   let level = 1;
   let paused = false;
+  let lastTime = 0;
+  let rafId = 0;
   let running = false;
   let lastEmitted: RanaState | null = null;
 
@@ -326,15 +335,41 @@ export function createRanaEngine(
     drawTimer();
   }
 
+  function updateLanes(dt: number) {
+    const mult = speedMult(level);
+    LANES.forEach((lane, index) => {
+      offsets[index] = mod(
+        offsets[index] + lane.speed * mult * lane.dir * dt,
+        LOOP,
+      );
+    });
+  }
+
+  function update(dt: number) {
+    updateLanes(dt);
+    emitState();
+  }
+
+  function loop(now: number) {
+    if (!running) return;
+    const dt = Math.min(now - lastTime, MAX_DT_MS) / 1000;
+    lastTime = now;
+    if (!paused) update(dt);
+    draw();
+    rafId = requestAnimationFrame(loop);
+  }
+
   return {
     start() {
       if (running) return;
       running = true;
+      lastTime = performance.now();
       emitState();
-      draw();
+      rafId = requestAnimationFrame(loop);
     },
     stop() {
       running = false;
+      cancelAnimationFrame(rafId);
     },
     setPaused(value: boolean) {
       if (paused === value) return;
@@ -351,7 +386,6 @@ export function createRanaEngine(
       frog = createFrog();
       timeLeft = FROG_TIME_MS;
       emitState();
-      draw();
     },
   };
 }
