@@ -18,6 +18,7 @@ actualiza cada vez que se añade, renombra o quita una skin, o se integra un jue
 | `rompemuros` | `components/games/rompemuros/` | `clasico`, `retro`, `neon`         | `clasico` | —                                                             | Sí                   | 🟢     |
 | `serpiente`  | `components/games/serpiente/`  | `clasico`, `retro`, `neon`         | `clasico` | —                                                             | Sí                   | 🟢     |
 | `bombardero` | `components/games/bombardero/` | `clasico`, `retro`, `neon`         | `clasico` | —                                                             | Sí                   | 🟢     |
+| `rana`       | `components/games/rana/`       | `clasico`, `retro`, `neon`         | `clasico` | —                                                             | Sí                   | 🟢     |
 
 Leyenda: 🟢 cumple · 🟡 parcial · 🔴 sin skins.
 
@@ -85,6 +86,19 @@ Leyenda: 🟢 cumple · 🟡 parcial · 🔴 sin skins.
 - **Nota:** en CLÁSICO los edificios llegan a 1.45:1 contra el cielo; se acepta porque CLÁSICO
   no altera el original.
 
+### RANA
+
+- **Skins:** `clasico` (CLÁSICO, default — colores originales), `retro` (RETRO, fósforo verde en
+  4 intensidades + scanlines), `neon` (NEÓN, rana lima, glow en rana/plataformas/vehículos/barra).
+  Paletas en `SKIN_PALETTES` y trazo en `SKIN_RENDERERS` (`glow`, `scanlines`) de
+  `components/games/rana/engine.ts`; `setSkin()` redibuja incluso en pausa y con partida terminada.
+- **Selector:** chips SKIN del menú ⋮ OPCIONES de `PlayRoom` (`skinControl`, `isRana`), store
+  genérico `lib/skin-store.ts` (snapshot de servidor `"clasico"`).
+- **Clave localStorage:** `arcadevault.rana.skin.v1`
+- **Spec:** `specs/17-juego-rana.md` §8 (addendum "skins visuales", 2026-10-05).
+- **Nota:** en CLÁSICO tronco/agua (2.40:1), rana/tortuga (2.54:1) y rana muerta/tortuga (1.22:1)
+  quedan bajo 3:1; se acepta porque CLÁSICO no altera el original.
+
 ## Contrastes medidos (modo oscuro)
 
 Peor caso por skin (color jugable vs. fondo de la skin). Lo completa `skin-designer` al
@@ -104,3 +118,6 @@ implementar.
 | `bombardero` | `clasico` | `#4a1f7a` (edificio)                       | `#241238` | 1.45:1 (excepción: original sin cambios) |
 | `bombardero` | `retro`   | `#177a31` (edificio)                       | `#04140a` | 3.48:1                                   |
 | `bombardero` | `neon`    | `#c4208f` (edificio)                       | `#0a0a14` | 3.70:1                                   |
+| `rana`       | `clasico` | `#ff2d6f` (rana muerta) sobre `#d9442e`    | `#d9442e` | 1.22:1 (excepción: original sin cambios) |
+| `rana`       | `retro`   | `#e0ffe8` (rana) sobre tortuga `#1f9e45`   | `#1f9e45` | 3.25:1                                   |
+| `rana`       | `neon`    | `#ccff33` (rana) sobre borde tronco        | `#cc7000` | 3.04:1                                   |

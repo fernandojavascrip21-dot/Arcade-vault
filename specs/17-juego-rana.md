@@ -288,9 +288,102 @@ Reglas internas del motor:
 
 ---
 
+## 8 — Addendum (2026-10-05): skins visuales
+
+**Objetivo:** dar a RANA las tres skins mínimas de la plataforma — CLÁSICO (default, colores de `PALETTE` sin cambios), RETRO (fósforo verde) y NEÓN (colores saturados con glow) — con el patrón de Bloques (spec 08 §8) y Bombardero (spec 16 §8): tabla de paletas + renderers por skin en el motor, `setSkin()`, prop controlada `skin` y chips SKIN del menú ⋮ OPCIONES de `PlayRoom`.
+
+**Contrato ampliado** (`components/games/rana/engine.ts`):
+
+```ts
+export type RanaSkin = "clasico" | "retro" | "neon";
+
+export const RANA_SKINS: Array<{ id: RanaSkin; label: string }>; // CLÁSICO, RETRO, NEÓN
+export const RANA_SKIN_STORAGE_KEY = "arcadevault.rana.skin.v1";
+
+export function createRanaEngine(
+  canvas: HTMLCanvasElement,
+  handlers: RanaHandlers,
+  options?: { initialSkin?: RanaSkin }, // default "clasico"
+): RanaEngine; // + setSkin(skin): no-op si no cambia; redibuja al instante, incluso en pausa o con la partida terminada
+```
+
+**Decisiones:**
+
+- **Sí:** `PALETTE` pasa a `SKIN_PALETTES` con los mismos valores en `clasico`. Mecánica, `LANES`, constantes numéricas y puntuación no cambian.
+- **Sí:** trazo por skin en `SKIN_RENDERERS` (`glow`, `scanlines`); glow solo en el relleno principal de rana, troncos, tortugas, vehículos y barra de tiempo, y `shadowBlur`/`shadowColor` se restablecen tras cada entidad.
+- **Sí:** RETRO = fósforo verde en 4 intensidades. Fondos `#020a04`/`#04140a`/`#0a2a14`; plataformas a media intensidad (tronco `#177a31`, tortuga `#1f9e45`); rana `#e0ffe8` (máxima); vehículos de `#177a31` a `#8dffa8`; barra de tiempo `#1f9e45` normal y `#e0ffe8` en aviso (se distingue por intensidad); scanlines de 1 px cada 3 px (`rgba(0,0,0,.18)`) — decisión del agente (pendiente de revisar).
+- **Sí:** en RETRO la rana muerta conserva el cuerpo `#e0ffe8` (para mantener el contraste con las tortugas) y se distingue por el vientre oscuro, el encogimiento y el giro — decisión del agente (pendiente de revisar).
+- **Sí:** NEÓN sobre `#05050a`/`#0a0a14`: rana lima `#ccff33`, rana muerta blanca con vientre magenta, troncos naranja oscuro `#b35f00`, tortugas magenta `#c4208f`, vehículos naranja/magenta/cian/violeta/azul (la fila amarilla de CLÁSICO pasa a naranja para no confundirse con la rana lima), barra de tiempo cian y magenta en aviso; glow `shadowBlur` 10, no en ventanas, faros ni decoración — decisión del agente (pendiente de revisar).
+- **Sí:** persistencia en `localStorage` (`arcadevault.rana.skin.v1`) con el store genérico `lib/skin-store.ts`, snapshot de servidor siempre `"clasico"`. "JUGAR DE NUEVO" no reinicia la skin.
+- **No:** corregir los contrastes de CLÁSICO (tronco/agua 2.40:1, rana/tortuga 2.54:1, rana muerta/tortuga 1.22:1, rana muerta/seto 1.50:1). Motivo: CLÁSICO es idéntico al aspecto original — decisión del agente (pendiente de revisar).
+- **No:** tocar Supabase, puntuación, mecánica, `LANES`, mando táctil ni tamaño del canvas.
+
+**Contrastes medidos** (WCAG; rana viva contra las superficies que pisa, plataformas contra el agua, vehículos contra la carretera):
+
+| Skin    | Rana/zona segura | Rana/carretera | Rana/tronco | Rana/tortuga | Rana/bahía | Rana muerta (peor) | Plataformas/agua (peor) | Vehículos/carretera (peor) | Barra ok/pista | Barra aviso/pista | Peor caso                  |
+| ------- | ---------------- | -------------- | ----------- | ------------ | ---------- | ------------------ | ----------------------- | -------------------------- | -------------- | ----------------- | -------------------------- |
+| clasico | 8.04             | 10.08          | 3.42        | 2.54¹        | 10.47      | 1.22¹ (tortuga)    | 2.40¹ (tronco)          | 4.82                       | 10.08          | 4.82              | muerta/tortuga 1.22:1¹     |
+| retro   | 14.50            | 17.70          | 5.08        | 3.25         | 18.74      | 3.25 (tortuga)     | 3.69 (tronco)           | 3.48                       | 5.44           | 17.70             | 3.25:1 (rana/tortuga)      |
+| neon    | 16.37            | 16.80          | 3.94        | 4.54         | 17.35      | 4.61 (tronco)      | 3.74 (tortuga)          | 5.29                       | 14.54          | 5.68              | 3.04:1 (rana/borde tronco) |
+
+¹ Excepción aceptada (CLÁSICO no altera el original). En RETRO la barra de aviso se distingue de la normal por intensidad (3.25:1); en NEÓN por tono cian/magenta. Rana viva/muerta en RETRO se distinguen por el vientre; en NEÓN por tono (lima/blanco).
+
+**Criterios de aceptación añadidos:**
+
+- [ ] Los chips SKIN (CLÁSICO/RETRO/NEÓN) aparecen en el menú ⋮ OPCIONES de `/play/rana`, con CLÁSICO por defecto.
+- [ ] CLÁSICO se ve idéntico a antes del addendum.
+- [ ] Cambiar de skin redibuja al instante el tablero, plataformas, vehículos, rana y barra de tiempo, también en pausa y con la partida terminada.
+- [ ] La skin persiste tras recargar y tras "JUGAR DE NUEVO", sin error de hidratación.
+- [ ] Mecánica, puntuación y `LANES` no cambian con ninguna skin.
+- [ ] Todo elemento jugable de RETRO y NEÓN tiene contraste ≥ 3:1 contra su fondo.
+
+---
+
+## 9 — Addendum (2026-10-05): soporte móvil
+
+Mapeo del mando (misma forma que la tabla de spec 13 §2):
+
+| Juego  | D-pad                  | Deslizador | Acciones |
+| ------ | ---------------------- | ---------- | -------- |
+| `rana` | ↑ ↓ ← → (un salto cada uno) | —     | —        |
+
+El motor lee `e.key` (`ArrowUp`/`ArrowDown`/`ArrowLeft`/`ArrowRight`) en `keydown` sobre `window`,
+que ya emite el teclado sintético; no usa `keyup` ni `isTrusted`. Sin `repeat`: el mando emite un
+único `keydown` (`repeat: false`) por toque y mantener el dedo no genera más, así que un toque
+mantenido da un solo salto (el motor además ignora `e.repeat` y las pulsaciones durante el salto y
+la animación de muerte). Sin botones de acción (como Serpiente). Pausa: botón PAUSA de la barra
+(el mando no emite `Escape`/`P`).
+
+```ts
+// components/touch-controller/layouts.ts
+rana: {
+  dpad: { up: "ArrowUp", down: "ArrowDown", left: "ArrowLeft", right: "ArrowRight" },
+  actions: [],
+},
+```
+
+**Decisiones:**
+
+- Sin `repeat` (DAS/ARR): Sí. Motivo: lo exige §7 (riesgos); un salto por pulsación — decisión del agente (pendiente de revisar).
+- Sin botones de acción: Sí. Motivo: el juego no usa ninguna tecla de acción — decisión del agente (pendiente de revisar).
+- Motor sin cambios: Sí. Motivo: todo se expresa con teclas — decisión del agente (pendiente de revisar).
+- `PlayRoom` sin cambios: Sí. Motivo: `isRana`, `isRealGame`, contenido de `CrtFrame`, ayuda de teclado, `skinControl`, `replay()` y marcadores VIDAS/NIVEL del HUD ya existían; el layout táctil se resuelve por `game.id` — decisión del agente (pendiente de revisar).
+- Pieza de mando nueva: No. Motivo: el D-pad basta.
+
+**Criterios de aceptación añadidos:**
+
+- [ ] `/play/rana` en `pointer: coarse` muestra el mando con las cuatro direcciones activas y sin botones de acción.
+- [ ] Cada toque en el D-pad da exactamente un salto; mantener pulsado no encadena saltos.
+- [ ] A 360 px la barra del HUD cabe en una fila y los controles miden ≥ 44×44 px.
+- [ ] En horizontal el mando cabe en las columnas laterales sin scroll.
+- [ ] Pausa con el botón PAUSA y con el menú ⋮; JUGAR DE NUEVO reinicia la partida.
+- [ ] En escritorio (`pointer: fine`) no aparece el mando ni el botón MANDO.
+
+---
+
 ## Lo que **no** entra en este spec
 
-- Skins y `setSkin()` (addendum de `skin-designer`).
+- Skins y `setSkin()` (hechos en el addendum §8 de `skin-designer`).
 - Mando táctil y revisión móvil (addendum de `mobile-porter`).
 - Tortugas que se sumergen, cocodrilos, mosca, rana acompañante, serpiente.
 - Bono de puntos por tiempo.

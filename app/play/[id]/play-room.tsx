@@ -68,7 +68,11 @@ import {
   BombarderoGame,
   type BombarderoGameHandle,
 } from "@/components/games/bombardero/bombardero-game";
-import { type RanaState } from "@/components/games/rana/engine";
+import {
+  RANA_SKINS,
+  RANA_SKIN_STORAGE_KEY,
+  type RanaState,
+} from "@/components/games/rana/engine";
 import {
   RanaGame,
   type RanaGameHandle,
@@ -112,6 +116,13 @@ const serpienteSkinStore = createSkinStore(
 const bombarderoSkinStore = createSkinStore(
   BOMBARDERO_SKIN_STORAGE_KEY,
   BOMBARDERO_SKINS,
+  "clasico",
+);
+
+// Skin de Rana (spec 17 §8): store genérico de lib/skin-store.ts.
+const ranaSkinStore = createSkinStore(
+  RANA_SKIN_STORAGE_KEY,
+  RANA_SKINS,
   "clasico",
 );
 
@@ -210,6 +221,7 @@ export function PlayRoom({ game }: { game: Game }) {
   const rompemurosSkin = useSkin(rompemurosSkinStore);
   const serpienteSkin = useSkin(serpienteSkinStore);
   const bombarderoSkin = useSkin(bombarderoSkinStore);
+  const ranaSkin = useSkin(ranaSkinStore);
   const [paused, setPaused] = useState(false);
   // Menú OPCIONES (⋮) de la sala (specs 14 y 15).
   const [menuOpen, setMenuOpen] = useState(false);
@@ -404,7 +416,14 @@ export function PlayRoom({ game }: { game: Game }) {
                 onChange: (id: string) =>
                   bombarderoSkinStore.write(id as typeof bombarderoSkin),
               }
-            : undefined;
+            : isRana
+              ? {
+                  value: ranaSkin,
+                  options: RANA_SKINS,
+                  onChange: (id: string) =>
+                    ranaSkinStore.write(id as typeof ranaSkin),
+                }
+              : undefined;
 
   // Sin motor de juego: simula el final de una partida con una puntuación
   // pseudoaleatoria para poder recorrer el flujo de guardado.
@@ -758,6 +777,7 @@ export function PlayRoom({ game }: { game: Game }) {
                 <RanaGame
                   ref={ranaGameRef}
                   paused={paused}
+                  skin={ranaSkin}
                   onStateChange={handleRanaStateChange}
                   onGameOver={handleRanaGameOver}
                 />

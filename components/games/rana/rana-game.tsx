@@ -7,6 +7,7 @@ import {
   RANA_WIDTH,
   createRanaEngine,
   type RanaEngine,
+  type RanaSkin,
   type RanaState,
 } from "./engine";
 
@@ -16,6 +17,7 @@ export interface RanaGameHandle {
 
 interface RanaGameProps {
   paused: boolean;
+  skin: RanaSkin;
   onStateChange: (state: RanaState) => void;
   onGameOver: (finalScore: number) => void;
 }
@@ -23,7 +25,7 @@ interface RanaGameProps {
 // Canvas 1280x800 (16:10) escalado por CSS: tiene la misma proporción que la
 // caja de CrtFrame, así que la ocupa entera sin franjas negras ni deformación.
 export const RanaGame = forwardRef<RanaGameHandle, RanaGameProps>(
-  function RanaGame({ paused, onStateChange, onGameOver }, ref) {
+  function RanaGame({ paused, skin, onStateChange, onGameOver }, ref) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const engineRef = useRef<RanaEngine | null>(null);
 
@@ -31,6 +33,9 @@ export const RanaGame = forwardRef<RanaGameHandle, RanaGameProps>(
     // que siempre debe llamar a la versión más reciente de cada callback.
     const onStateChangeRef = useRef(onStateChange);
     const onGameOverRef = useRef(onGameOver);
+    // La skin inicial se lee una vez al montar el motor; los cambios
+    // posteriores llegan por setSkin (efecto de abajo).
+    const skinRef = useRef(skin);
     useEffect(() => {
       onStateChangeRef.current = onStateChange;
     }, [onStateChange]);
@@ -42,10 +47,14 @@ export const RanaGame = forwardRef<RanaGameHandle, RanaGameProps>(
       const canvas = canvasRef.current;
       if (!canvas) return;
 
-      const engine = createRanaEngine(canvas, {
-        onStateChange: (state) => onStateChangeRef.current(state),
-        onGameOver: (finalScore) => onGameOverRef.current(finalScore),
-      });
+      const engine = createRanaEngine(
+        canvas,
+        {
+          onStateChange: (state) => onStateChangeRef.current(state),
+          onGameOver: (finalScore) => onGameOverRef.current(finalScore),
+        },
+        { initialSkin: skinRef.current },
+      );
       engineRef.current = engine;
       engine.start();
 
@@ -58,6 +67,10 @@ export const RanaGame = forwardRef<RanaGameHandle, RanaGameProps>(
     useEffect(() => {
       engineRef.current?.setPaused(paused);
     }, [paused]);
+
+    useEffect(() => {
+      engineRef.current?.setSkin(skin);
+    }, [skin]);
 
     useImperativeHandle(ref, () => ({
       restart() {

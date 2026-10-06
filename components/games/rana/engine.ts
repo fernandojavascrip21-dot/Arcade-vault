@@ -62,40 +62,164 @@ const LANES: Lane[] = [
 // Desfase inicial por carril para que no arranquen todos alineados.
 const LANE_PHASE = 97;
 
-// Todos los colores del juego: el pase de skins parte de esta tabla.
-const PALETTE = {
-  road: "#1a1a22",
-  roadLine: "#aab2bd",
-  water: "#0b2a5a",
-  waterLine: "#1d4f9c",
-  safe: "#3a1f5a",
-  safeEdge: "#5a2d8a",
-  hedge: "#1f7a3a",
-  bay: "#0b1a10",
-  frog: "#5fe04a",
-  frogBelly: "#b6ff7a",
-  frogEye: "#0b1a10",
-  frogDead: "#ff2d6f",
-  frogDeadBelly: "#ffd6e4",
-  log: "#8a5a2b",
-  logEdge: "#b47a3c",
-  logGrain: "#5c3a1a",
-  turtle: "#d9442e",
-  turtleShell: "#f08a4b",
-  vehicles: {
-    7: "#ffd23f",
-    8: "#ff2d6f",
-    9: "#00f5ff",
-    10: "#ff8a00",
-    11: "#c58cff",
-  } as Record<number, string>,
-  truckCab: "#e8eef5",
-  vehicleWindow: "#0b1a10",
-  headlight: "#ffffff",
-  timerTrack: "#1a1a22",
-  timerOk: "#5fe04a",
-  timerWarn: "#ff2d6f",
+export type RanaSkin = "clasico" | "retro" | "neon";
+
+export const RANA_SKINS: Array<{ id: RanaSkin; label: string }> = [
+  { id: "clasico", label: "CLÁSICO" },
+  { id: "retro", label: "RETRO" },
+  { id: "neon", label: "NEÓN" },
+];
+
+export const RANA_SKIN_STORAGE_KEY = "arcadevault.rana.skin.v1";
+
+// Todos los colores del juego, por skin. `clasico` conserva los valores
+// originales sin cambios.
+interface RanaPalette {
+  road: string;
+  roadLine: string;
+  water: string;
+  waterLine: string;
+  safe: string;
+  safeEdge: string;
+  hedge: string;
+  bay: string;
+  frog: string;
+  frogBelly: string;
+  frogEye: string;
+  frogDead: string;
+  frogDeadBelly: string;
+  log: string;
+  logEdge: string;
+  logGrain: string;
+  turtle: string;
+  turtleShell: string;
+  vehicles: Record<number, string>;
+  truckCab: string;
+  vehicleWindow: string;
+  headlight: string;
+  timerTrack: string;
+  timerOk: string;
+  timerWarn: string;
+}
+
+const SKIN_PALETTES: Record<RanaSkin, RanaPalette> = {
+  clasico: {
+    road: "#1a1a22",
+    roadLine: "#aab2bd",
+    water: "#0b2a5a",
+    waterLine: "#1d4f9c",
+    safe: "#3a1f5a",
+    safeEdge: "#5a2d8a",
+    hedge: "#1f7a3a",
+    bay: "#0b1a10",
+    frog: "#5fe04a",
+    frogBelly: "#b6ff7a",
+    frogEye: "#0b1a10",
+    frogDead: "#ff2d6f",
+    frogDeadBelly: "#ffd6e4",
+    log: "#8a5a2b",
+    logEdge: "#b47a3c",
+    logGrain: "#5c3a1a",
+    turtle: "#d9442e",
+    turtleShell: "#f08a4b",
+    vehicles: {
+      7: "#ffd23f",
+      8: "#ff2d6f",
+      9: "#00f5ff",
+      10: "#ff8a00",
+      11: "#c58cff",
+    },
+    truckCab: "#e8eef5",
+    vehicleWindow: "#0b1a10",
+    headlight: "#ffffff",
+    timerTrack: "#1a1a22",
+    timerOk: "#5fe04a",
+    timerWarn: "#ff2d6f",
+  },
+  // Fósforo verde: plataformas a media intensidad, rana y aviso a la máxima.
+  retro: {
+    road: "#04140a",
+    roadLine: "#177a31",
+    water: "#020a04",
+    waterLine: "#145c26",
+    safe: "#0a2a14",
+    safeEdge: "#1f9e45",
+    hedge: "#145c26",
+    bay: "#020a04",
+    frog: "#e0ffe8",
+    frogBelly: "#8dffa8",
+    frogEye: "#020a04",
+    frogDead: "#e0ffe8",
+    frogDeadBelly: "#020a04",
+    log: "#177a31",
+    logEdge: "#1f9e45",
+    logGrain: "#0f5a22",
+    turtle: "#1f9e45",
+    turtleShell: "#177a31",
+    vehicles: {
+      7: "#8dffa8",
+      8: "#33ff66",
+      9: "#1f9e45",
+      10: "#2bd05a",
+      11: "#177a31",
+    },
+    truckCab: "#b8ffcc",
+    vehicleWindow: "#04140a",
+    headlight: "#e0ffe8",
+    timerTrack: "#04140a",
+    timerOk: "#1f9e45",
+    timerWarn: "#e0ffe8",
+  },
+  neon: {
+    road: "#0a0a14",
+    roadLine: "#3a3a66",
+    water: "#04081c",
+    waterLine: "#133a9c",
+    safe: "#120a24",
+    safeEdge: "#8a2be2",
+    hedge: "#0a6a30",
+    bay: "#05050a",
+    frog: "#ccff33",
+    frogBelly: "#f0ffb0",
+    frogEye: "#05050a",
+    frogDead: "#ffffff",
+    frogDeadBelly: "#ff2d95",
+    log: "#b35f00",
+    logEdge: "#cc7000",
+    logGrain: "#6a3800",
+    turtle: "#c4208f",
+    turtleShell: "#e0309f",
+    vehicles: {
+      7: "#ff8a00",
+      8: "#ff2d95",
+      9: "#00f5ff",
+      10: "#b46bff",
+      11: "#4d7cff",
+    },
+    truckCab: "#e8f0ff",
+    vehicleWindow: "#05050a",
+    headlight: "#ffffff",
+    timerTrack: "#0a0a14",
+    timerOk: "#00f5ff",
+    timerWarn: "#ff2d95",
+  },
 };
+
+// Trazo por skin: glow (shadowBlur, 0 = ninguno) en rana, plataformas,
+// vehículos y barra de tiempo, y scanlines sobre todo el frame.
+interface SkinRenderer {
+  glow: number;
+  scanlines: boolean;
+}
+
+const SKIN_RENDERERS: Record<RanaSkin, SkinRenderer> = {
+  clasico: { glow: 0, scanlines: false },
+  retro: { glow: 0, scanlines: true },
+  neon: { glow: 10, scanlines: false },
+};
+
+const SCANLINE_COLOR = "rgba(0,0,0,.18)";
+const SCANLINE_STEP = 3;
 
 function mod(value: number, size: number): number {
   return ((value % size) + size) % size;
@@ -162,11 +286,13 @@ export interface RanaEngine {
   stop(): void;
   setPaused(paused: boolean): void;
   restart(): void;
+  setSkin(skin: RanaSkin): void;
 }
 
 export function createRanaEngine(
   canvas: HTMLCanvasElement,
   handlers: RanaHandlers,
+  options?: { initialSkin?: RanaSkin },
 ): RanaEngine {
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Canvas 2D no disponible");
@@ -175,6 +301,9 @@ export function createRanaEngine(
   canvas.width = RANA_WIDTH;
   canvas.height = RANA_HEIGHT;
 
+  let skin: RanaSkin = options?.initialSkin ?? "clasico";
+  let palette = SKIN_PALETTES[skin];
+  let renderer = SKIN_RENDERERS[skin];
   let offsets: number[] = createOffsets(); // px, uno por carril de LANES
   let homes: boolean[] = HOME_COLS.map(() => false);
   let frog: Frog = createFrog();
@@ -240,24 +369,46 @@ export function createRanaEngine(
     return xs;
   }
 
+  // Glow solo en el relleno principal de cada entidad; glowOff lo restablece
+  // para no contaminar el resto del frame.
+  function glowOn(color: string) {
+    if (renderer.glow <= 0) return;
+    g.shadowColor = color;
+    g.shadowBlur = renderer.glow;
+  }
+
+  function glowOff() {
+    if (renderer.glow <= 0) return;
+    g.shadowBlur = 0;
+    g.shadowColor = "transparent";
+  }
+
+  function drawScanlines() {
+    if (!renderer.scanlines) return;
+    g.fillStyle = SCANLINE_COLOR;
+    for (let y = 0; y < RANA_HEIGHT; y += SCANLINE_STEP) {
+      g.fillRect(0, y, RANA_WIDTH, 1);
+    }
+  }
+
   function drawBoard() {
-    g.fillStyle = PALETTE.water;
+    g.fillStyle = palette.water;
     g.fillRect(0, 0, RANA_WIDTH, ROW_MEDIAN * CELL_H);
-    g.fillStyle = PALETTE.waterLine;
+    g.fillStyle = palette.waterLine;
     for (let row = ROW_HOME + 1; row < ROW_MEDIAN; row++) {
       for (let x = (row % 2) * 80; x < RANA_WIDTH; x += 160) {
         g.fillRect(x + 20, row * CELL_H + 46, 36, 3);
       }
     }
 
-    g.fillStyle = PALETTE.road;
+    g.fillStyle = palette.road;
     g.fillRect(
       0,
       (ROW_MEDIAN + 1) * CELL_H,
       RANA_WIDTH,
       (ROW_START - ROW_MEDIAN - 1) * CELL_H,
     );
-    g.fillStyle = PALETTE.roadLine;
+    g.fillStyle = palette.roadLine;
     for (let row = ROW_MEDIAN + 2; row < ROW_START; row++) {
       for (let x = 16; x < RANA_WIDTH; x += CELL_W) {
         g.fillRect(x, row * CELL_H - 2, 32, 4);
@@ -265,30 +416,32 @@ export function createRanaEngine(
     }
 
     for (const row of [ROW_MEDIAN, ROW_START]) {
-      g.fillStyle = PALETTE.safe;
+      g.fillStyle = palette.safe;
       g.fillRect(0, row * CELL_H, RANA_WIDTH, CELL_H);
-      g.fillStyle = PALETTE.safeEdge;
+      g.fillStyle = palette.safeEdge;
       g.fillRect(0, row * CELL_H, RANA_WIDTH, 4);
       g.fillRect(0, (row + 1) * CELL_H - 4, RANA_WIDTH, 4);
     }
 
-    g.fillStyle = PALETTE.hedge;
+    g.fillStyle = palette.hedge;
     g.fillRect(0, 0, RANA_WIDTH, CELL_H);
     HOME_COLS.forEach((col, i) => {
       const x = col * CELL_W;
-      g.fillStyle = PALETTE.bay;
+      g.fillStyle = palette.bay;
       g.fillRect(x, HOME_INSET_Y, HOME_WIDTH, CELL_H - HOME_INSET_Y);
       if (homes[i]) drawFrog(x + HOME_WIDTH / 2, CELL_H / 2 + 4, 0.8);
     });
   }
 
   function drawLog(x: number, y: number, width: number) {
-    g.fillStyle = PALETTE.log;
+    g.fillStyle = palette.log;
+    glowOn(palette.log);
     g.fillRect(x, y + 8, width, CELL_H - 16);
-    g.fillStyle = PALETTE.logEdge;
+    glowOff();
+    g.fillStyle = palette.logEdge;
     g.fillRect(x, y + 8, width, 6);
     g.fillRect(x, y + 14, 10, CELL_H - 28);
-    g.fillStyle = PALETTE.logGrain;
+    g.fillStyle = palette.logGrain;
     for (let gx = x + 40; gx < x + width - 30; gx += 72) {
       g.fillRect(gx, y + 26 + ((gx - x) % 3) * 6, 28, 3);
     }
@@ -298,7 +451,8 @@ export function createRanaEngine(
     for (let i = 0; i < length; i++) {
       const cx = x + i * CELL_W + CELL_W / 2;
       const cy = y + CELL_H / 2;
-      g.fillStyle = PALETTE.turtle;
+      g.fillStyle = palette.turtle;
+      glowOn(palette.turtle);
       g.fillRect(cx + dir * 22 - 5, cy - 5, 10, 10); // cabeza
       g.fillRect(cx - 22, cy - 22, 8, 8);
       g.fillRect(cx + 14, cy - 22, 8, 8);
@@ -307,7 +461,8 @@ export function createRanaEngine(
       g.beginPath();
       g.arc(cx, cy, 20, 0, Math.PI * 2);
       g.fill();
-      g.fillStyle = PALETTE.turtleShell;
+      glowOff();
+      g.fillStyle = palette.turtleShell;
       g.beginPath();
       g.arc(cx, cy, 12, 0, Math.PI * 2);
       g.fill();
@@ -317,23 +472,27 @@ export function createRanaEngine(
   function drawVehicle(x: number, y: number, lane: Lane) {
     const width = lane.length * CELL_W;
     const front = lane.dir === 1 ? x + width - 4 : x + 4;
-    const color = PALETTE.vehicles[lane.row];
+    const color = palette.vehicles[lane.row];
     if (lane.kind === "truck") {
       const cabX = lane.dir === 1 ? x + width - 40 : x + 4;
       const boxX = lane.dir === 1 ? x + 4 : x + 44;
       g.fillStyle = color;
+      glowOn(color);
       g.fillRect(boxX, y + 8, width - 48, CELL_H - 16);
-      g.fillStyle = PALETTE.truckCab;
+      glowOff();
+      g.fillStyle = palette.truckCab;
       g.fillRect(cabX, y + 10, 36, CELL_H - 20);
-      g.fillStyle = PALETTE.vehicleWindow;
+      g.fillStyle = palette.vehicleWindow;
       g.fillRect(cabX + (lane.dir === 1 ? 18 : 6), y + 16, 12, CELL_H - 32);
     } else {
       g.fillStyle = color;
+      glowOn(color);
       g.fillRect(x + 4, y + 12, width - 8, CELL_H - 24);
-      g.fillStyle = PALETTE.vehicleWindow;
+      glowOff();
+      g.fillStyle = palette.vehicleWindow;
       g.fillRect(x + 20, y + 18, width - 40, CELL_H - 36);
     }
-    g.fillStyle = PALETTE.headlight;
+    g.fillStyle = palette.headlight;
     const lightX = lane.dir === 1 ? front - 6 : front;
     g.fillRect(lightX, y + 14, 6, 6);
     g.fillRect(lightX, y + CELL_H - 20, 6, 6);
@@ -363,7 +522,9 @@ export function createRanaEngine(
     g.translate(cx, cy);
     g.rotate(angle);
     g.scale(scale, scale);
-    g.fillStyle = dead ? PALETTE.frogDead : PALETTE.frog;
+    const bodyColor = dead ? palette.frogDead : palette.frog;
+    g.fillStyle = bodyColor;
+    glowOn(bodyColor);
     g.fillRect(-16, -14, 32, 30); // cuerpo
     g.fillRect(-16, -22, 10, 10); // ojos
     g.fillRect(6, -22, 10, 10);
@@ -371,9 +532,10 @@ export function createRanaEngine(
     g.fillRect(16, -10, 8, 10);
     g.fillRect(-24, 8, 8, 14); // patas traseras
     g.fillRect(16, 8, 8, 14);
-    g.fillStyle = dead ? PALETTE.frogDeadBelly : PALETTE.frogBelly;
+    glowOff();
+    g.fillStyle = dead ? palette.frogDeadBelly : palette.frogBelly;
     g.fillRect(-8, -4, 16, 14);
-    g.fillStyle = PALETTE.frogEye;
+    g.fillStyle = palette.frogEye;
     g.fillRect(-14, -22, 5, 5);
     g.fillRect(9, -22, 5, 5);
     g.restore();
@@ -404,16 +566,19 @@ export function createRanaEngine(
 
   function drawTimer() {
     const height = RANA_HEIGHT - TIMER_BAR_Y;
-    g.fillStyle = PALETTE.timerTrack;
+    g.fillStyle = palette.timerTrack;
     g.fillRect(0, TIMER_BAR_Y, RANA_WIDTH, height);
-    g.fillStyle =
-      timeLeft <= TIMER_WARN_MS ? PALETTE.timerWarn : PALETTE.timerOk;
+    const barColor =
+      timeLeft <= TIMER_WARN_MS ? palette.timerWarn : palette.timerOk;
+    g.fillStyle = barColor;
+    glowOn(barColor);
     g.fillRect(
       4,
       TIMER_BAR_Y + 4,
       (RANA_WIDTH - 8) * (timeLeft / FROG_TIME_MS),
       height - 8,
     );
+    glowOff();
   }
 
   function draw() {
@@ -421,6 +586,7 @@ export function createRanaEngine(
     drawLanes();
     drawActiveFrog();
     drawTimer();
+    drawScanlines();
   }
 
   function updateLanes(dt: number) {
@@ -631,6 +797,13 @@ export function createRanaEngine(
     },
     setPaused(value: boolean) {
       setPausedState(value);
+    },
+    setSkin(next: RanaSkin) {
+      if (next === skin) return;
+      skin = next;
+      palette = SKIN_PALETTES[skin];
+      renderer = SKIN_RENDERERS[skin];
+      draw(); // redibuja al instante, también en pausa o con la partida terminada
     },
     restart() {
       score = 0;
