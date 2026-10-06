@@ -287,6 +287,94 @@ function Bombardero() {
   );
 }
 
+function Rana() {
+  // Rana vista desde arriba, 12×10, con el origen en su esquina.
+  const frog = (x: number, y: number, scale = 1) => (
+    <g transform={`translate(${x} ${y}) scale(${scale})`}>
+      <g fill="#5fe04a">
+        <rect x={2} y={2} width={8} height={6} />
+        <rect x={2} y={0} width={2} height={2} />
+        <rect x={8} y={0} width={2} height={2} />
+        <rect x={0} y={3} width={2} height={2} />
+        <rect x={10} y={3} width={2} height={2} />
+        <rect x={0} y={7} width={2} height={3} />
+        <rect x={10} y={7} width={2} height={3} />
+      </g>
+      <rect x={4} y={4} width={4} height={3} fill="#b6ff7a" />
+      <rect x={2} y={0} width={1} height={1} fill="#0b1a10" />
+      <rect x={9} y={0} width={1} height={1} fill="#0b1a10" />
+    </g>
+  );
+  return (
+    <Frame>
+      {/* Seto con dos casas; la de la izquierda ya está ocupada. */}
+      <rect x={0} y={6} width={160} height={14} fill="#1f7a3a" />
+      <rect x={38} y={8} width={24} height={12} fill="#0b1a10" />
+      <rect x={98} y={8} width={24} height={12} fill="#0b1a10" />
+      {frog(45.8, 10.5, 0.7)}
+      {/* Río con un tronco. */}
+      <rect x={0} y={20} width={160} height={28} fill="#1456b8" opacity={0.6} />
+      {[
+        [12, 26],
+        [118, 30],
+        [136, 42],
+        [20, 43],
+      ].map(([x, y]) => (
+        <rect
+          key={`${x}-${y}`}
+          x={x}
+          y={y}
+          width={8}
+          height={1}
+          fill="#8fc7ff"
+          opacity={0.7}
+        />
+      ))}
+      <rect x={34} y={28} width={66} height={12} fill="#8a5a2b" />
+      <rect x={34} y={28} width={66} height={2} fill="#b47a3c" />
+      <rect x={34} y={30} width={4} height={8} fill="#d9a066" />
+      <rect x={52} y={33} width={10} height={1} fill="#5c3a1a" />
+      <rect x={74} y={35} width={14} height={1} fill="#5c3a1a" />
+      {/* Mediana con la rana a punto de saltar. */}
+      <rect x={0} y={48} width={160} height={14} fill="#5a2d8a" />
+      {frog(74, 50)}
+      {/* Carretera con dos vehículos en sentidos opuestos. */}
+      <rect
+        x={0}
+        y={62}
+        width={160}
+        height={32}
+        fill="#1a1a22"
+        opacity={0.85}
+      />
+      {Array.from({ length: 8 }, (_, i) => (
+        <rect
+          key={i}
+          x={4 + i * 20}
+          y={77}
+          width={10}
+          height={2}
+          fill="#aab2bd"
+          opacity={0.7}
+        />
+      ))}
+      <g>
+        <rect x={22} y={65} width={20} height={10} fill="#ff2d6f" />
+        <rect x={27} y={67} width={8} height={6} fill="#0b1a10" opacity={0.7} />
+        <rect x={40} y={66} width={2} height={2} fill="#ffd23f" />
+        <rect x={40} y={72} width={2} height={2} fill="#ffd23f" />
+      </g>
+      <g>
+        <rect x={96} y={81} width={10} height={10} fill="#00f5ff" />
+        <rect x={108} y={81} width={30} height={10} fill="#ffd23f" />
+        <rect x={99} y={83} width={4} height={6} fill="#0b1a10" opacity={0.7} />
+        <rect x={96} y={82} width={2} height={2} fill="#ffffff" />
+        <rect x={96} y={88} width={2} height={2} fill="#ffffff" />
+      </g>
+    </Frame>
+  );
+}
+
 const COVERS: Record<string, () => ReactNode> = {
   rompemuros: Rompemuros,
   serpiente: Serpiente,
@@ -295,6 +383,7 @@ const COVERS: Record<string, () => ReactNode> = {
   bloques: Bloques,
   laberinto: Laberinto,
   bombardero: Bombardero,
+  rana: Rana,
 };
 
 export function GameCover({ id }: { id: string }) {
