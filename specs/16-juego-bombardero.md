@@ -289,11 +289,11 @@ export function createBombarderoEngine(
 
 **Contrastes medidos** (WCAG, peor caso contra el cielo de la skin, arriba/abajo del degradado):
 
-| Skin    | Edificios (peor) | Avión              | Bomba              | Escombros (peor) | Polvo | Peor caso                  |
-| ------- | ---------------- | ------------------ | ------------------ | ---------------- | ----- | -------------------------- |
-| clasico | `#4a1f7a` 1.45¹  | `#00f5ff` 12.72:1  | `#f5ff00` 15.74:1  | 7.29:1           | 5.55  | edificio 1.45:1¹           |
-| retro   | `#177a31` 3.48:1 | `#e0ffe8` 17.70:1  | `#b8ffcc` 16.41:1  | 14.09:1          | 7.83  | edificio 3.48:1            |
-| neon    | `#c4208f` 3.70:1 | `#00f5ff` 14.54:1  | `#f5ff00` 17.99:1  | 5.68:1           | 6.58  | edificio 3.70:1            |
+| Skin    | Edificios (peor) | Avión             | Bomba             | Escombros (peor) | Polvo | Peor caso        |
+| ------- | ---------------- | ----------------- | ----------------- | ---------------- | ----- | ---------------- |
+| clasico | `#4a1f7a` 1.45¹  | `#00f5ff` 12.72:1 | `#f5ff00` 15.74:1 | 7.29:1           | 5.55  | edificio 1.45:1¹ |
+| retro   | `#177a31` 3.48:1 | `#e0ffe8` 17.70:1 | `#b8ffcc` 16.41:1 | 14.09:1          | 7.83  | edificio 3.48:1  |
+| neon    | `#c4208f` 3.70:1 | `#00f5ff` 14.54:1 | `#f5ff00` 17.99:1 | 5.68:1           | 6.58  | edificio 3.70:1  |
 
 ¹ Excepción aceptada (CLÁSICO no altera el original).
 
@@ -317,9 +317,9 @@ edificio: RETRO 3.54:1, NEÓN 4.60:1. Distinción avión/bomba: RETRO por intens
 
 Mapeo del mando (misma forma que la tabla de spec 13 §2):
 
-| Juego         | D-pad            | Deslizador | Acciones           |
-| ------------- | ---------------- | ---------- | ------------------ |
-| `bombardero`  | ↑ subir · ↓ bajar | —          | BOMBA (`Espacio`)  |
+| Juego        | D-pad             | Deslizador | Acciones          |
+| ------------ | ----------------- | ---------- | ----------------- |
+| `bombardero` | ↑ subir · ↓ bajar | —          | BOMBA (`Espacio`) |
 
 Izquierda y derecha quedan atenuadas (el avión avanza solo). Sin `repeat`: el motor lee estado de
 tecla (`keydown`/`keyup` mantenidos), así que mantener ↑/↓ funciona sin DAS/ARR. El motor lee
@@ -353,11 +353,26 @@ bombardero: {
 
 ---
 
+## 10 — Addendum (2026-10-05): carátula del catálogo
+
+La sección 2 dejaba la carátula fuera de alcance; se añade a petición del usuario para que la tarjeta de BOMBARDERO no quede solo con el gradiente `thumb`.
+
+- `components/game-cover.tsx`: nuevo componente `Bombardero` registrado en `COVERS` bajo `bombardero`, con el mismo `Frame` (viewBox 160×100) que el resto: ciudad de nueve edificios con ventanas amarillas y los colores por tramo del motor, franja de suelo, biplano cian en pasada hacia la derecha, dos bombas amarillas cayendo y un impacto sobre un edificio.
+- Solo SVG estático: sin assets, sin cambios en Supabase ni en el motor.
+
+Criterios de aceptación:
+
+- [ ] La tarjeta de BOMBARDERO en `/games` y en la home muestra la carátula sobre su gradiente, igual que el resto de juegos.
+- [ ] `/game/bombardero` muestra la misma carátula en la previsualización.
+- [ ] Las carátulas de los demás juegos no cambian.
+
+---
+
 ## Lo que **no** entra en este spec
 
 - Sonido, controles táctiles, selección de dificultad elegible.
 - Pantalla de transición "Nivel X completado" dentro del canvas.
-- Carátula pixel-art para `bombardero` en `components/game-cover.tsx`.
+- ~~Carátula pixel-art para `bombardero` en `components/game-cover.tsx`.~~ Añadida después: ver addendum §10.
 - Un registro genérico de juegos en `PlayRoom`.
 - Control horizontal manual del avión.
 - Cambios a la economía de créditos o a `CrtFrame`.
