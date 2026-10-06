@@ -307,11 +307,12 @@ function Rana() {
   );
   return (
     <Frame>
-      {/* Seto con dos casas; la de la izquierda ya está ocupada. */}
+      {/* Seto con dos casas; la de la derecha ya está ocupada (la izquierda
+          queda bajo la etiqueta de categoría de la tarjeta). */}
       <rect x={0} y={6} width={160} height={14} fill="#1f7a3a" />
       <rect x={38} y={8} width={24} height={12} fill="#0b1a10" />
       <rect x={98} y={8} width={24} height={12} fill="#0b1a10" />
-      {frog(45.8, 10.5, 0.7)}
+      {frog(105.8, 10.5, 0.7)}
       {/* Río con un tronco. */}
       <rect x={0} y={20} width={160} height={28} fill="#1456b8" opacity={0.6} />
       {[
