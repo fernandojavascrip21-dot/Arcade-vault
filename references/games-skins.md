@@ -7,7 +7,7 @@ actualiza cada vez que se añade, renombra o quita una skin, o se integra un jue
 **Requisito:** todo juego tiene al menos `clasico` (CLÁSICO, default), `retro` (RETRO) y `neon`
 (NEÓN), con contraste ≥ 3:1 contra el fondo de la skin en modo oscuro.
 
-Última revisión: 2026-09-30
+Última revisión: 2026-10-05
 
 ## Resumen
 
@@ -17,6 +17,7 @@ actualiza cada vez que se añade, renombra o quita una skin, o se integra un jue
 | `bloques`    | `components/games/bloques/`    | `retro`, `neon`, `pastel`, `pixel` | `retro`   | `clasico` (renombrar `retro`→`clasico` y crear `retro` nuevo) | Sí                   | 🟡     |
 | `rompemuros` | `components/games/rompemuros/` | `clasico`, `retro`, `neon`         | `clasico` | —                                                             | Sí                   | 🟢     |
 | `serpiente`  | `components/games/serpiente/`  | `clasico`, `retro`, `neon`         | `clasico` | —                                                             | Sí                   | 🟢     |
+| `bombardero` | `components/games/bombardero/` | `clasico`, `retro`, `neon`         | `clasico` | —                                                             | Sí                   | 🟢     |
 
 Leyenda: 🟢 cumple · 🟡 parcial · 🔴 sin skins.
 
@@ -70,6 +71,20 @@ Leyenda: 🟢 cumple · 🟡 parcial · 🔴 sin skins.
 - **Nota:** en CLÁSICO el círculo de fallback de la fruta (solo si `fruits.png` no carga) llega
   a 2.20:1 en su peor tono (`hsl(240,80%,55%)`); se acepta porque CLÁSICO no altera el original.
 
+### BOMBARDERO
+
+- **Skins:** `clasico` (CLÁSICO, default — colores originales), `retro` (RETRO, fósforo verde en
+  intensidades + ventanas apagadas + scanlines), `neon` (NEÓN, glow en avión/bombas/suelo).
+  Paletas en `SKIN_PALETTES` y trazo en `SKIN_RENDERERS` de
+  `components/games/bombardero/engine.ts`; `setSkin()` recrea el degradado del cielo y redibuja
+  incluso en pausa.
+- **Selector:** chips SKIN del menú ⋮ OPCIONES de `PlayRoom` (`skinControl`, `isBombardero`),
+  store genérico `lib/skin-store.ts` (snapshot de servidor `"clasico"`).
+- **Clave localStorage:** `arcadevault.bombardero.skin.v1`
+- **Spec:** `specs/16-juego-bombardero.md` §8 (addendum "skins visuales", 2026-10-05).
+- **Nota:** en CLÁSICO los edificios llegan a 1.45:1 contra el cielo; se acepta porque CLÁSICO
+  no altera el original.
+
 ## Contrastes medidos (modo oscuro)
 
 Peor caso por skin (color jugable vs. fondo de la skin). Lo completa `skin-designer` al
@@ -86,3 +101,6 @@ implementar.
 | `serpiente`  | `clasico` | fallback fruta `hsl(240,80%,55%)`          | `#0e2014` | 2.20:1 (excepción: original sin cambios) |
 | `serpiente`  | `retro`   | `#b37000` (cuerpo)                         | `#0f0a02` | 4.92:1                                   |
 | `serpiente`  | `neon`    | `#ff2d95` (fruta)                          | `#0a0a14` | 5.68:1                                   |
+| `bombardero` | `clasico` | `#4a1f7a` (edificio)                       | `#241238` | 1.45:1 (excepción: original sin cambios) |
+| `bombardero` | `retro`   | `#177a31` (edificio)                       | `#04140a` | 3.48:1                                   |
+| `bombardero` | `neon`    | `#c4208f` (edificio)                       | `#0a0a14` | 3.70:1                                   |

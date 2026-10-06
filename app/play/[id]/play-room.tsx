@@ -59,6 +59,15 @@ import {
   SerpienteGame,
   type SerpienteGameHandle,
 } from "@/components/games/serpiente/serpiente-game";
+import {
+  BOMBARDERO_SKINS,
+  BOMBARDERO_SKIN_STORAGE_KEY,
+  type BombarderoState,
+} from "@/components/games/bombardero/engine";
+import {
+  BombarderoGame,
+  type BombarderoGameHandle,
+} from "@/components/games/bombardero/bombardero-game";
 import { useCredits } from "@/contexts/credits-context";
 import { useSession } from "@/contexts/session-context";
 import {
@@ -91,6 +100,13 @@ const rompemurosSkinStore = createSkinStore(
 const serpienteSkinStore = createSkinStore(
   SERPIENTE_SKIN_STORAGE_KEY,
   SERPIENTE_SKINS,
+  "clasico",
+);
+
+// Skin de Bombardero (spec 16 §8): store genérico de lib/skin-store.ts.
+const bombarderoSkinStore = createSkinStore(
+  BOMBARDERO_SKIN_STORAGE_KEY,
+  BOMBARDERO_SKINS,
   "clasico",
 );
 
@@ -188,6 +204,7 @@ export function PlayRoom({ game }: { game: Game }) {
   const asteroidsSkin = useSkin(asteroidsSkinStore);
   const rompemurosSkin = useSkin(rompemurosSkinStore);
   const serpienteSkin = useSkin(serpienteSkinStore);
+  const bombarderoSkin = useSkin(bombarderoSkinStore);
   const [paused, setPaused] = useState(false);
   // Menú OPCIONES (⋮) de la sala (specs 14 y 15).
   const [menuOpen, setMenuOpen] = useState(false);
@@ -213,16 +230,21 @@ export function PlayRoom({ game }: { game: Game }) {
   const isBloques = game.id === "bloques";
   const isRompemuros = game.id === "rompemuros";
   const isSerpiente = game.id === "serpiente";
+  const isBombardero = game.id === "bombardero";
   const gameRef = useRef<AsteroidsGameHandle>(null);
   const bloquesGameRef = useRef<BloquesGameHandle>(null);
   const rompemurosGameRef = useRef<RompemurosGameHandle>(null);
   const serpienteGameRef = useRef<SerpienteGameHandle>(null);
-  const isRealGame = isAsteroids || isBloques || isRompemuros || isSerpiente;
+  const bombarderoGameRef = useRef<BombarderoGameHandle>(null);
+  const isRealGame =
+    isAsteroids || isBloques || isRompemuros || isSerpiente || isBombardero;
   // Bloques y Rompemuros pintan sus marcadores en el canvas, no en la barra.
   const hasBarStats = !isBloques && !isRompemuros;
-  // Control táctil (spec 13): solo en los 4 juegos reales.
+  // Control táctil (spec 13): solo en los juegos reales que tienen layout.
   const touch = useTouchControls();
-  const touchLayout = isRealGame ? TOUCH_LAYOUTS[game.id as TouchGameId] : null;
+  const touchLayout = isRealGame
+    ? (TOUCH_LAYOUTS[game.id as TouchGameId] ?? null)
+    : null;
   const showTouch = touchLayout !== null && touch.visible;
   const typerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   useEffect(
@@ -309,7 +331,9 @@ export function PlayRoom({ game }: { game: Game }) {
         ? "← → / A D / RATÓN MOVER · ESPACIO / CLIC LANZAR · 1 2 3 DIFICULTAD · ESC / P PAUSA"
         : isSerpiente
           ? "← ↑ ↓ → / WASD MOVER · ESC / P PAUSA"
-          : "MUEVE CON EL RATÓN O ← →";
+          : isBombardero
+            ? "↑ / W SUBIR · ↓ / S BAJAR · ESPACIO SOLTAR BOMBA · ESC / P PAUSA"
+            : "MUEVE CON EL RATÓN O ← →";
   const exit = () => {
     exitFullscreen();
     router.push("/games");
@@ -359,7 +383,14 @@ export function PlayRoom({ game }: { game: Game }) {
               onChange: (id: string) =>
                 serpienteSkinStore.write(id as typeof serpienteSkin),
             }
-          : undefined;
+          : isBombardero
+            ? {
+                value: bombarderoSkin,
+                options: BOMBARDERO_SKINS,
+                onChange: (id: string) =>
+                  bombarderoSkinStore.write(id as typeof bombarderoSkin),
+              }
+            : undefined;
 
   // Sin motor de juego: simula el final de una partida con una puntuación
   // pseudoaleatoria para poder recorrer el flujo de guardado.
@@ -413,6 +444,19 @@ export function PlayRoom({ game }: { game: Game }) {
   };
 
   const handleSerpienteGameOver = (finalScore: number) => {
+    setScore(finalScore);
+    setPaused(false);
+    setOver(true);
+  };
+
+  const handleBombarderoStateChange = (state: BombarderoState) => {
+    setScore(state.score);
+    setLives(state.lives);
+    setLevel(state.level);
+    setPaused(state.paused);
+  };
+
+  const handleBombarderoGameOver = (finalScore: number) => {
     setScore(finalScore);
     setPaused(false);
     setOver(true);
@@ -483,6 +527,11 @@ export function PlayRoom({ game }: { game: Game }) {
     }
     if (isSerpiente) {
       serpienteGameRef.current?.restart();
+      setLevel(1);
+    }
+    if (isBombardero) {
+      bombarderoGameRef.current?.restart();
+      setLives(3);
       setLevel(1);
     }
   };
@@ -620,7 +669,11 @@ export function PlayRoom({ game }: { game: Game }) {
         >
           <CrtFrame
             background={
-              isAsteroids || isBloques || isRompemuros || isSerpiente
+              isAsteroids ||
+              isBloques ||
+              isRompemuros ||
+              isSerpiente ||
+              isBombardero
                 ? "#000"
                 : game.thumb
             }
@@ -659,6 +712,14 @@ export function PlayRoom({ game }: { game: Game }) {
                   skin={serpienteSkin}
                   onStateChange={handleSerpienteStateChange}
                   onGameOver={handleSerpienteGameOver}
+                />
+              ) : isBombardero ? (
+                <BombarderoGame
+                  ref={bombarderoGameRef}
+                  paused={paused}
+                  skin={bombarderoSkin}
+                  onStateChange={handleBombarderoStateChange}
+                  onGameOver={handleBombarderoGameOver}
                 />
               ) : undefined
             }

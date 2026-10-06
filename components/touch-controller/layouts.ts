@@ -25,7 +25,12 @@ export type TouchLayout = {
   actions: TouchAction[];
 };
 
-export type TouchGameId = "asteroides" | "bloques" | "rompemuros" | "serpiente";
+export type TouchGameId =
+  | "asteroides"
+  | "bloques"
+  | "rompemuros"
+  | "serpiente"
+  | "bombardero";
 
 export const TOUCH_LAYOUTS: Record<TouchGameId, TouchLayout> = {
   asteroides: {
@@ -59,5 +64,10 @@ export const TOUCH_LAYOUTS: Record<TouchGameId, TouchLayout> = {
       right: "ArrowRight",
     },
     actions: [],
+  },
+  bombardero: {
+    // El avión avanza solo: solo subir/bajar (se mantienen) + soltar bomba.
+    dpad: { up: "ArrowUp", down: "ArrowDown" },
+    actions: [{ id: "bomb", label: "BOMBA", code: "Space", icon: "bomb" }],
   },
 };

@@ -49,6 +49,9 @@ Skills live in `.agents/skills/` and are symlinked from `.claude/skills/`.
 
 - `/spec` — design a feature spec (`specs/NN-slug.md`, state `Draft`). No code.
 - `/spec-impl NN-slug` — implement an approved spec.
+- `/spec-impl-game NN-slug` — project-specific variant of `/spec-impl` for game specs: follows the
+  live `/spec-impl` phases, then runs `skin-designer` and, once it has finished, `mobile-porter` on
+  the new game (sequential, never in parallel — both edit `play-room.tsx`).
 - `/add-game` — project-specific variant of `/spec` for integrating a new game (port from
   `references/started-games/` or from scratch). Produces the spec only; `/spec-impl` does the work.
 - `/frontend-design` — **always use it when designing user interfaces** (project rule).
@@ -63,7 +66,7 @@ Subagents live in `.claude/agents/`:
   into **two** full numeric `Draft` specs with different mechanic resolutions (same id/category,
   same shape as specs 06/08/10/11) at `specs/game-jam/<slug>-a.md` and `<slug>-b.md`. No code, no
   Supabase. Review both, pick one, approve it, and renumber into `specs/NN-slug.md` before
-  `/spec-impl`. (`specs/game-jam/bombardero.md` is an earlier single-spec draft from before the
+  `/spec-impl`. (`specs/16-juego-bombardero.md` started as an earlier single-spec draft there, from before the
   two-variant format.)
 - `skin-designer` (`model: sonnet`) — audits that every game has at least the skins `clasico`
   (default), `retro` and `neon`, implements missing ones following the skin contract (engine
@@ -171,11 +174,11 @@ Asteroides, whose folder is `components/games/asteroids/` (`asteroids-game.tsx`)
   (**not** a generic registry yet) — a new game adds its own branches there. On game over it uses
   `components/game-over-ranking.tsx` to show rank + score; `hall-of-fame.tsx` shows general ranking,
   per-game boards and the player's history (“MIS PARTIDAS”).
-- **Skins** (addendum §8 of specs 06/08/10/11; registry in `references/games-skins.md`): every
+- **Skins** (addendum §8 of specs 06/08/10/11/16; registry in `references/games-skins.md`): every
   engine exports `<Name>Skin`, `<NAME>_SKINS`, `<NAME>_SKIN_STORAGE_KEY`
   (`arcadevault.<slug>.skin.v1`), takes `options.initialSkin` and has `setSkin()` (redraws
   instantly, even paused); the wrapper takes a controlled `skin` prop (same pattern as `paused`).
-  Asteroides, Rompemuros and Serpiente have `clasico` (default) / `retro` / `neon` and use the
+  Asteroides, Rompemuros, Serpiente and Bombardero have `clasico` (default) / `retro` / `neon` and use the
   generic store `lib/skin-store.ts` (`createSkinStore` + `useSkin`). **Bloques is the exception**:
   `retro` (default) / `neon` / `pastel` / `pixel` — no `clasico` yet — with its own hand-written
   store in `play-room.tsx`. Skins are chosen from the ⋮ OPCIONES menu (`skinControl` in
@@ -215,7 +218,8 @@ Asteroides, whose folder is `components/games/asteroids/` (`asteroids-game.tsx`)
 - **`fixed` overlays in the play room must use `createPortal(…, document.body)`**: `<main>` keeps a
   `transform` from `animate-fade`, which makes it the containing block of `position: fixed`.
 - Pipeline for a new game: `game-planner` agent (decide which game) → `/add-game` (spec) →
-  `/spec-impl` (code) → `skin-designer` (skins) and `mobile-porter` (touch + mobile play room).
+  `/spec-impl-game` (code, then `skin-designer` for skins and `mobile-porter` for touch + mobile
+  play room, in that order). The same three steps by hand: `/spec-impl`, then each agent.
   Games to-do: `references/games-suggestion-all.md`.
 - Add a game with `/add-game`. Reference sources: `references/started-games/`
   (`02-asteroids`, `03-tetris`, `04-arkanoid`) — these are **git submodules** (`.gitmodules`,

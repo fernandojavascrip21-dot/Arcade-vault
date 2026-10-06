@@ -1,6 +1,6 @@
-# SPEC BOMBARDERO — Motor del juego Bombardero
+# SPEC 16 — Motor del juego Bombardero
 
-> **Status:** Draft
+> **Status:** Aprovado
 > **Depends on:** SPEC 01, SPEC 06, SPEC 07, SPEC 11
 > **Date:** 2026-09-29
 > **Objective:** Crear desde cero el motor del juego BOMBARDERO (un biplano que arrasa a bombazos una ciudad generada de forma procedural en cada partida) e integrarlo en `/play/bombardero`, con su fila nueva `bombardero` en la tabla `games`.
@@ -28,7 +28,8 @@ La mecánica central — un biplano que sobrevuela una ciudad, la bombardea y pu
     2. `heights[0] = clamp(baseHeight + randomInt(-2, 2), 0, MAX_BLOCKS)`.
     3. Para `i = 1..31`: `heights[i] = clamp(heights[i-1] + randomInt(-3, 3), 0, MAX_BLOCKS)` (paseo aleatorio acotado: evita tanto una ciudad plana como saltos imposibles entre columnas vecinas).
     4. `gapChance = max(0.04, 0.12 - (level - 1) * 0.02)`; para cada columna, si `Math.random() < gapChance`, `heights[i] = 0` (plaza/hueco: zona seguro de vuelo bajo y variedad visual).
-    5. A partir del nivel 3, si ninguna columna llega a `MAX_BLOCKS`, se fuerza una columna aleatoria a `MAX_BLOCKS` (garantiza al menos un "rascacielos" desafiante por ciudad).
+    5. Las columnas de los extremos (`0` y `31`) quedan siempre a `0`: el avión gira a 40 px del borde y las bombas caen rectas, así que no puede alcanzarlas (añadido el 2026-10-05 durante `/spec-impl`, ver sección 6).
+    6. A partir del nivel 3, si ninguna columna llega a `MAX_BLOCKS`, se fuerza una columna aleatoria (entre la `1` y la `30`) a `MAX_BLOCKS` (garantiza al menos un "rascacielos" desafiante por ciudad).
   - **El avión**: rectángulo de colisión de 56×22 px (`PLANE_WIDTH = 56`, `PLANE_HEIGHT = 22`), arranca en `x = 96`, `y = 120`. Avanza solo, en horizontal, a velocidad constante (`PLANE_SPEED_X = 200 + (level - 1) * 15`, tope `380` px/s) y rebota al llegar a 40 px de cualquier borde (vuelo de pasada en pasada, como un bombardero real haciendo corridas sobre el objetivo). El jugador solo controla la altitud: `↑`/`W` sube y `↓`/`S` baja a `PLANE_VERTICAL_SPEED = 220` px/s, acotado entre `PLANE_Y_MIN = 60` y `PLANE_Y_MAX = 760`.
   - **Bombas**: `Espacio` suelta una bomba (círculo de 6 px de radio) en la posición actual del avión, con `BOMB_COOLDOWN_MS = 280` entre disparos y un máximo de `BOMB_MAX_ACTIVE = 6` bombas activas a la vez (las pulsaciones de más se ignoran). Caen en línea recta a `BOMB_SPEED_Y = 320` px/s constante (no heredan la velocidad horizontal del avión: la columna de impacto queda fijada en el momento de soltarlas, para que la puntería sea predecible).
   - **Impacto de una bomba**: al alcanzar la altura actual del edificio de su columna (o el suelo si la columna ya está a 0), la bomba desaparece. Si la columna tenía altura > 0: `heights[col] -= 1`, se suman `POINTS_PER_BLOCK = 15` puntos (`30` si el avión iba a `y ≥ LOW_ALTITUDE_Y = 480` en el momento de soltarla — bono de vuelo bajo, `LOW_ALTITUDE_BONUS_MULTIPLIER = 2`, decidido para dar sentido a arriesgarse a bajar) y se lanzan 8 partículas de escombro (gravedad simple, 500 ms de vida). Si la columna llega a 0 por ese impacto, se suman además `BONUS_BUILDING_CLEARED = 100` puntos, una única vez por edificio. Si la bomba llega al suelo sin edificio que golpear, desaparece sin puntos (con una pequeña nube de polvo).
@@ -207,6 +208,8 @@ Reglas internas del motor:
 - **Sí:** generar la ciudad con `Math.random()` (paseo aleatorio acotado + huecos + garantía de un rascacielos desde el nivel 3), sin semilla fija, tanto al iniciar partida como en cada nivel. Motivo: resuelve de forma directa el riesgo señalado en el to-do ("la ciudad debe generarse de forma procedural en cada partida para evitar repetición"). — decisión del agente (pendiente de revisar).
 - **Sí:** canvas 1280×800 (16:10 exacto, llena la `CrtFrame` sin franjas), igual que Serpiente, en vez de un canvas 4:3 letterboxeado como Asteroides/Rompemuros. Motivo: es un juego de vuelo horizontal amplio; un 4:3 recortaría el campo de visión lateral que necesita el avance de pasada en pasada. — decisión del agente (pendiente de revisar).
 - **Sí:** avance horizontal automático del avión (rebote en los bordes) y control del jugador limitado a la altitud + soltar bombas. Motivo: mantiene los controles aprendibles en segundos (2 teclas + disparo + pausa) y concentra el reto en la puntería/altitud, que es el corazón de la mecánica descrita en la frase de catálogo. — decisión del agente (pendiente de revisar).
+- **Sí:** columnas `0` y `31` siempre vacías (la ciudad ocupa 30 columnas). Motivo: con `PLANE_TURN_MARGIN = 40` y caída vertical de las bombas, el centro del avión solo cubre las columnas 1–30; un edificio en un extremo hacía imposible arrasar la ciudad y el nivel no terminaba nunca (detectado en simulación durante `/spec-impl`, 2026-10-05). Se descartó bajar el margen a 0 y que las bombas hereden inercia. — decisión del usuario.
+- **Sí:** 1.5 s de invulnerabilidad (`INVULNERABLE_MS`) también al cambiar de nivel, y las bombas en vuelo se descartan. Motivo: la ciudad nueva puede aparecer encima del avión y el criterio de aceptación exige pasar de nivel sin perder vidas. — decisión del agente durante `/spec-impl` (pendiente de revisar).
 - **No:** control horizontal manual del avión (acelerar/frenar/invertir el sentido de vuelo a voluntad). Motivo: añadiría una dimensión de control redundante con la de altitud sin aportar profundidad proporcional al esfuerzo; se descarta como sobre-ingeniería para un juego "alternativo" (34/40). — decisión del agente (pendiente de revisar).
 - **No:** que el avión reaparezca (`wrap`) al llegar al borde, como en Asteroides. Motivo: un rebote (vuelo de pasada en pasada) es más legible sobre una ciudad fija que un teletransporte instantáneo al otro lado. — decisión del agente (pendiente de revisar).
 - **Sí:** bono de puntuación ×2 por bombardear "a baja altura" (`y ≥ 480` al soltar la bomba). Motivo: sin este bono, bajar de altitud solo añade riesgo de choque sin ninguna recompensa (la puntería no mejora con la altura, ya que las bombas caen en línea recta); el bono crea una decisión de riesgo/recompensa real en cada pasada, dándole profundidad rejugable al margen del riesgo de repetición ya resuelto con la ciudad procedural. — decisión del agente (pendiente de revisar).
@@ -236,11 +239,140 @@ Reglas internas del motor:
 
 ---
 
+## 8 — Addendum (2026-10-05): skins visuales
+
+**Objetivo:** dar a Bombardero las tres skins mínimas de la plataforma — CLÁSICO (default, colores
+actuales sin cambios), RETRO (fósforo verde) y NEÓN (colores saturados con glow) — con el patrón
+de Bloques (spec 08 §8): tabla de paletas + renderers por skin en el motor, `setSkin()`, prop
+controlada `skin` y chips SKIN del menú ⋮ OPCIONES de `PlayRoom`.
+
+**Contrato ampliado** (`components/games/bombardero/engine.ts`):
+
+```ts
+export type BombarderoSkin = "clasico" | "retro" | "neon";
+
+export const BOMBARDERO_SKINS: Array<{ id: BombarderoSkin; label: string }>; // CLÁSICO, RETRO, NEÓN
+export const BOMBARDERO_SKIN_STORAGE_KEY = "arcadevault.bombardero.skin.v1";
+
+export function createBombarderoEngine(
+  canvas: HTMLCanvasElement,
+  handlers: BombarderoHandlers,
+  options?: { initialSkin?: BombarderoSkin }, // default "clasico"
+): BombarderoEngine; // + setSkin(skin): no-op si no cambia; redibuja al instante, incluso en pausa
+```
+
+**Decisiones:**
+
+- **Sí:** las constantes de color sueltas (`SKY_TOP`, `SKY_BOTTOM`, `STAR_COLOR`, `GROUND_COLOR`,
+  `WINDOW_COLOR`, `PLANE_COLOR`, `BOMB_COLOR`, `DEBRIS_COLORS`, `DUST_COLOR`, `BUILDING_TIERS`)
+  pasan a `SKIN_PALETTES` con los mismos valores en `clasico`. Mecánica, constantes numéricas,
+  puntuación y generación de la ciudad no cambian.
+- **Sí:** el degradado del cielo se recrea en cada `setSkin` (antes se creaba una vez al montar).
+- **Sí:** el trazo por skin vive en `SKIN_RENDERERS` (`glow`, `scanlines`); tras cada entidad con
+  glow se restablecen `shadowBlur`/`shadowColor`.
+- **Sí:** RETRO = fósforo verde sobre `#020a04`→`#04140a`; avión `#e0ffe8` > bomba `#b8ffcc` >
+  escombros `#33ff66`/`#8dffa8` > edificios (4 verdes `#1f9e45`…`#177a31`); ventanas apagadas
+  (`#021208`) en lugar de amarillas; suelo `#33ff66`; scanlines de 1 px cada 3 px
+  (`rgba(0,0,0,.18)`) — decisión del agente (pendiente de revisar).
+- **Sí:** NEÓN sobre `#05050a`→`#0a0a14`: avión cian `#00f5ff` (= `--cian`), bomba amarilla
+  `#f5ff00` (= `--amarillo`), escombros naranja/magenta, edificios azul/magenta/violeta/azul
+  medio, ventanas amarillas; glow `shadowBlur` 12 solo en avión, bombas y suelo (no en
+  ventanas ni partículas, para no emborronar) — decisión del agente (pendiente de revisar).
+- **Sí:** en NEÓN se sustituye el teal `#0f5a6a` del último tramo por azul `#2a6bd0` para que el
+  avión cian no se pierda contra el edificio — decisión del agente (pendiente de revisar).
+- **Sí:** persistencia en `localStorage` (`arcadevault.bombardero.skin.v1`) con el store genérico
+  `lib/skin-store.ts`, snapshot de servidor siempre `"clasico"`. "JUGAR DE NUEVO" no reinicia la
+  skin.
+- **No:** corregir el contraste de los edificios de CLÁSICO (1.45–2.21:1 contra el cielo).
+  Motivo: CLÁSICO es idéntico al original — decisión del agente (pendiente de revisar).
+- **No:** tocar Supabase, puntuación, mecánica ni tamaño del canvas.
+
+**Contrastes medidos** (WCAG, peor caso contra el cielo de la skin, arriba/abajo del degradado):
+
+| Skin    | Edificios (peor) | Avión             | Bomba             | Escombros (peor) | Polvo | Peor caso        |
+| ------- | ---------------- | ----------------- | ----------------- | ---------------- | ----- | ---------------- |
+| clasico | `#4a1f7a` 1.45¹  | `#00f5ff` 12.72:1 | `#f5ff00` 15.74:1 | 7.29:1           | 5.55  | edificio 1.45:1¹ |
+| retro   | `#177a31` 3.48:1 | `#e0ffe8` 17.70:1 | `#b8ffcc` 16.41:1 | 14.09:1          | 7.83  | edificio 3.48:1  |
+| neon    | `#c4208f` 3.70:1 | `#00f5ff` 14.54:1 | `#f5ff00` 17.99:1 | 5.68:1           | 6.58  | edificio 3.70:1  |
+
+¹ Excepción aceptada (CLÁSICO no altera el original).
+
+Avión vs. edificios: RETRO 3.25:1, NEÓN 3.72:1. Bomba vs. edificios en RETRO 3.02:1. Ventanas vs.
+edificio: RETRO 3.54:1, NEÓN 4.60:1. Distinción avión/bomba: RETRO por intensidad y forma
+(bomba/avión 1.08:1, distinguibles solo por forma y movimiento), NEÓN por tono cian/amarillo.
+
+**Criterios de aceptación añadidos:**
+
+- [ ] Los chips SKIN (CLÁSICO/RETRO/NEÓN) aparecen en el menú ⋮ OPCIONES de `/play/bombardero`,
+      con CLÁSICO por defecto.
+- [ ] CLÁSICO se ve idéntico a antes del addendum.
+- [ ] Cambiar de skin redibuja al instante cielo, ciudad, avión y bombas, también en pausa.
+- [ ] La skin persiste tras recargar y tras "JUGAR DE NUEVO", sin error de hidratación.
+- [ ] Mecánica, puntuación y generación de la ciudad no cambian con ninguna skin.
+- [ ] Todo elemento jugable de RETRO y NEÓN tiene contraste ≥ 3:1 contra su fondo.
+
+---
+
+## 9 — Addendum (2026-10-05): soporte móvil
+
+Mapeo del mando (misma forma que la tabla de spec 13 §2):
+
+| Juego        | D-pad             | Deslizador | Acciones          |
+| ------------ | ----------------- | ---------- | ----------------- |
+| `bombardero` | ↑ subir · ↓ bajar | —          | BOMBA (`Espacio`) |
+
+Izquierda y derecha quedan atenuadas (el avión avanza solo). Sin `repeat`: el motor lee estado de
+tecla (`keydown`/`keyup` mantenidos), así que mantener ↑/↓ funciona sin DAS/ARR. El motor lee
+`e.key` (`ArrowUp`/`ArrowDown`/` `), que ya emite el teclado sintético. Pausa: botón PAUSA de la
+barra (no hay tecla en el mando).
+
+```ts
+// components/touch-controller/layouts.ts
+bombardero: {
+  dpad: { up: "ArrowUp", down: "ArrowDown" },
+  actions: [{ id: "bomb", label: "BOMBA", code: "Space", icon: "bomb" }],
+},
+```
+
+**Decisiones:**
+
+- Reutilizar el icono `bomb` existente para BOMBA: Sí. Motivo: ya está en `ActionIcon`/`GLYPHS`; no
+  hace falta icono nuevo — decisión del agente (pendiente de revisar).
+- Motor sin cambios: Sí. Motivo: todo se expresa con teclas — decisión del agente (pendiente de
+  revisar).
+- Pieza de mando nueva: No. Motivo: D-pad + un botón bastan.
+
+**Criterios de aceptación añadidos:**
+
+- [ ] `/play/bombardero` en `pointer: coarse` muestra el mando con ↑/↓ activos, ←/→ atenuados y BOMBA.
+- [ ] Mantener ↑ o ↓ sube o baja el avión de forma continua; soltar lo detiene.
+- [ ] BOMBA suelta una bomba por toque.
+- [ ] A 360 px la barra del HUD cabe en una fila y los controles miden ≥ 44×44 px.
+- [ ] En horizontal el mando cabe en las columnas laterales sin scroll.
+- [ ] En escritorio (`pointer: fine`) no aparece el mando ni el botón MANDO.
+
+---
+
+## 10 — Addendum (2026-10-05): carátula del catálogo
+
+La sección 2 dejaba la carátula fuera de alcance; se añade a petición del usuario para que la tarjeta de BOMBARDERO no quede solo con el gradiente `thumb`.
+
+- `components/game-cover.tsx`: nuevo componente `Bombardero` registrado en `COVERS` bajo `bombardero`, con el mismo `Frame` (viewBox 160×100) que el resto: ciudad de nueve edificios con ventanas amarillas y los colores por tramo del motor, franja de suelo, biplano cian en pasada hacia la derecha, dos bombas amarillas cayendo y un impacto sobre un edificio.
+- Solo SVG estático: sin assets, sin cambios en Supabase ni en el motor.
+
+Criterios de aceptación:
+
+- [ ] La tarjeta de BOMBARDERO en `/games` y en la home muestra la carátula sobre su gradiente, igual que el resto de juegos.
+- [ ] `/game/bombardero` muestra la misma carátula en la previsualización.
+- [ ] Las carátulas de los demás juegos no cambian.
+
+---
+
 ## Lo que **no** entra en este spec
 
 - Sonido, controles táctiles, selección de dificultad elegible.
 - Pantalla de transición "Nivel X completado" dentro del canvas.
-- Carátula pixel-art para `bombardero` en `components/game-cover.tsx`.
+- ~~Carátula pixel-art para `bombardero` en `components/game-cover.tsx`.~~ Añadida después: ver addendum §10.
 - Un registro genérico de juegos en `PlayRoom`.
 - Control horizontal manual del avión.
 - Cambios a la economía de créditos o a `CrtFrame`.
