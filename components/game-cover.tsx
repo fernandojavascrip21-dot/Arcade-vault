@@ -222,6 +222,71 @@ function Laberinto() {
   );
 }
 
+function Bombardero() {
+  // Perfil de la ciudad: [x, alto]. El tercero acaba de recibir un impacto.
+  const buildings: Array<[number, number, string]> = [
+    [6, 22, "#4a1f7a"],
+    [22, 34, "#6a1f45"],
+    [38, 16, "#3a4a5a"],
+    [54, 28, "#4a1f7a"],
+    [70, 12, "#3a4a5a"],
+    [86, 38, "#0f5a6a"],
+    [102, 26, "#6a1f45"],
+    [118, 18, "#3a4a5a"],
+    [134, 30, "#4a1f7a"],
+  ];
+  return (
+    <Frame>
+      {buildings.map(([x, h, fill]) => (
+        <g key={x}>
+          <rect x={x} y={94 - h} width={14} height={h} fill={fill} />
+          {Array.from({ length: Math.floor(h / 6) }, (_, row) =>
+            [0, 1].map((side) =>
+              (x + row * 3 + side) % 4 === 0 ? null : (
+                <rect
+                  key={`${row}-${side}`}
+                  x={x + 3 + side * 6}
+                  y={92 - h + row * 6 + 2}
+                  width={3}
+                  height={3}
+                  fill="#ffd23f"
+                  opacity={0.9}
+                />
+              ),
+            ),
+          )}
+        </g>
+      ))}
+      <rect x={0} y={94} width={160} height={2} fill="#aab2bd" />
+      {/* Biplano en pasada hacia la derecha. */}
+      <g fill="#00f5ff">
+        <rect x={98} y={14} width={18} height={2} />
+        <rect x={101} y={16} width={1} height={4} opacity={0.7} />
+        <rect x={112} y={16} width={1} height={4} opacity={0.7} />
+        <rect x={90} y={20} width={30} height={5} />
+        <rect x={120} y={21} width={3} height={3} />
+        <rect x={88} y={15} width={4} height={6} />
+        <rect x={100} y={25} width={14} height={2} opacity={0.8} />
+      </g>
+      <rect x={110} y={18} width={4} height={2} fill="#ffffff" />
+      <rect x={124} y={19} width={1} height={7} fill="#c8ffff" opacity={0.7} />
+      {/* Bombas soltadas a lo largo de la pasada. */}
+      <rect x={93} y={34} width={4} height={5} fill="#f5ff00" />
+      <rect x={76} y={48} width={4} height={5} fill="#f5ff00" />
+      {/* Impacto sobre el tercer edificio. */}
+      <g>
+        <rect x={41} y={70} width={8} height={8} fill="#ff8a00" />
+        <rect x={43} y={72} width={4} height={4} fill="#ffffff" />
+        <rect x={36} y={66} width={3} height={3} fill="#ffd23f" />
+        <rect x={51} y={64} width={3} height={3} fill="#ffd23f" />
+        <rect x={33} y={74} width={2} height={2} fill="#ff8a00" />
+        <rect x={55} y={72} width={2} height={2} fill="#ff8a00" />
+        <rect x={44} y={60} width={2} height={3} fill="#ffd23f" opacity={0.8} />
+      </g>
+    </Frame>
+  );
+}
+
 const COVERS: Record<string, () => ReactNode> = {
   rompemuros: Rompemuros,
   serpiente: Serpiente,
@@ -229,6 +294,7 @@ const COVERS: Record<string, () => ReactNode> = {
   asteroides: Asteroides,
   bloques: Bloques,
   laberinto: Laberinto,
+  bombardero: Bombardero,
 };
 
 export function GameCover({ id }: { id: string }) {
