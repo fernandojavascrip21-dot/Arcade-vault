@@ -50,6 +50,9 @@ const TUNNEL_SPEED = 80;
 const GUARDIAN_RADIUS = 15;
 // Dispersión y persecución alternadas (ms); la última persecución no termina.
 const PHASES_MS = [7000, 20000, 7000, 20000, 5000];
+const READY_MS = 1500; // todo quieto al aparecer
+const DEATH_MS = 1000; // animación de muerte
+const HIT_DISTANCE = 20; // px entre centros
 const AMBUSH_CELLS = 4; // emboscador: celdas por delante del jugador
 const FLANK_CELLS = 2; // flanqueador: celdas por delante del jugador
 const WANDER_CELLS = 8; // errante: distancia a la que se retira
@@ -249,6 +252,8 @@ export function createLaberintoEngine(
   let phaseMs = 0; // tiempo dentro de la fase actual
   let targetCol = 0; // objetivo del guardián que está decidiendo
   let targetRow = 0;
+  let readyMs = READY_MS; // cuenta atrás de la pausa de preparado
+  let deathMs = 0; // cuenta atrás de la animación de muerte
   let dotsLeft = 0; // puntos y cápsulas que quedan en el tablero
   let score = 0;
   let lives = LIVES_START;
@@ -297,6 +302,8 @@ export function createLaberintoEngine(
     spawnMs = 0;
     phaseIndex = 0;
     phaseMs = 0;
+    readyMs = READY_MS;
+    deathMs = 0;
   }
 
   function emitState() {
@@ -384,13 +391,16 @@ export function createLaberintoEngine(
     const phase = (player.travelled % MOUTH_PERIOD) / MOUTH_PERIOD;
     const mouth = MOUTH_MAX * Math.abs(1 - 2 * phase);
     const angle = ANGLE[player.facing];
+    // Al morir se encoge hasta desaparecer.
+    const radius =
+      deathMs > 0 ? (PLAYER_RADIUS * deathMs) / DEATH_MS : PLAYER_RADIUS;
     g.fillStyle = PALETTE.player;
     g.beginPath();
     g.moveTo(player.x, player.y);
     g.arc(
       player.x,
       player.y,
-      PLAYER_RADIUS,
+      radius,
       angle + mouth,
       angle - mouth + Math.PI * 2,
     );
@@ -434,7 +444,9 @@ export function createLaberintoEngine(
   function draw() {
     g.drawImage(wallLayer, 0, 0);
     drawCells();
+    if (gameOver) return; // tablero vacío bajo el modal de fin de partida
     drawPlayer();
+    if (deathMs > 0) return; // durante la muerte los guardianes se ocultan
     for (let i = 0; i < guardians.length; i++) {
       drawGuardian(guardians[i], PALETTE[GUARDIANS[i].id]);
     }
@@ -694,14 +706,53 @@ export function createLaberintoEngine(
     }
   }
 
+  function hitByGuardian(): boolean {
+    for (let i = 0; i < guardians.length; i++) {
+      const guardian = guardians[i];
+      if (guardian.mode !== MODE_NORMAL) continue;
+      const dx = guardian.x - player.x;
+      const dy = guardian.y - player.y;
+      if (dx * dx + dy * dy < HIT_DISTANCE * HIT_DISTANCE) return true;
+    }
+    return false;
+  }
+
+  // Fin de la animación de muerte: una vida menos y, si quedan, todos a su
+  // posición inicial (los puntos ya comidos no se reponen).
+  function finishDeath() {
+    lives -= 1;
+    if (lives <= 0) {
+      gameOver = true;
+      emitState();
+      handlers.onGameOver(score);
+      return;
+    }
+    resetPlayer();
+    resetGuardians();
+    emitState();
+  }
+
   function update(dt: number) {
     if (gameOver) return;
+    if (deathMs > 0) {
+      deathMs -= dt * 1000;
+      if (deathMs <= 0) {
+        deathMs = 0;
+        finishDeath();
+      }
+      return;
+    }
+    if (readyMs > 0) {
+      readyMs -= dt * 1000;
+      return;
+    }
     const levelBefore = level;
     updatePlayer(dt);
     if (level !== levelBefore) return; // tablero nuevo: todos en su sitio
     spawnMs += dt * 1000;
     updatePhase(dt);
     for (let i = 0; i < guardians.length; i++) updateGuardian(i, dt);
+    if (hitByGuardian()) deathMs = DEATH_MS;
   }
 
   function steer(direction: number) {
@@ -730,7 +781,7 @@ export function createLaberintoEngine(
     const direction = KEY_TO_DIRECTION[e.key];
     if (direction === undefined) return;
     e.preventDefault();
-    if (paused || gameOver) return;
+    if (paused || gameOver || deathMs > 0) return;
     steer(direction);
   }
 
