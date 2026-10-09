@@ -68,6 +68,11 @@ import {
   BombarderoGame,
   type BombarderoGameHandle,
 } from "@/components/games/bombardero/bombardero-game";
+import { type LaberintoState } from "@/components/games/laberinto/engine";
+import {
+  LaberintoGame,
+  type LaberintoGameHandle,
+} from "@/components/games/laberinto/laberinto-game";
 import {
   RANA_SKINS,
   RANA_SKIN_STORAGE_KEY,
@@ -249,19 +254,22 @@ export function PlayRoom({ game }: { game: Game }) {
   const isSerpiente = game.id === "serpiente";
   const isBombardero = game.id === "bombardero";
   const isRana = game.id === "rana";
+  const isLaberinto = game.id === "laberinto";
   const gameRef = useRef<AsteroidsGameHandle>(null);
   const bloquesGameRef = useRef<BloquesGameHandle>(null);
   const rompemurosGameRef = useRef<RompemurosGameHandle>(null);
   const serpienteGameRef = useRef<SerpienteGameHandle>(null);
   const bombarderoGameRef = useRef<BombarderoGameHandle>(null);
   const ranaGameRef = useRef<RanaGameHandle>(null);
+  const laberintoGameRef = useRef<LaberintoGameHandle>(null);
   const isRealGame =
     isAsteroids ||
     isBloques ||
     isRompemuros ||
     isSerpiente ||
     isBombardero ||
-    isRana;
+    isRana ||
+    isLaberinto;
   // Bloques y Rompemuros pintan sus marcadores en el canvas, no en la barra.
   const hasBarStats = !isBloques && !isRompemuros;
   // Control táctil (spec 13): solo en los juegos reales que tienen layout.
@@ -359,6 +367,8 @@ export function PlayRoom({ game }: { game: Game }) {
             ? "↑ / W SUBIR · ↓ / S BAJAR · ESPACIO SOLTAR BOMBA · ESC / P PAUSA"
             : isRana
               ? "← ↑ ↓ → / WASD SALTAR · ESC / P PAUSA"
+                    : isLaberinto
+                      ? "← ↑ ↓ → / WASD MOVER · ESC / P PAUSA"
               : "MUEVE CON EL RATÓN O ← →";
   const exit = () => {
     exitFullscreen();
@@ -585,6 +595,11 @@ export function PlayRoom({ game }: { game: Game }) {
       setLives(3);
       setLevel(1);
     }
+    if (isLaberinto) {
+      laberintoGameRef.current?.restart();
+      setLives(3);
+      setLevel(1);
+    }
   };
 
   return (
@@ -727,6 +742,8 @@ export function PlayRoom({ game }: { game: Game }) {
               isBombardero ||
               isRana
                 ? "#000"
+                    : isLaberinto
+                      ? "← ↑ ↓ → / WASD MOVER · ESC / P PAUSA"
                 : game.thumb
             }
             label=""
@@ -780,6 +797,13 @@ export function PlayRoom({ game }: { game: Game }) {
                   skin={ranaSkin}
                   onStateChange={handleRanaStateChange}
                   onGameOver={handleRanaGameOver}
+                />
+              ) : isLaberinto ? (
+                <LaberintoGame
+                  ref={laberintoGameRef}
+                  paused={paused}
+                  onStateChange={handleLaberintoStateChange}
+                  onGameOver={handleLaberintoGameOver}
                 />
               ) : undefined
             }
