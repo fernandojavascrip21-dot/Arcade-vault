@@ -367,9 +367,9 @@ export function PlayRoom({ game }: { game: Game }) {
             ? "↑ / W SUBIR · ↓ / S BAJAR · ESPACIO SOLTAR BOMBA · ESC / P PAUSA"
             : isRana
               ? "← ↑ ↓ → / WASD SALTAR · ESC / P PAUSA"
-                    : isLaberinto
-                      ? "← ↑ ↓ → / WASD MOVER · ESC / P PAUSA"
-              : "MUEVE CON EL RATÓN O ← →";
+              : isLaberinto
+                ? "← ↑ ↓ → / WASD MOVER · ESC / P PAUSA"
+                : "MUEVE CON EL RATÓN O ← →";
   const exit = () => {
     exitFullscreen();
     router.push("/games");
@@ -513,6 +513,19 @@ export function PlayRoom({ game }: { game: Game }) {
   };
 
   const handleRanaGameOver = (finalScore: number) => {
+    setScore(finalScore);
+    setPaused(false);
+    setOver(true);
+  };
+
+  const handleLaberintoStateChange = (state: LaberintoState) => {
+    setScore(state.score);
+    setLives(state.lives);
+    setLevel(state.level);
+    setPaused(state.paused);
+  };
+
+  const handleLaberintoGameOver = (finalScore: number) => {
     setScore(finalScore);
     setPaused(false);
     setOver(true);
@@ -740,10 +753,9 @@ export function PlayRoom({ game }: { game: Game }) {
               isRompemuros ||
               isSerpiente ||
               isBombardero ||
-              isRana
+              isRana ||
+              isLaberinto
                 ? "#000"
-                    : isLaberinto
-                      ? "← ↑ ↓ → / WASD MOVER · ESC / P PAUSA"
                 : game.thumb
             }
             label=""
