@@ -302,6 +302,23 @@ export function createBombarderoEngine(
   let renderer = SKIN_RENDERERS[skin];
   // El degradado depende de la skin: se recrea en cada cambio.
   let sky = createSky();
+  // Scanlines cacheadas: ~267 fillRect por frame pasan a un único drawImage.
+  // Se crea aquí (no a nivel de módulo) para no evaluarse en el servidor.
+  const scanlineLayer = document.createElement("canvas");
+  scanlineLayer.width = BOMBARDERO_WIDTH;
+  scanlineLayer.height = BOMBARDERO_HEIGHT;
+  buildScanlineLayer();
+
+  function buildScanlineLayer() {
+    const layer = scanlineLayer.getContext("2d");
+    if (!layer) return;
+    layer.clearRect(0, 0, BOMBARDERO_WIDTH, BOMBARDERO_HEIGHT);
+    if (!renderer.scanlines) return;
+    layer.fillStyle = SCANLINE_COLOR;
+    for (let y = 0; y < BOMBARDERO_HEIGHT; y += SCANLINE_STEP) {
+      layer.fillRect(0, y, BOMBARDERO_WIDTH, 1);
+    }
+  }
 
   function createSky(): CanvasGradient {
     const gradient = g.createLinearGradient(0, 0, 0, GROUND_Y);
@@ -470,10 +487,7 @@ export function createBombarderoEngine(
 
   function drawScanlines() {
     if (!renderer.scanlines) return;
-    g.fillStyle = SCANLINE_COLOR;
-    for (let y = 0; y < BOMBARDERO_HEIGHT; y += SCANLINE_STEP) {
-      g.fillRect(0, y, BOMBARDERO_WIDTH, 1);
-    }
+    g.drawImage(scanlineLayer, 0, 0);
   }
 
   function spawnParticles(
@@ -523,24 +537,29 @@ export function createBombarderoEngine(
 
   function updateBombs(dt: number) {
     bombCooldown = Math.max(0, bombCooldown - dt * 1000);
-    const falling: Bomb[] = [];
-    for (const bomb of bombs) {
+    // Compactación in situ: sin array nuevo por frame.
+    let kept = 0;
+    for (let i = 0; i < bombs.length; i++) {
+      const bomb = bombs[i];
       bomb.y += BOMB_SPEED_Y * dt;
       const impactY = GROUND_Y - heights[bomb.col] * BLOCK_HEIGHT;
       if (bomb.y + BOMB_RADIUS >= impactY) hitColumn(bomb, impactY);
-      else falling.push(bomb);
+      else bombs[kept++] = bomb;
     }
-    bombs = falling;
+    bombs.length = kept;
   }
 
   function updateParticles(dt: number) {
-    for (const particle of particles) {
+    let kept = 0;
+    for (let i = 0; i < particles.length; i++) {
+      const particle = particles[i];
       particle.vy += PARTICLE_GRAVITY * dt;
       particle.x += particle.vx * dt;
       particle.y += particle.vy * dt;
       particle.life -= dt * 1000;
+      if (particle.life > 0) particles[kept++] = particle;
     }
-    particles = particles.filter((particle) => particle.life > 0);
+    particles.length = kept;
   }
 
   function updatePlane(dt: number) {
@@ -676,6 +695,7 @@ export function createBombarderoEngine(
       palette = SKIN_PALETTES[skin];
       renderer = SKIN_RENDERERS[skin];
       sky = createSky();
+      buildScanlineLayer();
       draw(); // redibuja al instante, también en pausa
     },
     start() {

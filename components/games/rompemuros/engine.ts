@@ -18,6 +18,9 @@ const PARTICLE_LIFETIME = 600;
 
 const FRAME_MS = 1000 / 60;
 const MAX_FRAME_STEP = 2;
+// Tope del delta real (ms): al volver de otra pestaña no se acumula tiempo en
+// las partículas ni en la transición de nivel (mismo criterio que Rana).
+const MAX_DT_MS = 50;
 
 const SOUND_BOUNCE_URL = "/games/rompemuros/ball-bounce.mp3";
 const SOUND_BREAK_URL = "/games/rompemuros/break-sound.mp3";
@@ -414,6 +417,9 @@ function getDifficultyOptionRects() {
   }));
 }
 
+// Constante: solo depende de medidas fijas, no se recalcula en cada frame.
+const DIFFICULTY_OPTION_RECTS = getDifficultyOptionRects();
+
 export interface RompemurosState {
   score: number;
   lives: number;
@@ -511,6 +517,7 @@ export function createRompemurosEngine(
 
   let spritesheet: HTMLImageElement | null = null;
   let stopped = false;
+  let running = false;
   let rafId: number | null = null;
   let lastTimestamp: number | null = null;
 
@@ -866,12 +873,31 @@ export function createRompemurosEngine(
     ctx.globalAlpha = 1;
   }
 
-  function drawScanlines(color: string) {
-    ctx.fillStyle = color;
-    for (let y = 0; y < GAME_HEIGHT; y += SCANLINE_SPACING) {
-      ctx.fillRect(0, y, GAME_WIDTH, 1);
+  // Capa de scanlines cacheada en un canvas auxiliar: se regenera solo al
+  // cambiar de skin y se pinta con un único drawImage por frame.
+  let scanlinesLayer: HTMLCanvasElement | null = null;
+
+  function buildScanlines() {
+    const color = SKIN_PALETTES[skin].scanlines;
+    if (!color) {
+      scanlinesLayer = null;
+      return;
     }
+    const layer = document.createElement("canvas");
+    layer.width = GAME_WIDTH;
+    layer.height = GAME_HEIGHT;
+    const lctx = layer.getContext("2d");
+    if (!lctx) {
+      scanlinesLayer = null;
+      return;
+    }
+    lctx.fillStyle = color;
+    for (let y = 0; y < GAME_HEIGHT; y += SCANLINE_SPACING) {
+      lctx.fillRect(0, y, GAME_WIDTH, 1);
+    }
+    scanlinesLayer = layer;
   }
+  buildScanlines();
 
   const HUD_LIFE_RADIUS = 8;
   const HUD_LIFE_GAP = 24;
@@ -922,7 +948,7 @@ export function createRompemurosEngine(
     ctx.font = "bold 40px sans-serif";
     ctx.fillText("ELEGÍ LA DIFICULTAD", GAME_WIDTH / 2, GAME_HEIGHT / 2 - 160);
 
-    for (const rect of getDifficultyOptionRects()) {
+    for (const rect of DIFFICULTY_OPTION_RECTS) {
       const isSelected = rect.key === difficulty;
       ctx.fillStyle = isSelected ? palette.buttonSelected : palette.button;
       ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
@@ -958,7 +984,7 @@ export function createRompemurosEngine(
     renderer.ball(ball.x, ball.y, ball.radius, palette.ball);
     drawParticles();
     drawHUD();
-    if (palette.scanlines) drawScanlines(palette.scanlines);
+    if (scanlinesLayer) ctx.drawImage(scanlinesLayer, 0, 0);
 
     if (screen === "start") {
       ctx.fillStyle = palette.text;
@@ -1062,7 +1088,7 @@ export function createRompemurosEngine(
     if (paused) return;
     if (screen === "difficulty") {
       const { x, y } = pointerToCanvas(e);
-      const option = getDifficultyOptionRects().find(
+      const option = DIFFICULTY_OPTION_RECTS.find(
         (r) => x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h,
       );
       if (option) selectDifficulty(option.key);
@@ -1073,7 +1099,8 @@ export function createRompemurosEngine(
 
   function loop(ts: number) {
     rafId = null;
-    const dt = lastTimestamp === null ? 0 : ts - lastTimestamp;
+    const dt =
+      lastTimestamp === null ? 0 : Math.min(ts - lastTimestamp, MAX_DT_MS);
     lastTimestamp = ts;
     const step = Math.min(dt / FRAME_MS, MAX_FRAME_STEP);
 
@@ -1110,6 +1137,9 @@ export function createRompemurosEngine(
 
   return {
     start() {
+      // Idempotente: una segunda llamada no duplica listeners ni la carga.
+      if (running) return;
+      running = true;
       stopped = false;
       window.addEventListener("keydown", handleKeyDown);
       window.addEventListener("keyup", handleKeyUp);
@@ -1128,6 +1158,7 @@ export function createRompemurosEngine(
       image.src = SPRITESHEET_URL;
     },
     stop() {
+      running = false;
       stopped = true;
       cancelLoop();
       window.removeEventListener("keydown", handleKeyDown);
@@ -1147,6 +1178,7 @@ export function createRompemurosEngine(
     setSkin(next: RompemurosSkin) {
       if (next === skin) return;
       skin = next;
+      buildScanlines();
       // Redibuja ya: con la partida terminada el loop está detenido.
       draw();
     },

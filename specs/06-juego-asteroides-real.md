@@ -250,6 +250,50 @@ La llama del propulsor es decorativa (CLÁSICO `#ff8200` 8.45:1).
 
 ---
 
+## 9 — Addendum (2026-10-09): rendimiento
+
+Auditoría estática contra las reglas del spec 17 (RANA). Sin medición de FPS.
+
+| #   | Punto                                | Antes                                                              | Después                                                       |
+| --- | ------------------------------------ | ------------------------------------------------------------------ | ------------------------------------------------------------- |
+| 1   | Un solo RAF, `stop()` simétrico      | ❌ `start()` doble duplicaba RAF; `stop()` no frenaba el bucle      | ✅ bandera `running`, `start()` idempotente, `loop` sale si no corre |
+| 2   | Delta acotado                        | ✅ `Math.min(…, 0.05)`                                             | ✅ constante `MAX_DT`                                          |
+| 3   | Movimiento escalado por `dt`         | ❌ `DRAG = 0.987` aplicado por frame                               | ✅ `Math.pow(0.987, dt * 60)` (idéntico a 60 Hz)               |
+| 4   | Pausa no avanza ni cuela tiempo      | ✅ `lastTime = null` al reanudar                                   | ✅ sin cambios                                                 |
+| 5   | `onStateChange` solo si cambia       | ✅ `notifyStateChange` compara campo a campo                       | ✅ sin cambios                                                 |
+| 6   | Wrapper monta una vez                | ✅ `[]`, refs, efectos de `paused`/`skin`, cleanup `stop()`        | ✅ sin cambios                                                 |
+| 7   | `onGameOver` una vez                 | ✅ solo desde `killShip` en estado `playing`                       | ✅ sin cambios                                                 |
+| 8   | `shadowBlur` solo en relleno principal | ✅ glow por grupo (asteroides/balas/nave), `resetGlow()` antes de scanlines y HUD; partículas sin glow | ✅ sin cambios |
+| 9   | Sin asignaciones por frame           | ❌ `filter`/`concat`/spread por frame, array en `tryShoot`          | ✅ compactación en sitio (`compact`), sin spread; ver no aplicado |
+| 10  | Capas estáticas cacheadas            | ❌ RETRO: ~200 `fillRect` de scanlines por frame                   | ✅ canvas auxiliar creado en la fábrica, un `drawImage`        |
+| 11  | Sin resize/layout en el bucle        | ✅                                                                 | ✅                                                             |
+| 12  | Colecciones con tope y limpieza      | ✅ partículas y balas con vida finita; `initGame` las vacía        | ✅                                                             |
+| 13  | `save()`/`restore()` balanceados     | ✅                                                                 | ✅                                                             |
+
+**Contratos nuevos:** ninguno (la API pública del motor no cambia).
+
+**Decisiones:**
+
+- **Sí:** rozamiento de la nave escalado por `dt` con `Math.pow(0.987, dt * 60)`: a 60 Hz es el mismo valor; a 120 Hz evita que la nave frene el doble de rápido. — decisión del agente (pendiente de revisar)
+- **Sí:** scanlines de RETRO en un canvas auxiliar (`document.createElement` dentro de la fábrica), mismo color, paso y orden de dibujado (tras las entidades, antes del HUD). — decisión del agente (pendiente de revisar)
+- **No:** cambiar mecánica, velocidades, hitboxes, puntuación ni el aspecto de ninguna skin.
+
+**Correcciones no aplicadas:**
+
+- Cadena `rgba(...)` por partícula y frame (`Particle.draw`): precalcularla en una tabla por alfa podría diferir en el redondeo de `toFixed(2)` y no garantiza el mismo píxel; coste bajo (partículas con vida ≤ 1.1 s).
+- `PlayRoom` (`handleAsteroidsStateChange`) no requiere cambios: el estado solo cambia con score/vidas/nivel.
+
+**Criterios de aceptación:**
+
+- [ ] DevTools → Performance con NEÓN y RETRO: sin frames largos ni memoria creciente.
+- [ ] Cambiar de pestaña un minuto y volver: sin ráfaga ni salto de asteroides/nave.
+- [ ] Pausar y reanudar, y JUGAR DE NUEVO: un solo bucle, sin saltos.
+- [ ] Salir de `/play/asteroides` y volver: sin errores en consola ni bucles duplicados.
+- [ ] En pantalla de 120 Hz la nave acelera y frena como a 60 Hz.
+- [ ] RETRO se ve igual que antes (scanlines 1 px cada 3 px); el resto de skins sin cambios.
+
+---
+
 ## Lo que **no** entra en este spec
 
 - Adaptar cualquier otro juego del catálogo (rompemuros, serpiente, invasores, bloques, laberinto).

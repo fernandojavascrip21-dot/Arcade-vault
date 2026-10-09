@@ -368,6 +368,48 @@ Criterios de aceptación:
 
 ---
 
+## 11 — Addendum (2026-10-09): rendimiento
+
+**Objetivo:** llevar el motor a las reglas de rendimiento del spec 17 (Rana) sin cambiar jugabilidad
+ni aspecto. Auditoría estática (sin medir FPS).
+
+| #   | Punto                                         | Antes                                                      | Después                                       |
+| --- | --------------------------------------------- | ---------------------------------------------------------- | --------------------------------------------- |
+| 1   | Un solo RAF, `stop()` simétrico               | ✅ `engine.ts` `start()` idempotente, `stop()` quita todo  | ✅                                            |
+| 2   | Delta acotado                                 | ✅ `MAX_DT_MS = 50`                                        | ✅                                            |
+| 3   | Movimiento escalado por `dt`                  | ✅                                                         | ✅                                            |
+| 4   | Pausa sin avance ni colado de tiempo          | ✅ `lastTime` se actualiza en pausa                        | ✅                                            |
+| 5   | `onStateChange` solo con cambios              | ✅ `emitState` compara campo a campo; nada por frame      | ✅                                            |
+| 6   | Wrapper: montaje único, refs, cleanup         | ✅ `bombardero-game.tsx`                                   | ✅                                            |
+| 7   | `onGameOver` una vez, motor congelado         | ✅ `endGame` con guarda `gameOver`                         | ✅                                            |
+| 8   | `shadowBlur` solo en relleno principal        | ✅ avión, bombas y suelo; `endGlow()` tras cada uno        | ✅                                            |
+| 9   | Sin asignaciones por frame                    | ❌ `falling` y `particles.filter` nuevos cada frame        | ✅ compactación in situ                       |
+| 10  | Capas estáticas cacheadas                     | ❌ scanlines RETRO: ~267 `fillRect` por frame              | ✅ canvas auxiliar + un `drawImage`           |
+| 11  | Sin `canvas.width`/layout en el bucle         | ✅ solo al crear el motor                                  | ✅                                            |
+| 12  | Colecciones acotadas y limpiadas en `restart` | ✅ bombas ≤ 6; partículas con vida 500 ms                  | ✅                                            |
+| 13  | `save()`/`restore()` emparejados              | ✅ `drawPlane` (retornos tempranos antes del `save`)       | ✅                                            |
+
+**Contratos nuevos:** ninguno (cambios internos del motor).
+
+**Decisiones:**
+
+- Scanlines en un canvas auxiliar creado dentro de la fábrica y regenerado en `setSkin` — Sí. Motivo: patrón de Rana; mismo color, paso y orden de dibujado — decisión del agente (pendiente de revisar).
+- Compactación in situ de `bombs` y `particles` — Sí. Motivo: mismo orden y resultado, sin arrays nuevos por frame — decisión del agente (pendiente de revisar).
+- Reutilizar el degradado del cielo — ya se recreaba solo en `setSkin`; sin cambios.
+
+**Correcciones no aplicadas:** ninguna.
+
+Criterios de aceptación:
+
+- [ ] En RETRO las scanlines se ven igual que antes; CLÁSICO y NEÓN no las muestran.
+- [ ] Cambiar de skin en pausa redibuja al instante, incluidas las scanlines.
+- [ ] Bombas y escombros se comportan igual (caen, impactan y desaparecen).
+- [ ] DevTools → Performance en NEÓN y RETRO: sin frames largos ni memoria creciente.
+- [ ] Cambiar de pestaña un minuto y volver: sin salto del avión.
+- [ ] Pausar/reanudar, JUGAR DE NUEVO y salir de `/play/bombardero` y volver: sin errores ni bucles duplicados.
+
+---
+
 ## Lo que **no** entra en este spec
 
 - Sonido, controles táctiles, selección de dificultad elegible.
