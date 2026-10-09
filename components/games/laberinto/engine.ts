@@ -46,6 +46,9 @@ const DOT_RADIUS = 4;
 const CAPSULE_RADIUS = 10;
 const WALL_WIDTH = 3;
 const LIVES_START = 3;
+const POINTS_DOT = 10;
+const POINTS_CAPSULE = 50;
+const BONUS_LEVEL = 500; // multiplicado por el nivel completado
 const MAX_DT_MS = 50; // tope para no saltar tras pausas o cambios de pestaña
 const EPSILON = 0.001;
 
@@ -168,6 +171,7 @@ export function createLaberintoEngine(
     facing: LEFT,
     travelled: 0,
   };
+  let dotsLeft = 0; // puntos y cápsulas que quedan en el tablero
   let score = 0;
   let lives = LIVES_START;
   let level = 1;
@@ -182,11 +186,13 @@ export function createLaberintoEngine(
   resetPlayer();
 
   function fillCells() {
+    dotsLeft = 0;
     for (let row = 0; row < ROWS; row++) {
       for (let col = 0; col < COLS; col++) {
         const ch = MAZE[row][col];
         cells[row * COLS + col] =
           ch === "." ? CELL_DOT : ch === "o" ? CELL_CAPSULE : CELL_EMPTY;
+        if (ch === "." || ch === "o") dotsLeft += 1;
       }
     }
   }
@@ -305,6 +311,32 @@ export function createLaberintoEngine(
     drawPlayer();
   }
 
+  // Tablero vacío: bono, nivel siguiente y todo vuelve a su sitio.
+  function nextLevel() {
+    score += BONUS_LEVEL * level;
+    level += 1;
+    fillCells();
+    resetPlayer();
+  }
+
+  // Come lo que haya en la celda. Devuelve true si con ello cambió el nivel.
+  function eatAt(col: number, row: number): boolean {
+    if (col < 0 || col >= COLS) return false; // centros virtuales del túnel
+    const index = row * COLS + col;
+    const kind = cells[index];
+    if (kind === CELL_EMPTY) return false;
+    cells[index] = CELL_EMPTY;
+    dotsLeft -= 1;
+    score += kind === CELL_DOT ? POINTS_DOT : POINTS_CAPSULE;
+    if (dotsLeft === 0) {
+      nextLevel();
+      emitState();
+      return true;
+    }
+    emitState();
+    return false;
+  }
+
   function canPlayerGo(col: number, row: number, dir: number): boolean {
     return isCorridor(col + DX[dir], row + DY[dir]);
   }
@@ -324,6 +356,7 @@ export function createLaberintoEngine(
       if (atCenter) {
         player.x = centerOf(col);
         player.y = centerOf(row);
+        if (eatAt(col, row)) return;
         if (
           player.queuedDir !== NONE &&
           canPlayerGo(col, row, player.queuedDir)
