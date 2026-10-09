@@ -38,7 +38,21 @@ const TUNNEL_WRAP = LABERINTO_WIDTH + CELL;
 const PLAYER_START_COL = 15;
 const PLAYER_START_ROW = 11;
 
+const TUNNEL_SLOW_COLS = 6; // columnas 0–5 y 26–31 de la fila del túnel
+const BASE_EXIT_COL = 15; // columna de la puerta
+const BASE_EXIT_ROW = 7; // celda de salida, justo encima de la puerta
+
 const PLAYER_SPEED = 160; // px/s
+const GUARDIAN_SPEED = 144; // px/s en nivel 1
+const GUARDIAN_SPEED_STEP = 6; // por nivel superado
+const GUARDIAN_SPEED_MAX = 168;
+const TUNNEL_SPEED = 80;
+const GUARDIAN_RADIUS = 15;
+// Dispersión y persecución alternadas (ms); la última persecución no termina.
+const PHASES_MS = [7000, 20000, 7000, 20000, 5000];
+const AMBUSH_CELLS = 4; // emboscador: celdas por delante del jugador
+const FLANK_CELLS = 2; // flanqueador: celdas por delante del jugador
+const WANDER_CELLS = 8; // errante: distancia a la que se retira
 const PLAYER_RADIUS = 15;
 const MOUTH_MAX = 0.28 * Math.PI; // media apertura de la boca
 const MOUTH_PERIOD = CELL; // px recorridos por ciclo de boca
@@ -94,7 +108,53 @@ const PALETTE = {
   errante: "#b388ff",
   vulnerable: "#3a5bff",
   vulnerableWarn: "#ffffff",
+  eye: "#ffffff",
+  pupil: "#1a1a40",
 };
+
+type GuardianId = "cazador" | "emboscador" | "flanqueador" | "errante";
+
+// Posición inicial, esquina de dispersión y salida de la base (ms desde la
+// aparición). El cazador empieza ya fuera, sobre la puerta.
+const GUARDIANS: Array<{
+  id: GuardianId;
+  col: number;
+  row: number;
+  cornerCol: number;
+  cornerRow: number;
+  releaseMs: number;
+}> = [
+  { id: "cazador", col: 15, row: 7, cornerCol: 30, cornerRow: 1, releaseMs: 0 },
+  {
+    id: "emboscador",
+    col: 14,
+    row: 9,
+    cornerCol: 1,
+    cornerRow: 1,
+    releaseMs: 0,
+  },
+  {
+    id: "flanqueador",
+    col: 16,
+    row: 9,
+    cornerCol: 30,
+    cornerRow: 18,
+    releaseMs: 4000,
+  },
+  {
+    id: "errante",
+    col: 18,
+    row: 9,
+    cornerCol: 1,
+    cornerRow: 18,
+    releaseMs: 8000,
+  },
+];
+const CAZADOR = 0; // índice en GUARDIANS; el flanqueador lo usa de referencia
+
+const MODE_BASE = 0; // esperando dentro de la base
+const MODE_LEAVING = 1; // saliendo por la puerta
+const MODE_NORMAL = 2; // dispersión o persecución, según la fase
 
 function isWall(col: number, row: number): boolean {
   if (row < 0 || row >= ROWS || col < 0 || col >= COLS) return false;
@@ -124,6 +184,13 @@ interface Player {
   queuedDir: number; // giro en cola, o NONE
   facing: number; // última dirección, para dibujar la boca
   travelled: number; // px recorridos, anima la boca
+}
+
+interface Guardian {
+  x: number; // centro, px
+  y: number;
+  dir: number; // UP/LEFT/DOWN/RIGHT, o NONE antes de la primera decisión
+  mode: number; // MODE_*
 }
 
 export interface LaberintoState {
@@ -171,6 +238,17 @@ export function createLaberintoEngine(
     facing: LEFT,
     travelled: 0,
   };
+  const guardians: Guardian[] = GUARDIANS.map(() => ({
+    x: 0,
+    y: 0,
+    dir: NONE,
+    mode: MODE_BASE,
+  }));
+  let spawnMs = 0; // tiempo desde la última aparición (salidas de la base)
+  let phaseIndex = 0; // índice en PHASES_MS; par = dispersión
+  let phaseMs = 0; // tiempo dentro de la fase actual
+  let targetCol = 0; // objetivo del guardián que está decidiendo
+  let targetRow = 0;
   let dotsLeft = 0; // puntos y cápsulas que quedan en el tablero
   let score = 0;
   let lives = LIVES_START;
@@ -184,6 +262,7 @@ export function createLaberintoEngine(
 
   fillCells();
   resetPlayer();
+  resetGuardians();
 
   function fillCells() {
     dotsLeft = 0;
@@ -204,6 +283,20 @@ export function createLaberintoEngine(
     player.queuedDir = NONE;
     player.facing = LEFT;
     player.travelled = 0;
+  }
+
+  function resetGuardians() {
+    for (let i = 0; i < guardians.length; i++) {
+      const def = GUARDIANS[i];
+      const guardian = guardians[i];
+      guardian.x = centerOf(def.col);
+      guardian.y = centerOf(def.row);
+      guardian.dir = NONE;
+      guardian.mode = def.row === BASE_EXIT_ROW ? MODE_NORMAL : MODE_BASE;
+    }
+    spawnMs = 0;
+    phaseIndex = 0;
+    phaseMs = 0;
   }
 
   function emitState() {
@@ -305,10 +398,46 @@ export function createLaberintoEngine(
     g.fill();
   }
 
+  function drawGuardian(guardian: Guardian, color: string) {
+    const { x, y } = guardian;
+    const r = GUARDIAN_RADIUS;
+    const third = (r * 2) / 3;
+    // Cúpula, costados rectos y falda en tres picos.
+    g.fillStyle = color;
+    g.beginPath();
+    g.arc(x, y - 2, r, Math.PI, 0);
+    g.lineTo(x + r, y + r);
+    g.lineTo(x + r - third / 2, y + r - 5);
+    g.lineTo(x + r - third, y + r);
+    g.lineTo(x, y + r - 5);
+    g.lineTo(x - r + third, y + r);
+    g.lineTo(x - r + third / 2, y + r - 5);
+    g.lineTo(x - r, y + r);
+    g.closePath();
+    g.fill();
+
+    // Los ojos miran hacia donde avanza.
+    const lookX = guardian.dir === NONE ? 0 : DX[guardian.dir] * 2;
+    const lookY = guardian.dir === NONE ? 0 : DY[guardian.dir] * 2;
+    g.fillStyle = PALETTE.eye;
+    g.beginPath();
+    g.arc(x - 5.5, y - 3, 4, 0, Math.PI * 2);
+    g.arc(x + 5.5, y - 3, 4, 0, Math.PI * 2);
+    g.fill();
+    g.fillStyle = PALETTE.pupil;
+    g.beginPath();
+    g.arc(x - 5.5 + lookX, y - 3 + lookY, 2, 0, Math.PI * 2);
+    g.arc(x + 5.5 + lookX, y - 3 + lookY, 2, 0, Math.PI * 2);
+    g.fill();
+  }
+
   function draw() {
     g.drawImage(wallLayer, 0, 0);
     drawCells();
     drawPlayer();
+    for (let i = 0; i < guardians.length; i++) {
+      drawGuardian(guardians[i], PALETTE[GUARDIANS[i].id]);
+    }
   }
 
   // Tablero vacío: bono, nivel siguiente y todo vuelve a su sitio.
@@ -317,6 +446,7 @@ export function createLaberintoEngine(
     level += 1;
     fillCells();
     resetPlayer();
+    resetGuardians();
   }
 
   // Come lo que haya en la celda. Devuelve true si con ello cambió el nivel.
@@ -393,9 +523,185 @@ export function createLaberintoEngine(
     }
   }
 
+  function isScatter(): boolean {
+    return phaseIndex < PHASES_MS.length && phaseIndex % 2 === 0;
+  }
+
+  function guardianSpeed(guardian: Guardian): number {
+    const col = cellOf(guardian.x);
+    if (
+      cellOf(guardian.y) === TUNNEL_ROW &&
+      (col < TUNNEL_SLOW_COLS || col >= COLS - TUNNEL_SLOW_COLS)
+    ) {
+      return TUNNEL_SPEED;
+    }
+    return Math.min(
+      GUARDIAN_SPEED_MAX,
+      GUARDIAN_SPEED + (level - 1) * GUARDIAN_SPEED_STEP,
+    );
+  }
+
+  // Deja en targetCol/targetRow la celda a la que apunta el guardián. Puede
+  // caer fuera del tablero o en una pared: solo sirve para medir distancias.
+  function setTarget(index: number) {
+    const def = GUARDIANS[index];
+    if (isScatter()) {
+      targetCol = def.cornerCol;
+      targetRow = def.cornerRow;
+      return;
+    }
+    const playerCol = cellOf(player.x);
+    const playerRow = cellOf(player.y);
+    const aheadX = DX[player.facing];
+    const aheadY = DY[player.facing];
+    if (def.id === "cazador") {
+      targetCol = playerCol;
+      targetRow = playerRow;
+    } else if (def.id === "emboscador") {
+      targetCol = playerCol + aheadX * AMBUSH_CELLS;
+      targetRow = playerRow + aheadY * AMBUSH_CELLS;
+    } else if (def.id === "flanqueador") {
+      // Dobla el vector que va del cazador al punto por delante del jugador.
+      const pivotCol = playerCol + aheadX * FLANK_CELLS;
+      const pivotRow = playerRow + aheadY * FLANK_CELLS;
+      const cazador = guardians[CAZADOR];
+      targetCol = pivotCol * 2 - cellOf(cazador.x);
+      targetRow = pivotRow * 2 - cellOf(cazador.y);
+    } else {
+      // Errante: persigue de lejos y se retira a su esquina al acercarse.
+      const guardian = guardians[index];
+      const dCol = cellOf(guardian.x) - playerCol;
+      const dRow = cellOf(guardian.y) - playerRow;
+      if (dCol * dCol + dRow * dRow > WANDER_CELLS * WANDER_CELLS) {
+        targetCol = playerCol;
+        targetRow = playerRow;
+      } else {
+        targetCol = def.cornerCol;
+        targetRow = def.cornerRow;
+      }
+    }
+  }
+
+  // Entre las salidas libres elige la más cercana al objetivo (distancia
+  // euclídea; el túnel no cuenta como atajo). Nunca invierte el sentido y,
+  // en empate, gana el orden arriba, izquierda, abajo, derecha.
+  function chooseDirection(index: number, col: number, row: number): number {
+    const guardian = guardians[index];
+    const reverse = guardian.dir === NONE ? NONE : (guardian.dir + 2) % 4;
+    setTarget(index);
+    let best = NONE;
+    let bestDistance = Infinity;
+    for (let dir = 0; dir < 4; dir++) {
+      if (dir === reverse) continue;
+      const nextCol = col + DX[dir];
+      const nextRow = row + DY[dir];
+      if (!isCorridor(nextCol, nextRow)) continue;
+      const dCol = nextCol - targetCol;
+      const dRow = nextRow - targetRow;
+      const distance = dCol * dCol + dRow * dRow;
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        best = dir;
+      }
+    }
+    return best === NONE ? reverse : best;
+  }
+
+  // Sale de la base: primero hasta la columna de la puerta, luego hacia
+  // arriba hasta la celda de salida. Devuelve la distancia que sobra.
+  function leaveBase(guardian: Guardian, distance: number): number {
+    const exitX = centerOf(BASE_EXIT_COL);
+    const exitY = centerOf(BASE_EXIT_ROW);
+    let remaining = distance;
+    if (guardian.x !== exitX) {
+      const gap = exitX - guardian.x;
+      const step = Math.min(remaining, Math.abs(gap));
+      guardian.dir = gap > 0 ? RIGHT : LEFT;
+      guardian.x =
+        step === Math.abs(gap) ? exitX : guardian.x + step * DX[guardian.dir];
+      remaining -= step;
+    }
+    if (remaining > EPSILON && guardian.x === exitX) {
+      const gap = guardian.y - exitY;
+      const step = Math.min(remaining, gap);
+      guardian.dir = UP;
+      guardian.y = step === gap ? exitY : guardian.y - step;
+      remaining -= step;
+      if (guardian.y === exitY) {
+        guardian.mode = MODE_NORMAL;
+        guardian.dir = NONE; // decide libremente en la celda de salida
+      }
+    }
+    return remaining;
+  }
+
+  // Mismo avance de centro a centro que el jugador, decidiendo en cada uno.
+  function updateGuardian(index: number, dt: number) {
+    const guardian = guardians[index];
+    if (guardian.mode === MODE_BASE) {
+      if (spawnMs < GUARDIANS[index].releaseMs) return;
+      guardian.mode = MODE_LEAVING;
+    }
+    let remaining = guardianSpeed(guardian) * dt;
+    if (guardian.mode === MODE_LEAVING) {
+      remaining = leaveBase(guardian, remaining);
+      if (guardian.mode === MODE_LEAVING) return;
+    }
+    while (remaining > EPSILON) {
+      const col = cellOf(guardian.x);
+      const row = cellOf(guardian.y);
+      const atCenter =
+        Math.abs(guardian.x - centerOf(col)) < EPSILON &&
+        Math.abs(guardian.y - centerOf(row)) < EPSILON;
+      if (atCenter) {
+        guardian.x = centerOf(col);
+        guardian.y = centerOf(row);
+        guardian.dir = chooseDirection(index, col, row);
+        if (guardian.dir === NONE) return;
+      }
+
+      const dx = DX[guardian.dir];
+      const dy = DY[guardian.dir];
+      const offset =
+        dx !== 0
+          ? (guardian.x - centerOf(col)) * dx
+          : (guardian.y - centerOf(row)) * dy;
+      const toNext = offset < -EPSILON ? -offset : CELL - offset;
+      const step = Math.min(remaining, toNext);
+      guardian.x += dx * step;
+      guardian.y += dy * step;
+      remaining -= step;
+
+      if (dx < 0 && guardian.x <= -HALF + EPSILON) guardian.x += TUNNEL_WRAP;
+      else if (dx > 0 && guardian.x >= LABERINTO_WIDTH + HALF - EPSILON) {
+        guardian.x -= TUNNEL_WRAP;
+      }
+    }
+  }
+
+  // Al cambiar de fase, los guardianes en pasillo invierten el sentido.
+  function updatePhase(dt: number) {
+    if (phaseIndex >= PHASES_MS.length) return;
+    phaseMs += dt * 1000;
+    if (phaseMs < PHASES_MS[phaseIndex]) return;
+    phaseMs -= PHASES_MS[phaseIndex];
+    phaseIndex += 1;
+    for (let i = 0; i < guardians.length; i++) {
+      const guardian = guardians[i];
+      if (guardian.mode === MODE_NORMAL && guardian.dir !== NONE) {
+        guardian.dir = (guardian.dir + 2) % 4;
+      }
+    }
+  }
+
   function update(dt: number) {
     if (gameOver) return;
+    const levelBefore = level;
     updatePlayer(dt);
+    if (level !== levelBefore) return; // tablero nuevo: todos en su sitio
+    spawnMs += dt * 1000;
+    updatePhase(dt);
+    for (let i = 0; i < guardians.length; i++) updateGuardian(i, dt);
   }
 
   function steer(direction: number) {
@@ -462,6 +768,7 @@ export function createLaberintoEngine(
       gameOver = false;
       fillCells();
       resetPlayer();
+      resetGuardians();
       emitState();
     },
   };
