@@ -50,6 +50,15 @@ const TUNNEL_SPEED = 80;
 const GUARDIAN_RADIUS = 15;
 // Dispersión y persecución alternadas (ms); la última persecución no termina.
 const PHASES_MS = [7000, 20000, 7000, 20000, 5000];
+const FRIGHT_SPEED = 90; // guardián vulnerable
+const EYES_SPEED = 320; // ojos de vuelta a la base
+const BASE_REVIVE_ROW = 9; // fila del interior donde reviven los ojos
+const FRIGHT_MS = 7000; // duración de la cápsula en nivel 1
+const FRIGHT_STEP_MS = 500; // menos por nivel superado
+const FRIGHT_MIN_MS = 2000;
+const FRIGHT_WARN_MS = 2000; // parpadeo de aviso al final
+const WARN_BLINK_MS = 200;
+const CAPSULE_BLINK_MS = 400;
 const READY_MS = 1500; // todo quieto al aparecer
 const DEATH_MS = 1000; // animación de muerte
 const HIT_DISTANCE = 20; // px entre centros
@@ -65,6 +74,7 @@ const WALL_WIDTH = 3;
 const LIVES_START = 3;
 const POINTS_DOT = 10;
 const POINTS_CAPSULE = 50;
+const POINTS_GUARDIAN = [200, 400, 800, 1600]; // cadena dentro de una cápsula
 const BONUS_LEVEL = 500; // multiplicado por el nivel completado
 const MAX_DT_MS = 50; // tope para no saltar tras pausas o cambios de pestaña
 const EPSILON = 0.001;
@@ -158,6 +168,9 @@ const CAZADOR = 0; // índice en GUARDIANS; el flanqueador lo usa de referencia
 const MODE_BASE = 0; // esperando dentro de la base
 const MODE_LEAVING = 1; // saliendo por la puerta
 const MODE_NORMAL = 2; // dispersión o persecución, según la fase
+const MODE_VULNERABLE = 3; // cápsula activa: huye al azar y se le puede comer
+const MODE_EYES = 4; // comido: solo ojos, de vuelta a la puerta
+const MODE_ENTERING = 5; // ojos bajando por la puerta para revivir
 
 function isWall(col: number, row: number): boolean {
   if (row < 0 || row >= ROWS || col < 0 || col >= COLS) return false;
@@ -252,6 +265,9 @@ export function createLaberintoEngine(
   let phaseMs = 0; // tiempo dentro de la fase actual
   let targetCol = 0; // objetivo del guardián que está decidiendo
   let targetRow = 0;
+  let frightMs = 0; // cuenta atrás de la cápsula activa
+  let chain = 0; // guardianes comidos con la cápsula actual
+  let blinkMs = 0; // reloj de los parpadeos (cápsulas y aviso)
   let readyMs = READY_MS; // cuenta atrás de la pausa de preparado
   let deathMs = 0; // cuenta atrás de la animación de muerte
   let dotsLeft = 0; // puntos y cápsulas que quedan en el tablero
@@ -302,6 +318,8 @@ export function createLaberintoEngine(
     spawnMs = 0;
     phaseIndex = 0;
     phaseMs = 0;
+    frightMs = 0;
+    chain = 0;
     readyMs = READY_MS;
     deathMs = 0;
   }
@@ -370,12 +388,15 @@ export function createLaberintoEngine(
   }
 
   function drawCells() {
+    // Las cápsulas parpadean; los puntos no.
+    const capsulesOn = Math.floor(blinkMs / CAPSULE_BLINK_MS) % 2 === 0;
     g.fillStyle = PALETTE.dot;
     g.beginPath();
     for (let row = 0; row < ROWS; row++) {
       for (let col = 0; col < COLS; col++) {
         const kind = cells[row * COLS + col];
         if (kind === CELL_EMPTY) continue;
+        if (kind === CELL_CAPSULE && !capsulesOn) continue;
         const x = centerOf(col);
         const y = centerOf(row);
         const radius = kind === CELL_DOT ? DOT_RADIUS : CAPSULE_RADIUS;
@@ -408,23 +429,37 @@ export function createLaberintoEngine(
     g.fill();
   }
 
+  function guardianColor(index: number): string {
+    if (guardians[index].mode !== MODE_VULNERABLE) {
+      return PALETTE[GUARDIANS[index].id];
+    }
+    // En el aviso final alterna con blanco.
+    const warning =
+      frightMs < FRIGHT_WARN_MS &&
+      Math.floor(frightMs / WARN_BLINK_MS) % 2 === 0;
+    return warning ? PALETTE.vulnerableWarn : PALETTE.vulnerable;
+  }
+
   function drawGuardian(guardian: Guardian, color: string) {
     const { x, y } = guardian;
     const r = GUARDIAN_RADIUS;
     const third = (r * 2) / 3;
-    // Cúpula, costados rectos y falda en tres picos.
-    g.fillStyle = color;
-    g.beginPath();
-    g.arc(x, y - 2, r, Math.PI, 0);
-    g.lineTo(x + r, y + r);
-    g.lineTo(x + r - third / 2, y + r - 5);
-    g.lineTo(x + r - third, y + r);
-    g.lineTo(x, y + r - 5);
-    g.lineTo(x - r + third, y + r);
-    g.lineTo(x - r + third / 2, y + r - 5);
-    g.lineTo(x - r, y + r);
-    g.closePath();
-    g.fill();
+    // Comido: solo quedan los ojos.
+    if (guardian.mode !== MODE_EYES && guardian.mode !== MODE_ENTERING) {
+      // Cúpula, costados rectos y falda en tres picos.
+      g.fillStyle = color;
+      g.beginPath();
+      g.arc(x, y - 2, r, Math.PI, 0);
+      g.lineTo(x + r, y + r);
+      g.lineTo(x + r - third / 2, y + r - 5);
+      g.lineTo(x + r - third, y + r);
+      g.lineTo(x, y + r - 5);
+      g.lineTo(x - r + third, y + r);
+      g.lineTo(x - r + third / 2, y + r - 5);
+      g.lineTo(x - r, y + r);
+      g.closePath();
+      g.fill();
+    }
 
     // Los ojos miran hacia donde avanza.
     const lookX = guardian.dir === NONE ? 0 : DX[guardian.dir] * 2;
@@ -448,7 +483,7 @@ export function createLaberintoEngine(
     drawPlayer();
     if (deathMs > 0) return; // durante la muerte los guardianes se ocultan
     for (let i = 0; i < guardians.length; i++) {
-      drawGuardian(guardians[i], PALETTE[GUARDIANS[i].id]);
+      drawGuardian(guardians[i], guardianColor(i));
     }
   }
 
@@ -461,6 +496,31 @@ export function createLaberintoEngine(
     resetGuardians();
   }
 
+  // Cápsula: los guardianes que están fuera de la base se vuelven vulnerables
+  // e invierten el sentido. Otra cápsula reinicia la duración y la cadena.
+  function startFright() {
+    frightMs = Math.max(
+      FRIGHT_MIN_MS,
+      FRIGHT_MS - (level - 1) * FRIGHT_STEP_MS,
+    );
+    chain = 0;
+    for (let i = 0; i < guardians.length; i++) {
+      const guardian = guardians[i];
+      if (guardian.mode !== MODE_NORMAL) continue;
+      guardian.mode = MODE_VULNERABLE;
+      if (guardian.dir !== NONE) guardian.dir = (guardian.dir + 2) % 4;
+    }
+  }
+
+  function endFright() {
+    frightMs = 0;
+    for (let i = 0; i < guardians.length; i++) {
+      if (guardians[i].mode === MODE_VULNERABLE) {
+        guardians[i].mode = MODE_NORMAL;
+      }
+    }
+  }
+
   // Come lo que haya en la celda. Devuelve true si con ello cambió el nivel.
   function eatAt(col: number, row: number): boolean {
     if (col < 0 || col >= COLS) return false; // centros virtuales del túnel
@@ -470,6 +530,7 @@ export function createLaberintoEngine(
     cells[index] = CELL_EMPTY;
     dotsLeft -= 1;
     score += kind === CELL_DOT ? POINTS_DOT : POINTS_CAPSULE;
+    if (kind === CELL_CAPSULE) startFright();
     if (dotsLeft === 0) {
       nextLevel();
       emitState();
@@ -540,6 +601,10 @@ export function createLaberintoEngine(
   }
 
   function guardianSpeed(guardian: Guardian): number {
+    if (guardian.mode === MODE_EYES || guardian.mode === MODE_ENTERING) {
+      return EYES_SPEED;
+    }
+    if (guardian.mode === MODE_VULNERABLE) return FRIGHT_SPEED;
     const col = cellOf(guardian.x);
     if (
       cellOf(guardian.y) === TUNNEL_ROW &&
@@ -557,6 +622,11 @@ export function createLaberintoEngine(
   // caer fuera del tablero o en una pared: solo sirve para medir distancias.
   function setTarget(index: number) {
     const def = GUARDIANS[index];
+    if (guardians[index].mode === MODE_EYES) {
+      targetCol = BASE_EXIT_COL;
+      targetRow = BASE_EXIT_ROW;
+      return;
+    }
     if (isScatter()) {
       targetCol = def.cornerCol;
       targetRow = def.cornerRow;
@@ -594,12 +664,35 @@ export function createLaberintoEngine(
     }
   }
 
+  // Vulnerable: una salida libre al azar, sin invertir el sentido.
+  function randomDirection(col: number, row: number, reverse: number): number {
+    let exits = 0;
+    for (let dir = 0; dir < 4; dir++) {
+      if (dir !== reverse && isCorridor(col + DX[dir], row + DY[dir])) {
+        exits += 1;
+      }
+    }
+    if (exits === 0) return reverse;
+    let pick = Math.floor(Math.random() * exits);
+    for (let dir = 0; dir < 4; dir++) {
+      if (dir === reverse || !isCorridor(col + DX[dir], row + DY[dir])) {
+        continue;
+      }
+      if (pick === 0) return dir;
+      pick -= 1;
+    }
+    return reverse;
+  }
+
   // Entre las salidas libres elige la más cercana al objetivo (distancia
   // euclídea; el túnel no cuenta como atajo). Nunca invierte el sentido y,
   // en empate, gana el orden arriba, izquierda, abajo, derecha.
   function chooseDirection(index: number, col: number, row: number): number {
     const guardian = guardians[index];
     const reverse = guardian.dir === NONE ? NONE : (guardian.dir + 2) % 4;
+    if (guardian.mode === MODE_VULNERABLE) {
+      return randomDirection(col, row, reverse);
+    }
     setTarget(index);
     let best = NONE;
     let bestDistance = Infinity;
@@ -655,6 +748,13 @@ export function createLaberintoEngine(
       guardian.mode = MODE_LEAVING;
     }
     let remaining = guardianSpeed(guardian) * dt;
+    if (guardian.mode === MODE_ENTERING) {
+      // Los ojos bajan por la puerta, reviven dentro y vuelven a salir.
+      const reviveY = centerOf(BASE_REVIVE_ROW);
+      guardian.y = Math.min(reviveY, guardian.y + remaining);
+      if (guardian.y === reviveY) guardian.mode = MODE_LEAVING;
+      return;
+    }
     if (guardian.mode === MODE_LEAVING) {
       remaining = leaveBase(guardian, remaining);
       if (guardian.mode === MODE_LEAVING) return;
@@ -668,6 +768,15 @@ export function createLaberintoEngine(
       if (atCenter) {
         guardian.x = centerOf(col);
         guardian.y = centerOf(row);
+        if (
+          guardian.mode === MODE_EYES &&
+          col === BASE_EXIT_COL &&
+          row === BASE_EXIT_ROW
+        ) {
+          guardian.mode = MODE_ENTERING;
+          guardian.dir = DOWN;
+          return;
+        }
         guardian.dir = chooseDirection(index, col, row);
         if (guardian.dir === NONE) return;
       }
@@ -693,6 +802,7 @@ export function createLaberintoEngine(
 
   // Al cambiar de fase, los guardianes en pasillo invierten el sentido.
   function updatePhase(dt: number) {
+    if (frightMs > 0) return; // el reloj de fases se detiene con la cápsula
     if (phaseIndex >= PHASES_MS.length) return;
     phaseMs += dt * 1000;
     if (phaseMs < PHASES_MS[phaseIndex]) return;
@@ -706,13 +816,22 @@ export function createLaberintoEngine(
     }
   }
 
+  // Un guardián vulnerable se come (200, 400, 800, 1600 dentro de la misma
+  // cápsula) y vuelve como ojos; uno normal mata. Devuelve true si mata.
   function hitByGuardian(): boolean {
     for (let i = 0; i < guardians.length; i++) {
       const guardian = guardians[i];
-      if (guardian.mode !== MODE_NORMAL) continue;
+      if (guardian.mode !== MODE_NORMAL && guardian.mode !== MODE_VULNERABLE) {
+        continue;
+      }
       const dx = guardian.x - player.x;
       const dy = guardian.y - player.y;
-      if (dx * dx + dy * dy < HIT_DISTANCE * HIT_DISTANCE) return true;
+      if (dx * dx + dy * dy >= HIT_DISTANCE * HIT_DISTANCE) continue;
+      if (guardian.mode === MODE_NORMAL) return true;
+      score += POINTS_GUARDIAN[Math.min(chain, POINTS_GUARDIAN.length - 1)];
+      chain += 1;
+      guardian.mode = MODE_EYES;
+      emitState();
     }
     return false;
   }
@@ -746,9 +865,14 @@ export function createLaberintoEngine(
       readyMs -= dt * 1000;
       return;
     }
+    blinkMs += dt * 1000;
     const levelBefore = level;
     updatePlayer(dt);
     if (level !== levelBefore) return; // tablero nuevo: todos en su sitio
+    if (frightMs > 0) {
+      frightMs -= dt * 1000;
+      if (frightMs <= 0) endFright();
+    }
     spawnMs += dt * 1000;
     updatePhase(dt);
     for (let i = 0; i < guardians.length; i++) updateGuardian(i, dt);
