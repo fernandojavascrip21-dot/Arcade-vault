@@ -109,21 +109,101 @@ const CELL_EMPTY = 0;
 const CELL_DOT = 1;
 const CELL_CAPSULE = 2;
 
-const PALETTE = {
-  bg: "#000",
-  wall: "#ff8a00",
-  dot: "#ffd6a5",
-  door: "#ffd6a5",
-  player: "#f5ff00",
-  cazador: "#ff2d6f",
-  emboscador: "#00e5ff",
-  flanqueador: "#39ff14",
-  errante: "#b388ff",
-  vulnerable: "#3a5bff",
-  vulnerableWarn: "#ffffff",
-  eye: "#ffffff",
-  pupil: "#1a1a40",
+export type LaberintoSkin = "clasico" | "retro" | "neon";
+
+export const LABERINTO_SKINS: Array<{ id: LaberintoSkin; label: string }> = [
+  { id: "clasico", label: "CLÁSICO" },
+  { id: "retro", label: "RETRO" },
+  { id: "neon", label: "NEÓN" },
+];
+
+export const LABERINTO_SKIN_STORAGE_KEY = "arcadevault.laberinto.skin.v1";
+
+interface LaberintoPalette {
+  bg: string;
+  wall: string;
+  dot: string;
+  door: string;
+  player: string;
+  cazador: string;
+  emboscador: string;
+  flanqueador: string;
+  errante: string;
+  vulnerable: string;
+  vulnerableWarn: string;
+  eye: string;
+  pupil: string;
+}
+
+// Todos los colores del juego, por skin. `clasico` conserva los valores
+// con los que se implementó el spec 20. `retro` es fósforo verde: los cuatro
+// guardianes se distinguen por intensidad (de más a menos brillante: cazador,
+// emboscador, flanqueador, errante) y el vulnerable es el más apagado, con el
+// aviso en blanco.
+const SKIN_PALETTES: Record<LaberintoSkin, LaberintoPalette> = {
+  clasico: {
+    bg: "#000",
+    wall: "#ff8a00",
+    dot: "#ffd6a5",
+    door: "#ffd6a5",
+    player: "#f5ff00",
+    cazador: "#ff2d6f",
+    emboscador: "#00e5ff",
+    flanqueador: "#39ff14",
+    errante: "#b388ff",
+    vulnerable: "#3a5bff",
+    vulnerableWarn: "#ffffff",
+    eye: "#ffffff",
+    pupil: "#1a1a40",
+  },
+  retro: {
+    bg: "#020a04",
+    wall: "#177a31",
+    dot: "#5fd37a",
+    door: "#5fd37a",
+    player: "#e0ffe8",
+    cazador: "#9af5b2",
+    emboscador: "#62dd82",
+    flanqueador: "#3fbf63",
+    errante: "#25a049",
+    vulnerable: "#127a2e",
+    vulnerableWarn: "#ffffff",
+    eye: "#020a04",
+    pupil: "#e0ffe8",
+  },
+  neon: {
+    bg: "#05050a",
+    wall: "#7c4dff",
+    dot: "#ffe08a",
+    door: "#ff9ad5",
+    player: "#ffee00",
+    cazador: "#ff2d95",
+    emboscador: "#00f0ff",
+    flanqueador: "#44ff55",
+    errante: "#ff8a00",
+    vulnerable: "#3a5bff",
+    vulnerableWarn: "#ffffff",
+    eye: "#ffffff",
+    pupil: "#05050a",
+  },
 };
+
+// Trazo por skin: glow (shadowBlur, 0 = ninguno) en paredes (capa en caché),
+// puntos, jugador y cuerpo de guardianes, y scanlines (capa en caché).
+interface SkinRenderer {
+  glow: number;
+  wallGlow: number;
+  scanlines: boolean;
+}
+
+const SKIN_RENDERERS: Record<LaberintoSkin, SkinRenderer> = {
+  clasico: { glow: 0, wallGlow: 0, scanlines: false },
+  retro: { glow: 0, wallGlow: 0, scanlines: true },
+  neon: { glow: 10, wallGlow: 8, scanlines: false },
+};
+
+const SCANLINE_COLOR = "rgba(0,0,0,.18)";
+const SCANLINE_STEP = 3;
 
 type GuardianId = "cazador" | "emboscador" | "flanqueador" | "errante";
 
@@ -226,11 +306,13 @@ export interface LaberintoEngine {
   stop(): void;
   setPaused(paused: boolean): void;
   restart(): void;
+  setSkin(skin: LaberintoSkin): void;
 }
 
 export function createLaberintoEngine(
   canvas: HTMLCanvasElement,
   handlers: LaberintoHandlers,
+  options?: { initialSkin?: LaberintoSkin },
 ): LaberintoEngine {
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Canvas 2D no disponible");
@@ -239,11 +321,18 @@ export function createLaberintoEngine(
   canvas.width = LABERINTO_WIDTH;
   canvas.height = LABERINTO_HEIGHT;
 
-  // Las paredes no cambian: se pintan una vez y se copian en cada frame.
+  let skin: LaberintoSkin = options?.initialSkin ?? "clasico";
+  let palette = SKIN_PALETTES[skin];
+  let renderer = SKIN_RENDERERS[skin];
+
+  // Las paredes no cambian: se pintan una vez (y al cambiar de skin) y se
+  // copian en cada frame.
   const wallLayer = document.createElement("canvas");
   wallLayer.width = LABERINTO_WIDTH;
   wallLayer.height = LABERINTO_HEIGHT;
   drawWallLayer();
+  // Scanlines: capa en caché, creada la primera vez que una skin las usa.
+  let scanlineLayer: HTMLCanvasElement | null = null;
 
   const cells = new Uint8Array(COLS * ROWS); // puntos y cápsulas vivos
   const player: Player = {
@@ -325,17 +414,18 @@ export function createLaberintoEngine(
   }
 
   function emitState() {
-    const next: LaberintoState = { score, lives, level, paused };
     const prev = lastEmitted;
     if (
       prev &&
-      prev.score === next.score &&
-      prev.lives === next.lives &&
-      prev.level === next.level &&
-      prev.paused === next.paused
+      prev.score === score &&
+      prev.lives === lives &&
+      prev.level === level &&
+      prev.paused === paused
     ) {
       return;
     }
+    // El objeto solo se crea cuando algo cambió.
+    const next: LaberintoState = { score, lives, level, paused };
     lastEmitted = next;
     handlers.onStateChange(next);
   }
@@ -344,11 +434,13 @@ export function createLaberintoEngine(
   function drawWallLayer() {
     const w = wallLayer.getContext("2d");
     if (!w) throw new Error("Canvas 2D no disponible");
-    w.fillStyle = PALETTE.bg;
+    w.fillStyle = palette.bg;
     w.fillRect(0, 0, LABERINTO_WIDTH, LABERINTO_HEIGHT);
     w.lineWidth = WALL_WIDTH;
     w.lineCap = "round";
-    w.strokeStyle = PALETTE.wall;
+    w.strokeStyle = palette.wall;
+    w.shadowColor = palette.wall;
+    w.shadowBlur = renderer.wallGlow;
     w.beginPath();
     for (let row = 0; row < ROWS; row++) {
       for (let col = 0; col < COLS; col++) {
@@ -375,7 +467,8 @@ export function createLaberintoEngine(
     }
     w.stroke();
 
-    w.strokeStyle = PALETTE.door;
+    w.strokeStyle = palette.door;
+    w.shadowColor = palette.door;
     w.beginPath();
     for (let row = 0; row < ROWS; row++) {
       for (let col = 0; col < COLS; col++) {
@@ -385,12 +478,42 @@ export function createLaberintoEngine(
       }
     }
     w.stroke();
+    w.shadowBlur = 0;
+    w.shadowColor = "transparent";
+  }
+
+  function drawScanlines() {
+    if (!renderer.scanlines) return;
+    if (!scanlineLayer) {
+      const layer = document.createElement("canvas");
+      layer.width = LABERINTO_WIDTH;
+      layer.height = LABERINTO_HEIGHT;
+      const c = layer.getContext("2d");
+      if (!c) throw new Error("Canvas 2D no disponible");
+      c.fillStyle = SCANLINE_COLOR;
+      for (let y = 0; y < LABERINTO_HEIGHT; y += SCANLINE_STEP) {
+        c.fillRect(0, y, LABERINTO_WIDTH, 1);
+      }
+      scanlineLayer = layer;
+    }
+    g.drawImage(scanlineLayer, 0, 0);
+  }
+
+  function setGlow(color: string) {
+    g.shadowColor = color;
+    g.shadowBlur = renderer.glow;
+  }
+
+  function clearGlow() {
+    g.shadowBlur = 0;
+    g.shadowColor = "transparent";
   }
 
   function drawCells() {
     // Las cápsulas parpadean; los puntos no.
     const capsulesOn = Math.floor(blinkMs / CAPSULE_BLINK_MS) % 2 === 0;
-    g.fillStyle = PALETTE.dot;
+    g.fillStyle = palette.dot;
+    if (renderer.glow > 0) setGlow(palette.dot);
     g.beginPath();
     for (let row = 0; row < ROWS; row++) {
       for (let col = 0; col < COLS; col++) {
@@ -405,6 +528,7 @@ export function createLaberintoEngine(
       }
     }
     g.fill();
+    if (renderer.glow > 0) clearGlow();
   }
 
   function drawPlayer() {
@@ -415,7 +539,8 @@ export function createLaberintoEngine(
     // Al morir se encoge hasta desaparecer.
     const radius =
       deathMs > 0 ? (PLAYER_RADIUS * deathMs) / DEATH_MS : PLAYER_RADIUS;
-    g.fillStyle = PALETTE.player;
+    g.fillStyle = palette.player;
+    if (renderer.glow > 0) setGlow(palette.player);
     g.beginPath();
     g.moveTo(player.x, player.y);
     g.arc(
@@ -427,17 +552,18 @@ export function createLaberintoEngine(
     );
     g.closePath();
     g.fill();
+    if (renderer.glow > 0) clearGlow();
   }
 
   function guardianColor(index: number): string {
     if (guardians[index].mode !== MODE_VULNERABLE) {
-      return PALETTE[GUARDIANS[index].id];
+      return palette[GUARDIANS[index].id];
     }
     // En el aviso final alterna con blanco.
     const warning =
       frightMs < FRIGHT_WARN_MS &&
       Math.floor(frightMs / WARN_BLINK_MS) % 2 === 0;
-    return warning ? PALETTE.vulnerableWarn : PALETTE.vulnerable;
+    return warning ? palette.vulnerableWarn : palette.vulnerable;
   }
 
   function drawGuardian(guardian: Guardian, color: string) {
@@ -448,6 +574,7 @@ export function createLaberintoEngine(
     if (guardian.mode !== MODE_EYES && guardian.mode !== MODE_ENTERING) {
       // Cúpula, costados rectos y falda en tres picos.
       g.fillStyle = color;
+      if (renderer.glow > 0) setGlow(color);
       g.beginPath();
       g.arc(x, y - 2, r, Math.PI, 0);
       g.lineTo(x + r, y + r);
@@ -459,17 +586,18 @@ export function createLaberintoEngine(
       g.lineTo(x - r, y + r);
       g.closePath();
       g.fill();
+      if (renderer.glow > 0) clearGlow();
     }
 
     // Los ojos miran hacia donde avanza.
     const lookX = guardian.dir === NONE ? 0 : DX[guardian.dir] * 2;
     const lookY = guardian.dir === NONE ? 0 : DY[guardian.dir] * 2;
-    g.fillStyle = PALETTE.eye;
+    g.fillStyle = palette.eye;
     g.beginPath();
     g.arc(x - 5.5, y - 3, 4, 0, Math.PI * 2);
     g.arc(x + 5.5, y - 3, 4, 0, Math.PI * 2);
     g.fill();
-    g.fillStyle = PALETTE.pupil;
+    g.fillStyle = palette.pupil;
     g.beginPath();
     g.arc(x - 5.5 + lookX, y - 3 + lookY, 2, 0, Math.PI * 2);
     g.arc(x + 5.5 + lookX, y - 3 + lookY, 2, 0, Math.PI * 2);
@@ -479,12 +607,17 @@ export function createLaberintoEngine(
   function draw() {
     g.drawImage(wallLayer, 0, 0);
     drawCells();
-    if (gameOver) return; // tablero vacío bajo el modal de fin de partida
-    drawPlayer();
-    if (deathMs > 0) return; // durante la muerte los guardianes se ocultan
-    for (let i = 0; i < guardians.length; i++) {
-      drawGuardian(guardians[i], guardianColor(i));
+    if (!gameOver) {
+      // Tablero vacío bajo el modal de fin de partida.
+      drawPlayer();
+      // Durante la muerte los guardianes se ocultan.
+      if (deathMs <= 0) {
+        for (let i = 0; i < guardians.length; i++) {
+          drawGuardian(guardians[i], guardianColor(i));
+        }
+      }
     }
+    drawScanlines();
   }
 
   // Tablero vacío: bono, nivel siguiente y todo vuelve a su sitio.
@@ -945,6 +1078,14 @@ export function createLaberintoEngine(
       resetPlayer();
       resetGuardians();
       emitState();
+    },
+    setSkin(next: LaberintoSkin) {
+      if (next === skin) return;
+      skin = next;
+      palette = SKIN_PALETTES[skin];
+      renderer = SKIN_RENDERERS[skin];
+      drawWallLayer();
+      draw(); // redibuja al instante, también en pausa
     },
   };
 }

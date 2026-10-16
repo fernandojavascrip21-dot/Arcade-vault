@@ -108,15 +108,15 @@ export function createLaberintoEngine(
 
 ## 5 — Acceptance criteria
 
-- [ ] (Manual) El jugador no puede atravesar paredes. El túnel lo teletransporta al otro extremo.
+- [x] (Manual) El jugador no puede atravesar paredes. El túnel lo teletransporta al otro extremo.
 - [ ] (Manual) Los controles reaccionan suavemente permitiendo un "giro en cola" fluido antes del cruce.
 - [ ] (Manual) Se dibujan 4 guardianes, cada uno siguiendo comportamientos consistentes y lógicos de persecución/dispersión.
 - [ ] (Manual) Comer píldoras de poder cambia el estado de guardianes, permitiendo comerlos.
 - [ ] (Manual) Los guardianes comidos regresan visualmente a la base y reviven.
 - [ ] (Manual) Limpiar el tablero sube de nivel, incrementando la velocidad de los enemigos.
-- [ ] (Manual) Al perder 3 vidas, el juego muestra la pantalla de Fin del Juego del sistema (HUD), no un texto dibujado en el canvas.
+- [x] (Manual) Al perder 3 vidas, el juego muestra la pantalla de Fin del Juego del sistema (HUD), no un texto dibujado en el canvas.
 - [ ] (Manual) Presionar `Esc` o el botón de pausa pausa los relojes internos y el dibujado.
-- [ ] (Técnico) Solo se usa un `requestAnimationFrame` sin fugas de memoria al cambiar de juego.
+- [x] (Técnico) Solo se usa un `requestAnimationFrame` sin fugas de memoria al cambiar de juego.
 
 ---
 
@@ -134,6 +134,130 @@ export function createLaberintoEngine(
 
 - **Movimiento inconsistente a diferentes fps**: Mitigado limitando el `dt` a 50ms máximos y escalando avances matemáticamente.
 - **Enemigos atascados o rebotando**: Mitigado asegurando que la IA siempre prohíbe invertir el sentido (giros de 180 grados) por sí sola salvo tras un cambio explícito de fase (dispersión/cápsula).
+
+---
+
+## 8 — Addendum (2026-10-09): skins visuales
+
+**Objetivo:** que Laberinto tenga `clasico` (default), `retro` y `neon`, con el patrón de spec 17 §8 / spec 08 §8. Preferencia solo de cliente: sin Supabase ni impacto en mecánica, `MAZE`, velocidades, tiempos, puntuación ni IA.
+
+**Contratos (`components/games/laberinto/engine.ts`):**
+
+```ts
+export type LaberintoSkin = "clasico" | "retro" | "neon";
+export const LABERINTO_SKINS: Array<{ id: LaberintoSkin; label: string }>; // CLÁSICO, RETRO, NEÓN
+export const LABERINTO_SKIN_STORAGE_KEY = "arcadevault.laberinto.skin.v1";
+createLaberintoEngine(canvas, handlers, options?: { initialSkin?: LaberintoSkin });
+interface LaberintoEngine { /* ... */ setSkin(skin: LaberintoSkin): void }
+```
+
+`PALETTE` pasa a `SKIN_PALETTES: Record<LaberintoSkin, LaberintoPalette>` (`clasico` con los valores originales) y el trazo a `SKIN_RENDERERS` (`glow`, `wallGlow`, `scanlines`). El wrapper recibe `skin` controlada; `PlayRoom` usa `createSkinStore`/`useSkin` (snapshot de servidor `"clasico"`) y la rama `isLaberinto` de `skinControl` (chips SKIN del menú ⋮).
+
+**Decisiones:**
+
+- **Sí**: `setSkin()` vuelve a pintar `wallLayer` (la capa en caché) y redibuja al instante, también en pausa y con la partida terminada. _Motivo_: las paredes y la puerta no se repintan por frame. — decisión del agente (pendiente de revisar)
+- **Sí**: RETRO en fósforo verde; los cuatro guardianes se distinguen por intensidad, con ojos oscuros sobre cuerpo claro; el vulnerable es el tono más apagado y su aviso parpadea a blanco. _Motivo_: monocromo sin perder legibilidad. — decisión del agente (pendiente de revisar)
+- **Sí**: RETRO añade scanlines en una capa fuera de pantalla creada una vez y copiada con `drawImage` al final del frame. _Motivo_: sin trabajo por frame ni asignaciones. — decisión del agente (pendiente de revisar)
+- **Sí**: NEÓN con `shadowBlur` 10 en puntos, jugador y cuerpo de guardianes (se restablece tras cada entidad), 8 en la capa de paredes (en caché); los ojos se dibujan sin glow. _Motivo_: no emborronar entidades pequeñas. — decisión del agente (pendiente de revisar)
+- **Sí**: NEÓN usa paredes violeta (`#7c4dff`) y errante naranja. _Motivo_: dejar azul para el vulnerable y no repetir el verde/amarillo del flanqueador y el jugador. — decisión del agente (pendiente de revisar)
+- **No**: cambiar el aspecto de `clasico`. _Motivo_: es el default.
+
+**Criterios:**
+
+- [ ] (Manual) Los chips SKIN del menú ⋮ muestran CLÁSICO / RETRO / NEÓN y la elección persiste al recargar.
+- [ ] (Manual) Cambiar de skin en pausa redibuja paredes, puntos y guardianes al instante.
+- [ ] (Manual) En cada skin los cuatro guardianes, el vulnerable y su aviso se distinguen entre sí.
+- [ ] (Manual) CLÁSICO es idéntico al aspecto previo; JUGAR DE NUEVO no reinicia la skin.
+- [x] (Técnico) `npm run lint` y `npm run build` limpios.
+
+**Contrastes medidos (modo oscuro, peor caso vs. fondo de la skin):**
+
+| Skin      | Fondo     | Peor color             | Contraste |
+| --------- | --------- | ---------------------- | --------- |
+| `clasico` | `#000`    | `#3a5bff` (vulnerable) | 4.12:1    |
+| `retro`   | `#020a04` | `#127a2e` (vulnerable) | 3.67:1    |
+| `neon`    | `#05050a` | `#3a5bff` (vulnerable) | 3.99:1    |
+
+En RETRO el peor par entre entidades es por intensidad (errante `#25a049` vs. vulnerable `#127a2e`), ya que es monocromo.
+
+---
+
+## 9 — Addendum (2026-10-09): soporte móvil
+
+**Objetivo:** que Laberinto se juegue en el navegador del teléfono con el mando táctil de spec 13 y la sala responsive de spec 14, sin cambiar el escritorio. Sin tocar el motor, la mecánica, la puntuación, las skins ni Supabase.
+
+**Mapeo del mando (misma forma que spec 13 §2):**
+
+| Juego       | D-pad                               | Deslizador | Acciones | `repeat` |
+| ----------- | ----------------------------------- | ---------- | -------- | -------- |
+| `laberinto` | ↑ ↓ ← → (`ArrowUp/Down/Left/Right`) | —          | —        | no       |
+
+**Contratos (`components/touch-controller/layouts.ts`):**
+
+```ts
+export type TouchGameId = /* ... */ | "laberinto";
+TOUCH_LAYOUTS.laberinto = { dpad: { up, down, left, right }, actions: [] };
+```
+
+**Decisiones:**
+
+- **Sí**: D-pad de cuatro direcciones sin acciones, igual que `serpiente` y `rana`. _Motivo_: el motor solo escucha las flechas (`e.key`) y la pausa se hace con PAUSA/menú ⋮. — decisión del agente (pendiente de revisar)
+- **No**: `repeat` (DAS/ARR). _Motivo_: un `keydown` repetido solo reescribe el giro en cola; no hay efecto acumulado. — decisión del agente (pendiente de revisar)
+- **No**: tocar el motor, `KeyCode`, `KEY_FOR_CODE`, `ActionIcon` ni `GLYPHS`. _Motivo_: todo se expresa con teclas ya existentes. — decisión del agente (pendiente de revisar)
+- Las ramas de `play-room.tsx` (`isLaberinto`, `isRealGame`, contenido del CRT, ayuda de teclado, `skinControl`, `replay()`) y el HUD (PUNTUACIÓN, VIDAS, NIVEL con `HudStat`) ya existían; no se cambian.
+
+**Criterios:**
+
+- [ ] (Manual) En móvil vertical y horizontal aparece el D-pad y cada flecha encola el giro; la dirección contraria se aplica al instante.
+- [ ] (Manual) La barra (PUNTUACIÓN, VIDAS, NIVEL, PAUSA, ⋮) cabe en una fila a 360 px y los controles miden ≥ 44×44 px.
+- [ ] (Manual) En horizontal el D-pad cabe en la columna izquierda (150 px) sin tapar el laberinto.
+- [ ] (Manual) El menú ⋮ ofrece SKIN/MANDO/TEMA/SALIR y abrirlo pausa; fin de partida, guardar y JUGAR DE NUEVO funcionan.
+- [ ] (Manual) En escritorio (`pointer: fine`) no hay mando ni botón MANDO y el juego se maneja con teclado como antes.
+- [x] (Técnico) `npm run lint` y `npm run build` limpios.
+
+---
+
+## 10 — Addendum (2026-10-09): rendimiento
+
+**Objetivo:** primer pase de rendimiento (auditoría estática, referencia spec 17) sin cambiar el frame ni la jugabilidad a 60 Hz.
+
+**Auditoría (antes / después):**
+
+| #   | Punto                                      | Antes                                                                                                         | Después |
+| --- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------- | ------- |
+| 1   | Un solo RAF, `stop()` simétrico            | ✅ `engine.ts:1054-1066` (`running`, `start()` idempotente, quita `keydown`, cancela RAF)                     | ✅      |
+| 2   | Delta acotado                              | ✅ `MAX_DT_MS = 50` (`engine.ts:79`, `:1046`)                                                                 | ✅      |
+| 3   | Movimiento escalado por `dt`               | ✅ `updatePlayer`/`updateGuardian` (`:682`, `:876`), relojes en ms desde `dt`                                  | ✅      |
+| 4   | Pausa sin avance ni salto                  | ✅ `if (!paused) update(dt)` y `lastTime` se actualiza cada frame (`:1046-1048`)                              | ✅      |
+| 5   | `onStateChange` solo con cambio            | ❌ comparaba bien, pero creaba el objeto `next` en cada llamada (`:416`); se llama por evento, no por frame   | ✅ compara contra las variables y crea el objeto solo si cambió |
+| 6   | Wrapper                                    | ✅ `laberinto-game.tsx:37-72` (montaje único, refs, efectos de `paused`/`skin`, cleanup con `stop()`)         | ✅      |
+| 7   | `onGameOver` una vez                       | ✅ `finishDeath` pone `gameOver`; `update` y teclas quedan congelados hasta `restart()` (`:973-984`)          | ✅      |
+| 8   | `shadowBlur` solo en relleno principal     | ✅ solo en `neon`, restablecido tras cada entidad; ojos sin glow; `clasico`/`retro` no tocan `shadow*` (`:501-509`) | ✅ (ver no aplicado) |
+| 9   | Sin asignaciones por frame                 | ✅ direcciones numéricas, `targetCol/Row`, `Uint8Array`; `{ x, y }` de `drawGuardian` no asigna (`:569`)      | ✅      |
+| 10  | Capas estáticas en caché                   | ✅ `wallLayer` solo al crear y en `setSkin`; scanlines creadas una vez (`:484-499`); un `drawImage` cada una  | ✅      |
+| 11  | Sin `canvas.width` ni layout en el bucle   | ✅ tamaño fijado una vez (`:321-322`)                                                                         | ✅      |
+| 12  | Colecciones acotadas                       | — no hay colecciones que crezcan (4 guardianes y 640 celdas fijas; `fillCells()` en `restart()`)               | —       |
+| 13  | `save()`/`restore()`                       | — el motor no usa `save`/`restore`                                                                             | —       |
+
+**Contratos nuevos:** ninguno.
+
+**Decisiones:**
+
+- **Sí**: `emitState()` compara antes de crear el objeto. _Motivo_: igual que Rana, sin asignar en llamadas que no cambian nada; comportamiento idéntico. — decisión del agente (pendiente de revisar)
+- **No**: cambiar `drawCells()`. _Motivo_: recorrer 640 celdas con un único `fill` es barato y cualquier caché de la ruta cambiaría el parpadeo o el orden de dibujado. — decisión del agente (pendiente de revisar)
+
+**Correcciones no aplicadas (reportadas):**
+
+- En `neon`, `drawCells()` aplica `shadowBlur = 10` a un único trazado con todos los puntos y cápsulas (una pasada de desenfoque, pero sobre ~300 arcos). Quitar o reducir ese glow cambia el aspecto; si en móvil se notara, hay que decidir si se limita a las cápsulas.
+- `draw()` se ejecuta cada frame también en pausa y con la partida terminada (el resultado es el mismo frame). Saltarlo es posible pero no está en las reglas y exige cuidado con `setSkin`; se deja.
+
+**Criterios:**
+
+- [ ] (Manual) DevTools → Performance con NEÓN y RETRO: sin frames largos ni memoria creciente.
+- [ ] (Manual) Cambiar de pestaña un minuto y volver: sin ráfaga ni salto de jugador o guardianes.
+- [ ] (Manual) Pausar, reanudar y JUGAR DE NUEVO: sin duplicar bucles; salir de `/play/laberinto` y volver sin errores en consola.
+- [ ] (Manual) Marcador, vidas y nivel se actualizan igual que antes; cada skin se ve igual.
+- [x] (Técnico) `npm run lint` y `npm run build` limpios.
 
 ---
 

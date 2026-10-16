@@ -68,7 +68,11 @@ import {
   BombarderoGame,
   type BombarderoGameHandle,
 } from "@/components/games/bombardero/bombardero-game";
-import { type LaberintoState } from "@/components/games/laberinto/engine";
+import {
+  LABERINTO_SKINS,
+  LABERINTO_SKIN_STORAGE_KEY,
+  type LaberintoState,
+} from "@/components/games/laberinto/engine";
 import {
   LaberintoGame,
   type LaberintoGameHandle,
@@ -128,6 +132,13 @@ const bombarderoSkinStore = createSkinStore(
 const ranaSkinStore = createSkinStore(
   RANA_SKIN_STORAGE_KEY,
   RANA_SKINS,
+  "clasico",
+);
+
+// Skin de Laberinto (spec 20 §8): store genérico de lib/skin-store.ts.
+const laberintoSkinStore = createSkinStore(
+  LABERINTO_SKIN_STORAGE_KEY,
+  LABERINTO_SKINS,
   "clasico",
 );
 
@@ -227,6 +238,7 @@ export function PlayRoom({ game }: { game: Game }) {
   const serpienteSkin = useSkin(serpienteSkinStore);
   const bombarderoSkin = useSkin(bombarderoSkinStore);
   const ranaSkin = useSkin(ranaSkinStore);
+  const laberintoSkin = useSkin(laberintoSkinStore);
   const [paused, setPaused] = useState(false);
   // Menú OPCIONES (⋮) de la sala (specs 14 y 15).
   const [menuOpen, setMenuOpen] = useState(false);
@@ -433,7 +445,14 @@ export function PlayRoom({ game }: { game: Game }) {
                   onChange: (id: string) =>
                     ranaSkinStore.write(id as typeof ranaSkin),
                 }
-              : undefined;
+              : isLaberinto
+                ? {
+                    value: laberintoSkin,
+                    options: LABERINTO_SKINS,
+                    onChange: (id: string) =>
+                      laberintoSkinStore.write(id as typeof laberintoSkin),
+                  }
+                : undefined;
 
   // Sin motor de juego: simula el final de una partida con una puntuación
   // pseudoaleatoria para poder recorrer el flujo de guardado.
@@ -814,6 +833,7 @@ export function PlayRoom({ game }: { game: Game }) {
                 <LaberintoGame
                   ref={laberintoGameRef}
                   paused={paused}
+                  skin={laberintoSkin}
                   onStateChange={handleLaberintoStateChange}
                   onGameOver={handleLaberintoGameOver}
                 />

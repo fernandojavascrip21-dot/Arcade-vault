@@ -31,7 +31,8 @@ export type TouchGameId =
   | "rompemuros"
   | "serpiente"
   | "bombardero"
-  | "rana";
+  | "rana"
+  | "laberinto";
 
 export const TOUCH_LAYOUTS: Record<TouchGameId, TouchLayout> = {
   asteroides: {
@@ -73,6 +74,17 @@ export const TOUCH_LAYOUTS: Record<TouchGameId, TouchLayout> = {
   },
   rana: {
     // Un salto por pulsación: sin `repeat` (mantener no encadena saltos).
+    dpad: {
+      up: "ArrowUp",
+      down: "ArrowDown",
+      left: "ArrowLeft",
+      right: "ArrowRight",
+    },
+    actions: [],
+  },
+  laberinto: {
+    // El jugador avanza solo; cada pulsación guarda un giro en cola (el motor
+    // lee `e.key` en keydown). Sin `repeat`: mantener no acumula nada.
     dpad: {
       up: "ArrowUp",
       down: "ArrowDown",

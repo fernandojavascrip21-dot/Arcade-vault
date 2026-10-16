@@ -7,7 +7,7 @@ actualiza cada vez que se añade, renombra o quita una skin, o se integra un jue
 **Requisito:** todo juego tiene al menos `clasico` (CLÁSICO, default), `retro` (RETRO) y `neon`
 (NEÓN), con contraste ≥ 3:1 contra el fondo de la skin en modo oscuro.
 
-Última revisión: 2026-10-05
+Última revisión: 2026-10-09
 
 ## Resumen
 
@@ -19,6 +19,7 @@ actualiza cada vez que se añade, renombra o quita una skin, o se integra un jue
 | `serpiente`  | `components/games/serpiente/`  | `clasico`, `retro`, `neon`         | `clasico` | —                                                             | Sí                   | 🟢     |
 | `bombardero` | `components/games/bombardero/` | `clasico`, `retro`, `neon`         | `clasico` | —                                                             | Sí                   | 🟢     |
 | `rana`       | `components/games/rana/`       | `clasico`, `retro`, `neon`         | `clasico` | —                                                             | Sí                   | 🟢     |
+| `laberinto`  | `components/games/laberinto/`  | `clasico`, `retro`, `neon`         | `clasico` | —                                                             | Sí                   | 🟢     |
 
 Leyenda: 🟢 cumple · 🟡 parcial · 🔴 sin skins.
 
@@ -103,6 +104,18 @@ Leyenda: 🟢 cumple · 🟡 parcial · 🔴 sin skins.
   hay un original externo que preservar (la paleta nació en el spec 17): ajuste pendiente de
   decisión.
 
+### LABERINTO
+
+- **Skins:** `clasico` (CLÁSICO, default — paleta original del spec 20), `retro` (RETRO, fósforo
+  verde: guardianes por intensidad + scanlines en capa en caché), `neon` (NEÓN, glow en puntos,
+  jugador, guardianes y paredes). Paletas en `SKIN_PALETTES` y trazo en `SKIN_RENDERERS`
+  (`glow`, `wallGlow`, `scanlines`) de `components/games/laberinto/engine.ts`; `setSkin()`
+  repinta la capa de paredes y redibuja incluso en pausa.
+- **Selector:** chips SKIN del menú ⋮ OPCIONES de `PlayRoom` (`skinControl`, `isLaberinto`),
+  store genérico `lib/skin-store.ts` (snapshot de servidor `"clasico"`).
+- **Clave localStorage:** `arcadevault.laberinto.skin.v1`
+- **Spec:** `specs/20-juego-laberinto.md` §8 (addendum "skins visuales", 2026-10-09).
+
 ## Contrastes medidos (modo oscuro)
 
 Peor caso por skin (color jugable vs. fondo de la skin). Lo completa `skin-designer` al
@@ -126,3 +139,6 @@ el color de esa plataforma. `bloques` no tiene contrastes medidos.
 | `rana`       | `clasico` | `#ff2d6f` (rana muerta)                    | `#d9442e` | 1.22:1 (sobre tortuga; pendiente)        |
 | `rana`       | `retro`   | `#e0ffe8` (rana)                           | `#1f9e45` | 3.25:1 (sobre tortuga)                   |
 | `rana`       | `neon`    | `#ccff33` (rana)                           | `#cc7000` | 3.04:1 (sobre el borde del tronco)       |
+| `laberinto`  | `clasico` | `#3a5bff` (vulnerable)                     | `#000`    | 4.12:1                                   |
+| `laberinto`  | `retro`   | `#127a2e` (vulnerable)                     | `#020a04` | 3.67:1                                   |
+| `laberinto`  | `neon`    | `#3a5bff` (vulnerable)                     | `#05050a` | 3.99:1                                   |
