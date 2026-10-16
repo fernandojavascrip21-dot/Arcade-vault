@@ -19,7 +19,7 @@ Every spec starts with metadata in a blockquote (no tables, no blocks, simple as
 
 **Valid states:** `Draft`, `In review`, `Approved`, `Implemented`, `Obsolete`.
 
-> The labels above are the English defaults. The skills also accept equivalents in any language (e.g. Spanish `Borrador` / `En revisión` / `Aprobado` / `Implementado` / `Obsoleto`). Pick one set per repo and stay consistent.
+> The labels above are the English defaults. The skills also accept equivalents in any language (e.g. Spanish `Borrador` / `En revisión` / `Aprobado` / `Implementado` / `Obsoleto`). Pick one set per repo and stay consistent — the same goes for section headings: write all of them in one language.
 
 **Objective rule:** one sentence that a human reads in 5 seconds and understands what is going to be built. If it doesn't fit in one sentence, split the feature.
 
@@ -35,7 +35,7 @@ For simple specs, omit it.
 
 ## Section 2 — Scope
 
-Two explicit sub-blocks. **Both are mandatory.**
+Three sub-blocks. **In** and **Not in** are mandatory; **Constraints** only when there are any.
 
 ```markdown
 ## Scope
@@ -45,13 +45,33 @@ Two explicit sub-blocks. **Both are mandatory.**
 - Concrete thing one.
 - Concrete thing two.
 
-**Out of scope (for future specs):**
+**Not in:**
 
-- Something that could be done but not now.
-- Something that came up in the conversation but is not in.
+| What                   | Destination | Reason                                                      |
+| ---------------------- | ----------- | ----------------------------------------------------------- |
+| Export the list to CSV | Follow-up   | Same screen, but needs a file-format decision not made yet. |
+| Sync between devices   | Own spec    | New backend, new data, its own set of questions.            |
+| Animated transitions   | Won't do    | Nobody asked for it and the objective is met without it.    |
+
+**Constraints:**
+
+- The public API of `src/store.js` does not change.
 ```
 
-**Why "out" matters:** it captures the things the user mentioned during the question phase but were decided to be deferred. Without that record, during implementation there will be a temptation to slip them in "while we're at it".
+**Destinations — exactly one per row:**
+
+- **Follow-up** — small, but it does not fit now. It becomes a dated addendum of this same spec once it is implemented. It is _not_ a new spec.
+- **Own spec** — it delivers value on its own and opens a new domain (new data, an external dependency, another area of the system).
+- **Won't do** — nobody asked for it or it is not needed. It is not planned work.
+
+**What does not belong in this table:**
+
+- Something the objective is incomplete without → it goes under **In**. If the spec gets too big, split the spec.
+- Something cheap that touches the same files, opens no new decision and adds one or two steps → it goes under **In**.
+- A design alternative that was considered and rejected → it goes in **Decisions**.
+- Something the spec must not touch → it goes under **Constraints**.
+
+**Why the reason matters:** the table captures what came up and was left out, and why. Without the destination, every excluded item looks like a future spec; without the reason, nobody can tell later whether it could simply have been included.
 
 ---
 
@@ -88,16 +108,18 @@ Numbered steps. Each step must leave the system in a **functional and runnable**
 ```markdown
 ## Implementation plan
 
-1. Create file X with an empty skeleton.
-2. Implement function A in X. Manual test: run Y, see Z.
-3. Wire X to existing module W.
+1. Create file X with an empty skeleton. Check: the project still builds.
+2. Implement function A in X. Check: run Y, see Z.
+3. Wire X to existing module W. Check: opening screen S shows the new value.
 4. ...
 ```
 
 **Rules:**
 
 - Each step must be commitable on its own.
-- If a step requires more than 30–50 lines of code, split it.
+- One step = one change that can be reviewed in a single diff. If a step needs two unrelated explanations, split it.
+- Every step ends with its `Check:` — what to run or look at to know the step works. The implementer runs it before moving on.
+- Every item under **In** is covered by at least one step, and no step does something that is not under **In**.
 - The last step of the plan is **not** "test everything" — that is the acceptance criteria.
 
 ---
@@ -112,7 +134,10 @@ Boolean checklist. Each item can be verified with yes or no.
 - [ ] The game loads without errors in the console.
 - [ ] Breaking a brick adds exactly 10 points.
 - [ ] Reloading the page preserves the high-scores.
+- [ ] (manual) The pause menu is readable on a 320 px wide screen.
 ```
+
+Every item under **In** has at least one criterion, and so does every failure state the spec mentions. When it is not obvious how a criterion is checked, say it: prefix it with `(manual)` or name the command or test.
 
 **Anti-patterns to avoid:**
 
@@ -138,6 +163,14 @@ The section that has the most value 3 months from now. Capture **what you consid
 
 Each decision ideally has a brief reason. Decisions without a reason are the first ones to be questioned later.
 
+**Adjustments during implementation.** When the implementation has to deviate from the spec, the deviation is recorded here, in a dated sub-block, at the moment it happens — never silently in the code:
+
+```markdown
+### Adjustments during implementation (YYYY-MM-DD)
+
+- Step 3 used a wrapper instead of editing `src/store.js` directly: the direct edit broke the import cycle check.
+```
+
 ---
 
 ## Section 7 — Identified risks (optional)
@@ -157,19 +190,49 @@ For small specs or very contained features, omit it.
 
 ---
 
+## Addendum (optional, added later)
+
+A small follow-up to a spec that is already implemented — typically a row marked **Follow-up** in its "Not in" table. It is appended to the same file, after the last numbered section and before the closing "What is not in" section. It has **its own state**, independent of the spec's.
+
+```markdown
+## 8 — Addendum (YYYY-MM-DD): short title
+
+> **Status:** Draft
+
+**In:**
+
+- Concrete thing.
+
+**Plan:**
+
+1. Step. Check: what to run or look at.
+
+**Acceptance criteria:**
+
+- [ ] Verifiable thing.
+```
+
+**Rules:**
+
+- An addendum does not rewrite the sections above it. If it contradicts one of them, say which.
+- It fits in one or two plan steps and opens no new decision domain. Anything bigger is its own spec.
+- When the addendum covers a row of the "Not in" table, update that row to point at it (e.g. "Done — see addendum §8").
+
+---
+
 ## Final section — What is NOT in (reinforcement)
 
-Repeat explicitly at the end what **will not** be done in this spec. This repetition is deliberate — the Scope section already says it, but at the end of the document it serves as a reminder when someone reads only the last lines.
+Repeat at the end what **will not** be done in this spec, grouped by destination. This repetition is deliberate — the Scope section already says it, but at the end of the document it serves as a reminder when someone reads only the last lines.
 
 ```markdown
 ## What is **not** in this spec
 
-- Visual editor (another spec if it ever lands).
-- Multiplayer.
-- Mobile version.
-
-Each one of those, if it lands, goes in its own spec.
+- **Follow-up (addendum of this spec):** export the list to CSV.
+- **Own spec:** sync between devices.
+- **Won't do:** animated transitions.
 ```
+
+Do not close with a blanket sentence such as "each of these goes in its own spec": most excluded items are not future specs, and the destination already says where each one goes.
 
 ---
 
@@ -178,5 +241,6 @@ Each one of those, if it lands, goes in its own spec.
 - **One sentence per idea.** If a sentence has two commas and a semicolon, split it.
 - **Concrete names.** If you say "the levels module", say `src/levels.js`. If you say "a key", give the exact string.
 - **No TODOs.** A TODO in a spec means the decision was not made. Make it or note it as a pending decision with a reason.
+- **No references to specs that do not exist.** Do not cite the number of a spec that has not been written; numbers get assigned when a spec is saved. Say "its own spec".
 - **No long executable code.** The spec describes; the code is written afterwards. Short snippets to illustrate data structures are fine; full functions are not.
 - **Standard markdown.** No weird extensions. It must render on GitHub without surprises.

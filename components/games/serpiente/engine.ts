@@ -14,6 +14,7 @@ const TICK_STEP_MS = 10; // se resta por nivel superado
 const TICK_MIN_MS = 60;
 const FRUIT_SPRITE_URL = "/games/serpiente/fruits.png";
 const FRUIT_DRAW_HEIGHT = 34;
+const MAX_DT_MS = 50; // tope del delta de frame: sin ráfaga de ticks al volver a la pestaña
 
 // Skins visuales (spec 11 §8): `clasico` es el aspecto original; `retro`
 // (fósforo ámbar) y `neon` (glow) solo cambian colores y trazo. No cambian
@@ -73,6 +74,17 @@ const SKIN_PALETTES: Record<SerpienteSkin, SerpientePalette> = {
     fruit: "#ff2d95",
     scanlines: null,
   },
+};
+
+// Desplazamiento de los ojos por dirección (constante: sin objetos por frame).
+const EYE_FORWARD = 7;
+const EYE_SIDE = 8;
+const EYE_OFFSET: Record<Direction, [number, number, number, number]> = {
+  // [fx, fy, sx, sy]
+  right: [EYE_FORWARD, 0, 0, EYE_SIDE],
+  left: [-EYE_FORWARD, 0, 0, EYE_SIDE],
+  up: [0, -EYE_FORWARD, EYE_SIDE, 0],
+  down: [0, EYE_FORWARD, EYE_SIDE, 0],
 };
 
 const NEON_BODY_GLOW = 8;
@@ -215,6 +227,19 @@ export function createSerpienteEngine(
 
   // El juego no espera a la imagen: hasta que cargue (o si falla) la fruta
   // se dibuja como círculo de color.
+  // Capas estáticas cacheadas (se regeneran solo en `setSkin`): damero y
+  // scanlines. Se pintan con un único drawImage por frame.
+  const boardLayer = document.createElement("canvas");
+  boardLayer.width = SERPIENTE_WIDTH;
+  boardLayer.height = SERPIENTE_HEIGHT;
+  const boardCtx = boardLayer.getContext("2d");
+  const scanlineLayer = document.createElement("canvas");
+  scanlineLayer.width = SERPIENTE_WIDTH;
+  scanlineLayer.height = SERPIENTE_HEIGHT;
+  const scanlineCtx = scanlineLayer.getContext("2d");
+  // Color de la fruta-fallback por clave (evita construir el string cada frame).
+  const fallbackColors: Record<string, string> = {};
+
   const fruitImage = new Image();
   let fruitImageReady = false;
   fruitImage.onload = () => {
@@ -276,14 +301,29 @@ export function createSerpienteEngine(
     handlers.onStateChange(next);
   }
 
-  function drawBoard() {
+  function renderStaticLayers() {
     const palette = SKIN_PALETTES[skin];
-    for (let y = 0; y < ROWS; y++) {
-      for (let x = 0; x < COLS; x++) {
-        g.fillStyle = (x + y) % 2 === 0 ? palette.bgA : palette.bgB;
-        g.fillRect(x * CELL, y * CELL, CELL, CELL);
+    if (boardCtx) {
+      for (let y = 0; y < ROWS; y++) {
+        for (let x = 0; x < COLS; x++) {
+          boardCtx.fillStyle = (x + y) % 2 === 0 ? palette.bgA : palette.bgB;
+          boardCtx.fillRect(x * CELL, y * CELL, CELL, CELL);
+        }
       }
     }
+    if (scanlineCtx) {
+      scanlineCtx.clearRect(0, 0, SERPIENTE_WIDTH, SERPIENTE_HEIGHT);
+      if (palette.scanlines) {
+        scanlineCtx.fillStyle = palette.scanlines;
+        for (let y = 0; y < SERPIENTE_HEIGHT; y += SCANLINE_SPACING) {
+          scanlineCtx.fillRect(0, y, SERPIENTE_WIDTH, 1);
+        }
+      }
+    }
+  }
+
+  function drawBoard() {
+    g.drawImage(boardLayer, 0, 0);
   }
 
   function cellPath(cell: Cell) {
@@ -340,9 +380,13 @@ export function createSerpienteEngine(
           );
           return;
         }
-        let hash = 0;
-        for (const ch of key) hash = (hash * 31 + ch.charCodeAt(0)) % 360;
-        fruitCircle(cx, cy, `hsl(${hash}, 80%, 55%)`);
+        let color = fallbackColors[key];
+        if (!color) {
+          let hash = 0;
+          for (const ch of key) hash = (hash * 31 + ch.charCodeAt(0)) % 360;
+          color = fallbackColors[key] = `hsl(${hash}, 80%, 55%)`;
+        }
+        fruitCircle(cx, cy, color);
       },
     },
     retro: {
@@ -390,20 +434,17 @@ export function createSerpienteEngine(
     const cx = cell.x * CELL + CELL / 2;
     const cy = cell.y * CELL + CELL / 2;
     // Ojos desplazados según la dirección de la cabeza.
-    const forward = 7;
-    const side = 8;
-    const vec: Record<Direction, [number, number]> = {
-      right: [forward, 0],
-      left: [-forward, 0],
-      up: [0, -forward],
-      down: [0, forward],
-    };
-    const [fx, fy] = vec[direction];
-    const [sx, sy] = [Math.abs(fy) > 0 ? side : 0, Math.abs(fx) > 0 ? side : 0];
+    const off = EYE_OFFSET[direction];
     g.fillStyle = palette.eye;
-    for (const sign of [-1, 1]) {
+    for (let sign = -1; sign <= 1; sign += 2) {
       g.beginPath();
-      g.arc(cx + fx + sx * sign, cy + fy + sy * sign, 3.5, 0, Math.PI * 2);
+      g.arc(
+        cx + off[0] + off[2] * sign,
+        cy + off[1] + off[3] * sign,
+        3.5,
+        0,
+        Math.PI * 2,
+      );
       g.fill();
     }
   }
@@ -426,12 +467,8 @@ export function createSerpienteEngine(
   }
 
   function drawScanlines() {
-    const color = SKIN_PALETTES[skin].scanlines;
-    if (!color) return;
-    g.fillStyle = color;
-    for (let y = 0; y < SERPIENTE_HEIGHT; y += SCANLINE_SPACING) {
-      g.fillRect(0, y, SERPIENTE_WIDTH, 1);
-    }
+    if (!SKIN_PALETTES[skin].scanlines) return;
+    g.drawImage(scanlineLayer, 0, 0);
   }
 
   function draw() {
@@ -457,8 +494,14 @@ export function createSerpienteEngine(
     const hitsWall =
       newHead.x < 0 || newHead.x >= COLS || newHead.y < 0 || newHead.y >= ROWS;
     // Si no come, la cola se retira en este mismo tick: su celda queda libre.
-    const body = eats ? snake : snake.slice(0, -1);
-    const hitsSelf = body.some((c) => c.x === newHead.x && c.y === newHead.y);
+    const bodyLen = eats ? snake.length : snake.length - 1;
+    let hitsSelf = false;
+    for (let i = 0; i < bodyLen; i++) {
+      if (snake[i].x === newHead.x && snake[i].y === newHead.y) {
+        hitsSelf = true;
+        break;
+      }
+    }
     if (hitsWall || hitsSelf) {
       endGame();
       return;
@@ -518,12 +561,13 @@ export function createSerpienteEngine(
 
   function loop(now: number) {
     if (!running) return;
-    const delta = now - lastTime;
+    const delta = Math.min(now - lastTime, MAX_DT_MS);
     lastTime = now;
     if (moving && !paused) {
       accumulator += delta;
       const tick = tickDuration(level);
-      while (accumulator >= tick) {
+      // `moving` corta la ráfaga si un paso termina la partida.
+      while (moving && accumulator >= tick) {
         accumulator -= tick;
         step();
       }
@@ -534,6 +578,7 @@ export function createSerpienteEngine(
 
   resetSnake();
   spawnFruit();
+  renderStaticLayers();
 
   return {
     start() {
@@ -565,6 +610,7 @@ export function createSerpienteEngine(
     setSkin(next: SerpienteSkin) {
       if (next === skin) return;
       skin = next;
+      renderStaticLayers();
       // Redibuja ya: no depende de que el loop siga activo (pausa, fin).
       draw();
     },

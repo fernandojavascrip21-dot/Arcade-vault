@@ -127,6 +127,8 @@ const PIECES: Array<number[][] | null> = [
 
 const LINE_SCORES = [0, 100, 300, 500, 800];
 
+const MAX_DT_MS = 50; // tope para no saltar tras pausas o cambios de pestaña
+
 interface Piece {
   type: number;
   shape: number[][];
@@ -194,6 +196,12 @@ export function createBloquesEngine(
   let gameOver: boolean;
 
   let prevSnapshot: BloquesState | null = null;
+
+  // Capa estática (fondo, superficie del tablero y rejilla): se pinta una sola
+  // vez aquí y cada frame se compone con un único drawImage (no depende de la skin).
+  const staticLayer = document.createElement("canvas");
+  staticLayer.width = GAME_WIDTH;
+  staticLayer.height = GAME_HEIGHT;
 
   function notifyStateChange() {
     const snapshot: BloquesState = { score, lines, level };
@@ -423,26 +431,31 @@ export function createBloquesEngine(
     ctx.globalAlpha = alpha;
     SKIN_RENDERERS[skin](px, py, color, size);
     ctx.globalAlpha = 1;
-    ctx.shadowBlur = 0;
-    ctx.shadowColor = "transparent";
   }
 
-  function drawGrid() {
-    ctx.strokeStyle = GRID;
-    ctx.lineWidth = 0.5;
+  function buildStaticLayer() {
+    const sctx = staticLayer.getContext("2d");
+    if (!sctx) return;
+    sctx.fillStyle = BG;
+    sctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    sctx.fillStyle = SURFACE;
+    sctx.fillRect(0, 0, BOARD_WIDTH, BOARD_HEIGHT);
+    sctx.strokeStyle = GRID;
+    sctx.lineWidth = 0.5;
     for (let c = 1; c < COLS; c++) {
-      ctx.beginPath();
-      ctx.moveTo(c * BLOCK, 0);
-      ctx.lineTo(c * BLOCK, BOARD_HEIGHT);
-      ctx.stroke();
+      sctx.beginPath();
+      sctx.moveTo(c * BLOCK, 0);
+      sctx.lineTo(c * BLOCK, BOARD_HEIGHT);
+      sctx.stroke();
     }
     for (let r = 1; r < ROWS; r++) {
-      ctx.beginPath();
-      ctx.moveTo(0, r * BLOCK);
-      ctx.lineTo(BOARD_WIDTH, r * BLOCK);
-      ctx.stroke();
+      sctx.beginPath();
+      sctx.moveTo(0, r * BLOCK);
+      sctx.lineTo(BOARD_WIDTH, r * BLOCK);
+      sctx.stroke();
     }
   }
+  buildStaticLayer();
 
   function drawNextPreview(offsetX: number, offsetY: number, boxSize: number) {
     const nb = boxSize / 4;
@@ -503,13 +516,7 @@ export function createBloquesEngine(
   }
 
   function draw() {
-    ctx.fillStyle = BG;
-    ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-
-    ctx.fillStyle = SURFACE;
-    ctx.fillRect(0, 0, BOARD_WIDTH, BOARD_HEIGHT);
-
-    drawGrid();
+    ctx.drawImage(staticLayer, 0, 0);
 
     for (let r = 0; r < ROWS; r++)
       for (let c = 0; c < COLS; c++)
@@ -582,10 +589,11 @@ export function createBloquesEngine(
   let rafId: number | null = null;
   let lastTime: number | null = null;
   let paused = false;
+  let running = false;
 
   function loop(ts: number) {
     if (lastTime === null) lastTime = ts;
-    const dt = ts - lastTime;
+    const dt = Math.min(ts - lastTime, MAX_DT_MS);
     lastTime = ts;
     dropAccum += dt;
 
@@ -606,6 +614,8 @@ export function createBloquesEngine(
 
   return {
     start() {
+      if (running) return;
+      running = true;
       window.addEventListener("keydown", handleKeyDown);
       paused = false;
       initGame();
@@ -614,6 +624,7 @@ export function createBloquesEngine(
       rafId = requestAnimationFrame(loop);
     },
     stop() {
+      running = false;
       if (rafId !== null) {
         cancelAnimationFrame(rafId);
         rafId = null;
@@ -628,7 +639,7 @@ export function createBloquesEngine(
           cancelAnimationFrame(rafId);
           rafId = null;
         }
-      } else if (!gameOver) {
+      } else if (running && !gameOver) {
         lastTime = null;
         rafId = requestAnimationFrame(loop);
       }

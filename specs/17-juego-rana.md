@@ -1,6 +1,6 @@
 # SPEC 17 — Motor del juego Rana
 
-> **Status:** Aprovado
+> **Status:** Implementad
 > **Depends on:** SPEC 06, SPEC 07, SPEC 15, SPEC 16
 > **Date:** 2026-10-05
 > **Objective:** Crear desde cero el motor del juego RANA (una rana que cruza cinco carriles de tráfico y cinco de río para llenar cinco casas) e integrarlo en `/play/rana`, con su fila nueva `rana` en la tabla `games` y su carátula de catálogo.
@@ -343,9 +343,9 @@ export function createRanaEngine(
 
 Mapeo del mando (misma forma que la tabla de spec 13 §2):
 
-| Juego  | D-pad                  | Deslizador | Acciones |
-| ------ | ---------------------- | ---------- | -------- |
-| `rana` | ↑ ↓ ← → (un salto cada uno) | —     | —        |
+| Juego  | D-pad                       | Deslizador | Acciones |
+| ------ | --------------------------- | ---------- | -------- |
+| `rana` | ↑ ↓ ← → (un salto cada uno) | —          | —        |
 
 El motor lee `e.key` (`ArrowUp`/`ArrowDown`/`ArrowLeft`/`ArrowRight`) en `keydown` sobre `window`,
 que ya emite el teclado sintético; no usa `keyup` ni `isTrusted`. Sin `repeat`: el mando emite un

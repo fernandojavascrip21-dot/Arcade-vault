@@ -8,6 +8,7 @@
 
 const GAME_WIDTH = 800;
 const GAME_HEIGHT = 600;
+const MAX_DT = 0.05; // tope del delta de frame (s): no saltar tras pausas o cambios de pestaña
 
 const wrap = (v: number, max: number) => ((v % max) + max) % max;
 const dist = (a: { x: number; y: number }, b: { x: number; y: number }) =>
@@ -239,7 +240,9 @@ class Ship {
 
     const ROT = 3.5; // rad/s
     const THRUST = 260; // px/s²
-    const DRAG = 0.987;
+    // Rozamiento calibrado a 60 Hz (0.987 por frame): se escala por dt para que
+    // la nave frene igual a 60 Hz y a 120 Hz.
+    const DRAG = Math.pow(0.987, dt * 60);
 
     if (keys.ArrowLeft) this.angle -= ROT * dt;
     if (keys.ArrowRight) this.angle += ROT * dt;
@@ -404,10 +407,9 @@ export function createAsteroidsEngine(
     retro: {
       glow: noGlow,
       // Scanlines sutiles: 1 px cada 3 px con alfa bajo, no tapan las balas.
+      // Cacheadas en un canvas auxiliar (se pintan con un único drawImage).
       overlay() {
-        ctx.fillStyle = "rgba(0, 0, 0, 0.14)";
-        for (let y = 0; y < GAME_HEIGHT; y += 3)
-          ctx.fillRect(0, y, GAME_WIDTH, 1);
+        if (scanlines) ctx.drawImage(scanlines, 0, 0);
       },
     },
     neon: {
@@ -418,6 +420,25 @@ export function createAsteroidsEngine(
       overlay: () => {},
     },
   };
+
+  // Capa de scanlines de RETRO: se genera una vez (creación del motor / setSkin)
+  // y se pinta con un único drawImage por frame.
+  let scanlines: HTMLCanvasElement | null = null;
+  function buildScanlines() {
+    if (skin !== "retro") return;
+    if (!scanlines) {
+      scanlines = document.createElement("canvas");
+      scanlines.width = GAME_WIDTH;
+      scanlines.height = GAME_HEIGHT;
+      const sctx = scanlines.getContext("2d");
+      if (sctx) {
+        sctx.fillStyle = "rgba(0, 0, 0, 0.14)";
+        for (let y = 0; y < GAME_HEIGHT; y += 3)
+          sctx.fillRect(0, y, GAME_WIDTH, 1);
+      }
+    }
+  }
+  buildScanlines();
 
   function resetGlow() {
     ctx.shadowBlur = 0;
@@ -454,6 +475,15 @@ export function createAsteroidsEngine(
   let deadTimer: number;
   let novaBombs: number;
   let nextNovaBombLevel: number | null;
+
+  // Compacta en sitio (mismo orden que filter) sin crear un array por frame.
+  function compact<T extends { dead: boolean }>(arr: T[]) {
+    let w = 0;
+    for (let i = 0; i < arr.length; i++) {
+      if (!arr[i].dead) arr[w++] = arr[i];
+    }
+    arr.length = w;
+  }
 
   let prevSnapshot: AsteroidsState | null = null;
 
@@ -535,14 +565,14 @@ export function createAsteroidsEngine(
   function update(dt: number) {
     if (state === "gameover") {
       particles.forEach((p) => p.update(dt));
-      particles = particles.filter((p) => !p.dead);
+      compact(particles);
       return;
     }
 
     if (state === "dead") {
       deadTimer -= dt;
       particles.forEach((p) => p.update(dt));
-      particles = particles.filter((p) => !p.dead);
+      compact(particles);
       asteroids.forEach((a) => a.update(dt));
       if (deadTimer <= 0) {
         state = "playing";
@@ -553,7 +583,8 @@ export function createAsteroidsEngine(
 
     // Disparar
     if (pressed("Space")) {
-      bullets.push(...ship.tryShoot());
+      const shot = ship.tryShoot();
+      if (shot.length > 0) bullets.push(shot[0]);
     }
 
     // Bomba Nova
@@ -564,7 +595,7 @@ export function createAsteroidsEngine(
         explode(a.x, a.y, a.size * 5);
         a.dead = true;
       }
-      asteroids = asteroids.filter((a) => !a.dead);
+      compact(asteroids);
       novaBombs = 0;
       nextNovaBombLevel = level + 3;
     }
@@ -574,8 +605,8 @@ export function createAsteroidsEngine(
     asteroids.forEach((a) => a.update(dt));
     particles.forEach((p) => p.update(dt));
 
-    bullets = bullets.filter((b) => !b.dead);
-    particles = particles.filter((p) => !p.dead);
+    compact(bullets);
+    compact(particles);
 
     // Bala vs asteroide
     const newAsteroids: Asteroid[] = [];
@@ -590,8 +621,9 @@ export function createAsteroidsEngine(
         }
       }
     }
-    asteroids = asteroids.filter((a) => !a.dead).concat(newAsteroids);
-    bullets = bullets.filter((b) => !b.dead);
+    compact(asteroids);
+    for (const a of newAsteroids) asteroids.push(a);
+    compact(bullets);
 
     // Nave vs asteroide
     if (ship.invincible <= 0) {
@@ -667,16 +699,18 @@ export function createAsteroidsEngine(
     drawHUD();
   }
 
+  let running = false;
   let rafId: number | null = null;
   let lastTime: number | null = null;
   let paused = false;
 
   function loop(ts: number) {
+    if (!running) return;
     if (paused) {
       rafId = requestAnimationFrame(loop);
       return;
     }
-    const dt = lastTime === null ? 0 : Math.min((ts - lastTime) / 1000, 0.05);
+    const dt = lastTime === null ? 0 : Math.min((ts - lastTime) / 1000, MAX_DT);
     lastTime = ts;
     update(dt);
     draw();
@@ -685,6 +719,8 @@ export function createAsteroidsEngine(
 
   return {
     start() {
+      if (running) return; // idempotente: un solo RAF y un solo juego de listeners
+      running = true;
       window.addEventListener("keydown", handleKeyDown);
       window.addEventListener("keyup", handleKeyUp);
       initGame();
@@ -694,6 +730,7 @@ export function createAsteroidsEngine(
       rafId = requestAnimationFrame(loop);
     },
     stop() {
+      running = false;
       if (rafId !== null) {
         cancelAnimationFrame(rafId);
         rafId = null;
@@ -714,6 +751,7 @@ export function createAsteroidsEngine(
     setSkin(next: AsteroidsSkin) {
       if (next === skin) return;
       skin = next;
+      buildScanlines();
       if (initialized) draw();
     },
   };

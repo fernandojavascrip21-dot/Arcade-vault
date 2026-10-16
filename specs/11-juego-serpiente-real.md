@@ -295,6 +295,61 @@ además de forma y ojos); NEÓN por tono (cian / amarillo / magenta).
 
 ---
 
+## 9 — Addendum (2026-10-09): rendimiento
+
+**Objetivo:** llevar el motor de Serpiente a las reglas de rendimiento del motor de Rana
+(spec 17 §3/§6/§7/§8) sin cambiar jugabilidad ni aspecto. Auditoría estática; la fluidez real la
+comprueba el usuario a mano.
+
+| #   | Punto                      | Antes                                                              | Después                                                          |
+| --- | -------------------------- | ------------------------------------------------------------------ | ---------------------------------------------------------------- |
+| 1   | Un solo RAF / `stop()`     | ✅ `running`, `start()` idempotente, `stop()` quita `keydown`      | ✅ sin cambios                                                   |
+| 2   | Delta acotado              | ❌ `now - lastTime` sin tope: ráfaga de ticks al volver a pestaña  | ✅ `Math.min(…, MAX_DT_MS = 50)`                                 |
+| 3   | Movimiento por ticks       | ✅ acumulador con ticks de duración fija                           | ✅ sin cambios                                                   |
+| 4   | Pausa                      | ✅ `lastTime` se actualiza cada frame; el acumulador no avanza     | ✅ sin cambios                                                   |
+| 5   | `onStateChange` solo cambio| ✅ `emitState` compara con el último snapshot; sin relojes         | ✅ sin cambios                                                   |
+| 6   | Wrapper                    | ✅ monta una vez, callbacks por refs, efectos de `paused`/`skin`   | ✅ sin cambios                                                   |
+| 7   | `onGameOver` una vez       | ⚠️ guard `gameOver`, pero el `while` seguía llamando a `step()`    | ✅ el `while` exige `moving` (se corta al terminar la partida)   |
+| 8   | `shadowBlur`               | ✅ solo NEÓN, en cuerpo/cabeza/fruta, con `resetGlow()` tras cada una | ✅ sin cambios                                                |
+| 9   | Asignaciones por frame     | ❌ objeto+arrays de ojos, `[-1,1]`, `hsl()` del fallback, `slice`/`some` por tick | ✅ tabla `EYE_OFFSET` de módulo, bucle `for`, color fallback cacheado, colisión sin `slice` |
+| 10  | Capas estáticas            | ❌ damero (640 `fillRect`) y scanlines RETRO (267) en cada frame   | ✅ canvas auxiliares regenerados en `setSkin`; un `drawImage` c/u |
+| 11  | `canvas.width` / layout    | ✅ solo al crear el motor                                          | ✅ sin cambios                                                   |
+| 12  | Colecciones acotadas       | ✅ la serpiente ≤ 640 celdas; se rehace en `restart()`             | ✅ sin cambios                                                   |
+| 13  | `save()`/`restore()`       | — no se usan (`globalAlpha` se restablece en el mismo renderer)    | —                                                                |
+
+**Contratos nuevos:** ninguno (`SerpienteEngine`, `SerpienteState` y props del wrapper intactos).
+
+**Decisiones:**
+
+- Tope de delta 50 ms (como Rana) en vez de acotar el acumulador: a 60 Hz el delta (~16,7 ms) no
+  se ve afectado y el tick mínimo (60 ms) sigue siendo alcanzable. — decisión del agente
+  (pendiente de revisar)
+- Cachear también el damero, no solo las scanlines: es opaco y el resultado es idéntico bit a
+  bit. — decisión del agente (pendiente de revisar)
+- Las scanlines cacheadas se componen con `drawImage` sobre la serpiente, en el mismo orden que
+  antes; el redondeo de alfa de 8 bits puede diferir como mucho 1 nivel. — decisión del agente
+  (pendiente de revisar)
+
+**Correcciones no aplicadas:**
+
+- NEÓN: hasta ~640 trazos con `shadowBlur = 8` en el cuerpo de la serpiente larga. Quitar o
+  agrupar el glow cambiaría el aspecto, así que se deja; coste proporcional a la longitud. Si se
+  quiere reducir, hay que decidir un glow solo en la cabeza o un trazo único del cuerpo.
+- `spawnFruit()` crea un `Set` y un array de celdas libres por fruta comida (no por frame);
+  no se toca.
+
+**Criterios de aceptación añadidos:**
+
+- [ ] DevTools → Performance con NEÓN y RETRO: sin frames largos ni memoria creciente.
+- [ ] Cambiar de pestaña un minuto y volver: la serpiente no salta varias casillas de golpe.
+- [ ] Pausar y reanudar: no avanza durante la pausa ni se cuela el tiempo pausado.
+- [ ] JUGAR DE NUEVO y salir/volver a `/play/serpiente`: sin errores ni bucles duplicados.
+- [ ] Cada skin (CLÁSICO, RETRO, NEÓN) se ve igual que antes, incluidas las scanlines de RETRO y
+      el cambio de skin en pausa.
+- [ ] Velocidad y puntuación idénticas a antes a 60 Hz y 120 Hz.
+
+---
+
 ## What is **not** in this spec
 
 - Cambios en Supabase, en `saveScoreAction` o en el ranking.

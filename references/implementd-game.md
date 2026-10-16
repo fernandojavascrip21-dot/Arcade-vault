@@ -12,6 +12,7 @@ Fuente: tabla `games` de Supabase, contrastada con `components/games/`.
 | `serpiente`  | SERPIENTE  | Clásico   | Snake                 | `components/games/serpiente/`  |
 | `bombardero` | BOMBARDERO | Acción    | Blitz / Bomber        | `components/games/bombardero/` |
 | `rana`       | RANA       | Acción    | Frogger               | `components/games/rana/`       |
+| `laberinto`  | LABERINTO  | Clásico   | Comecocos             | `components/games/laberinto/`  |
 
 ### ASTEROIDES
 
@@ -49,11 +50,16 @@ Fuente: tabla `games` de Supabase, contrastada con `components/games/`.
 - **Descripción:** Cruza la autopista y el río sin perder el salto.
 - **Detalle:** Lleva a cada rana desde la orilla hasta su casa al otro lado. Primero cinco carriles de tráfico que no frenan; después un río que solo se cruza saltando entre troncos y tortugas. Llena las cinco casas para subir de nivel: todo se acelera y sigues con las mismas tres vidas.
 
+### LABERINTO
+
+- **Categoría:** Clásico
+- **Descripción:** Come todos los puntos y escapa de los guardianes.
+- **Detalle:** Recorre el laberinto recogiendo puntos mientras cuatro guardianes patrullan los pasillos. Las cápsulas de energía invierten la persecución durante unos segundos. Vacía el tablero para pasar al siguiente plano.
+
 ## Solo en el catálogo (sin motor de juego todavía)
 
 Existen como filas en `games`, pero no tienen implementación jugable en `components/games/`.
 
-| ID          | Título    | Categoría | Descripción                                       |
-| ----------- | --------- | --------- | ------------------------------------------------- |
-| `invasores` | INVASORES | Espacio   | Defiende la base del enjambre orbital.            |
-| `laberinto` | LABERINTO | Clásico   | Come todos los puntos y escapa de los guardianes. |
+| ID          | Título    | Categoría | Descripción                            |
+| ----------- | --------- | --------- | -------------------------------------- |
+| `invasores` | INVASORES | Espacio   | Defiende la base del enjambre orbital. |

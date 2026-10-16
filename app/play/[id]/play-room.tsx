@@ -69,6 +69,15 @@ import {
   type BombarderoGameHandle,
 } from "@/components/games/bombardero/bombardero-game";
 import {
+  LABERINTO_SKINS,
+  LABERINTO_SKIN_STORAGE_KEY,
+  type LaberintoState,
+} from "@/components/games/laberinto/engine";
+import {
+  LaberintoGame,
+  type LaberintoGameHandle,
+} from "@/components/games/laberinto/laberinto-game";
+import {
   RANA_SKINS,
   RANA_SKIN_STORAGE_KEY,
   type RanaState,
@@ -123,6 +132,13 @@ const bombarderoSkinStore = createSkinStore(
 const ranaSkinStore = createSkinStore(
   RANA_SKIN_STORAGE_KEY,
   RANA_SKINS,
+  "clasico",
+);
+
+// Skin de Laberinto (spec 20 §8): store genérico de lib/skin-store.ts.
+const laberintoSkinStore = createSkinStore(
+  LABERINTO_SKIN_STORAGE_KEY,
+  LABERINTO_SKINS,
   "clasico",
 );
 
@@ -222,6 +238,7 @@ export function PlayRoom({ game }: { game: Game }) {
   const serpienteSkin = useSkin(serpienteSkinStore);
   const bombarderoSkin = useSkin(bombarderoSkinStore);
   const ranaSkin = useSkin(ranaSkinStore);
+  const laberintoSkin = useSkin(laberintoSkinStore);
   const [paused, setPaused] = useState(false);
   // Menú OPCIONES (⋮) de la sala (specs 14 y 15).
   const [menuOpen, setMenuOpen] = useState(false);
@@ -249,19 +266,22 @@ export function PlayRoom({ game }: { game: Game }) {
   const isSerpiente = game.id === "serpiente";
   const isBombardero = game.id === "bombardero";
   const isRana = game.id === "rana";
+  const isLaberinto = game.id === "laberinto";
   const gameRef = useRef<AsteroidsGameHandle>(null);
   const bloquesGameRef = useRef<BloquesGameHandle>(null);
   const rompemurosGameRef = useRef<RompemurosGameHandle>(null);
   const serpienteGameRef = useRef<SerpienteGameHandle>(null);
   const bombarderoGameRef = useRef<BombarderoGameHandle>(null);
   const ranaGameRef = useRef<RanaGameHandle>(null);
+  const laberintoGameRef = useRef<LaberintoGameHandle>(null);
   const isRealGame =
     isAsteroids ||
     isBloques ||
     isRompemuros ||
     isSerpiente ||
     isBombardero ||
-    isRana;
+    isRana ||
+    isLaberinto;
   // Bloques y Rompemuros pintan sus marcadores en el canvas, no en la barra.
   const hasBarStats = !isBloques && !isRompemuros;
   // Control táctil (spec 13): solo en los juegos reales que tienen layout.
@@ -359,7 +379,9 @@ export function PlayRoom({ game }: { game: Game }) {
             ? "↑ / W SUBIR · ↓ / S BAJAR · ESPACIO SOLTAR BOMBA · ESC / P PAUSA"
             : isRana
               ? "← ↑ ↓ → / WASD SALTAR · ESC / P PAUSA"
-              : "MUEVE CON EL RATÓN O ← →";
+              : isLaberinto
+                ? "← ↑ ↓ → / WASD MOVER · ESC / P PAUSA"
+                : "MUEVE CON EL RATÓN O ← →";
   const exit = () => {
     exitFullscreen();
     router.push("/games");
@@ -423,7 +445,14 @@ export function PlayRoom({ game }: { game: Game }) {
                   onChange: (id: string) =>
                     ranaSkinStore.write(id as typeof ranaSkin),
                 }
-              : undefined;
+              : isLaberinto
+                ? {
+                    value: laberintoSkin,
+                    options: LABERINTO_SKINS,
+                    onChange: (id: string) =>
+                      laberintoSkinStore.write(id as typeof laberintoSkin),
+                  }
+                : undefined;
 
   // Sin motor de juego: simula el final de una partida con una puntuación
   // pseudoaleatoria para poder recorrer el flujo de guardado.
@@ -508,6 +537,19 @@ export function PlayRoom({ game }: { game: Game }) {
     setOver(true);
   };
 
+  const handleLaberintoStateChange = (state: LaberintoState) => {
+    setScore(state.score);
+    setLives(state.lives);
+    setLevel(state.level);
+    setPaused(state.paused);
+  };
+
+  const handleLaberintoGameOver = (finalScore: number) => {
+    setScore(finalScore);
+    setPaused(false);
+    setOver(true);
+  };
+
   const nameValue = nameDraft ?? user ?? "";
   const nameNormalized = normalizePlayerName(nameValue);
   const nameError = nameNormalized
@@ -582,6 +624,11 @@ export function PlayRoom({ game }: { game: Game }) {
     }
     if (isRana) {
       ranaGameRef.current?.restart();
+      setLives(3);
+      setLevel(1);
+    }
+    if (isLaberinto) {
+      laberintoGameRef.current?.restart();
       setLives(3);
       setLevel(1);
     }
@@ -725,7 +772,8 @@ export function PlayRoom({ game }: { game: Game }) {
               isRompemuros ||
               isSerpiente ||
               isBombardero ||
-              isRana
+              isRana ||
+              isLaberinto
                 ? "#000"
                 : game.thumb
             }
@@ -780,6 +828,14 @@ export function PlayRoom({ game }: { game: Game }) {
                   skin={ranaSkin}
                   onStateChange={handleRanaStateChange}
                   onGameOver={handleRanaGameOver}
+                />
+              ) : isLaberinto ? (
+                <LaberintoGame
+                  ref={laberintoGameRef}
+                  paused={paused}
+                  skin={laberintoSkin}
+                  onStateChange={handleLaberintoStateChange}
+                  onGameOver={handleLaberintoGameOver}
                 />
               ) : undefined
             }

@@ -50,8 +50,9 @@ Skills live in `.agents/skills/` and are symlinked from `.claude/skills/`.
 - `/spec` — design a feature spec (`specs/NN-slug.md`, state `Draft`). No code.
 - `/spec-impl NN-slug` — implement an approved spec.
 - `/spec-impl-game NN-slug` — project-specific variant of `/spec-impl` for game specs: follows the
-  live `/spec-impl` phases, then runs `skin-designer` and, once it has finished, `mobile-porter` on
-  the new game (sequential, never in parallel — both edit `play-room.tsx`).
+  live `/spec-impl` phases, then runs `skin-designer`, `mobile-porter` and
+  `game-performance-booster` on the new game, each once the previous one has finished (sequential,
+  never in parallel — they edit the same `play-room.tsx` and `engine.ts`).
 - `/add-game` — project-specific variant of `/spec` for integrating a new game (port from
   `references/started-games/` or from scratch). Produces the spec only; `/spec-impl` does the work.
 - `/frontend-design` — **always use it when designing user interfaces** (project rule).
@@ -82,6 +83,16 @@ Subagents live in `.claude/agents/`:
   engine under the spec 13 exception (`movePaddleBy`). Documents a dated addendum in the game's
   spec and runs lint/build; no visual check — that is manual. Must be given a game (or "todos");
   otherwise it stops and asks. Never touches Supabase, mechanics, scores or skins; doesn't commit.
+- `game-performance-booster` (`model: sonnet`) — audits a game's engine, wrapper and `PlayRoom`
+  branches against the performance rules spec 17 (Rana) follows by design: a single RAF that
+  `stop()` cleans up, frame delta capped (≤ 50 ms), `dt`-scaled movement, `onStateChange` only on
+  change (nothing per-frame in React state), `shadowBlur` only on main fills and reset after each
+  entity, no per-frame allocations, static layers (scanlines) cached. Fixes what fails by copying
+  the engine that already complies, **only if the frame stays pixel-identical and gameplay is
+  unchanged** — otherwise it reports the fix instead of applying it. Static audit only (no FPS
+  measurement; the manual check is the user's). Documents a dated addendum in the game's spec and
+  runs lint/build. Must be given a game (or "todos"); otherwise it stops and asks. Never touches
+  Supabase, mechanics, scores, skins or the touch controller; doesn't commit.
 
 ## Hooks and MCP
 
@@ -160,7 +171,7 @@ Pages are Server Components that fetch data and pass it to `*-client.tsx` / clie
 ## Games
 
 Playable games (id → engine): `asteroides` (Asteroids), `bloques` (Tetris), `rompemuros` (Arkanoid),
-`serpiente` (Snake), `rana` (Frogger), under `components/games/<slug>/{engine.ts,<slug>-game.tsx}` — except
+`serpiente` (Snake), `rana` (Frogger), `laberinto` (maze chase), under `components/games/<slug>/{engine.ts,<slug>-game.tsx}` — except
 Asteroides, whose folder is `components/games/asteroids/` (`asteroids-game.tsx`).
 
 - `engine.ts` is framework-free: `create<Name>Engine(canvas, handlers, options?)` →
@@ -174,11 +185,11 @@ Asteroides, whose folder is `components/games/asteroids/` (`asteroids-game.tsx`)
   (**not** a generic registry yet) — a new game adds its own branches there. On game over it uses
   `components/game-over-ranking.tsx` to show rank + score; `hall-of-fame.tsx` shows general ranking,
   per-game boards and the player's history (“MIS PARTIDAS”).
-- **Skins** (addendum §8 of specs 06/08/10/11/16/17; registry in `references/games-skins.md`): every
+- **Skins** (addendum §8 of specs 06/08/10/11/16/17/20; registry in `references/games-skins.md`): every
   engine exports `<Name>Skin`, `<NAME>_SKINS`, `<NAME>_SKIN_STORAGE_KEY`
   (`arcadevault.<slug>.skin.v1`), takes `options.initialSkin` and has `setSkin()` (redraws
   instantly, even paused); the wrapper takes a controlled `skin` prop (same pattern as `paused`).
-  Asteroides, Rompemuros, Serpiente, Bombardero and Rana have `clasico` (default) / `retro` / `neon` and use the
+  Asteroides, Rompemuros, Serpiente, Bombardero, Rana and Laberinto have `clasico` (default) / `retro` / `neon` and use the
   generic store `lib/skin-store.ts` (`createSkinStore` + `useSkin`). **Bloques is the exception**:
   `retro` (default) / `neon` / `pastel` / `pixel` — no `clasico` yet — with its own hand-written
   store in `play-room.tsx`. Skins are chosen from the ⋮ OPCIONES menu (`skinControl` in
@@ -218,8 +229,9 @@ Asteroides, whose folder is `components/games/asteroids/` (`asteroids-game.tsx`)
 - **`fixed` overlays in the play room must use `createPortal(…, document.body)`**: `<main>` keeps a
   `transform` from `animate-fade`, which makes it the containing block of `position: fixed`.
 - Pipeline for a new game: `game-planner` agent (decide which game) → `/add-game` (spec) →
-  `/spec-impl-game` (code, then `skin-designer` for skins and `mobile-porter` for touch + mobile
-  play room, in that order). The same three steps by hand: `/spec-impl`, then each agent.
+  `/spec-impl-game` (code, then `skin-designer` for skins, `mobile-porter` for touch + mobile
+  play room and `game-performance-booster` for the performance audit, in that order). The same
+  steps by hand: `/spec-impl`, then each agent.
   Games to-do: `references/games-suggestion-all.md`.
 - Add a game with `/add-game`. Reference sources: `references/started-games/`
   (`02-asteroids`, `03-tetris`, `04-arkanoid`) — these are **git submodules** (`.gitmodules`,

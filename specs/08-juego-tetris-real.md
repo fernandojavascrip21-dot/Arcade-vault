@@ -233,6 +233,48 @@ cambios posteriores con `engine.setSkin(skin)` en un efecto.
 
 ---
 
+## 9 — Addendum (2026-10-09): rendimiento
+
+Auditoría estática de `components/games/bloques/engine.ts`, `bloques-game.tsx` y las ramas
+`bloques` de `play-room.tsx`, contra las reglas del spec 17 (Rana). Motor por ticks
+(acumulador `dropAccum`): se acota el delta, no se pasa a tiempo continuo.
+
+| #   | Punto                          | Antes                                                                   | Después                                                   |
+| --- | ------------------------------ | ----------------------------------------------------------------------- | --------------------------------------------------------- |
+| 1   | Un solo RAF, `stop()` simétrico | ❌ `start()` doble duplicaba listener y RAF                              | ✅ bandera `running`, `start()` idempotente                |
+| 2   | Delta acotado                  | ❌ `dt` sin tope (al volver de la pestaña, un paso de caída inmediato)   | ✅ `Math.min(dt, MAX_DT_MS = 50)`                          |
+| 3   | Movimiento por dt/ticks        | ✅ caída por acumulador; movimiento por teclas, no por frame             | ✅                                                         |
+| 4   | Pausa                          | ✅ cancela RAF y reinicia `lastTime`; `setPaused(false)` tras `stop()` podía revivir el bucle | ✅ `setPaused` respeta `running`                           |
+| 5   | `onStateChange` solo si cambia | ✅ `notifyStateChange` compara snapshot; solo score/lines/level          | ✅                                                         |
+| 6   | Wrapper                        | ✅ monta una vez, refs, efectos de `paused`/`skin`, cleanup `stop()`     | ✅                                                         |
+| 7   | `onGameOver` una vez           | ✅ `gameOver` congela teclas y bucle hasta `restart()`                   | ✅                                                         |
+| 8   | `shadowBlur`                   | ✅ solo en el borde neón, dentro de `save/restore` (`drawBlockNeon`); ❌ `drawBlock` tocaba `shadow*` en todas las skins | ✅ retirado el reset redundante (el `restore()` ya lo restablece) |
+| 9   | Asignaciones por frame         | ✅ sin arrays/gradientes en el camino de dibujo (solo `toLocaleString`/`String` del panel, coste mínimo) | ✅ sin cambios                                             |
+| 10  | Capa estática cacheada         | ❌ fondo + superficie + 28 trazos de rejilla cada frame                  | ✅ canvas auxiliar (`staticLayer`) creado en la fábrica, un `drawImage` |
+| 11  | Sin resize/layout en el bucle  | ✅                                                                       | ✅                                                         |
+| 12  | Colecciones acotadas           | — tablero fijo 10x20, sin partículas ni balas                            | —                                                         |
+| 13  | `save`/`restore`               | ✅ único par en `drawBlockNeon`                                          | ✅                                                         |
+
+**Contratos nuevos:** ninguno (la API pública del motor no cambia).
+
+**Decisiones:**
+
+- **Sí:** acotar el acumulador vía `dt` ≤ 50 ms en vez de pasar a tiempo continuo — motor por ticks. Con la pestaña visible a 60/120 Hz el comportamiento no cambia — decisión del agente (pendiente de revisar).
+- **Sí:** la capa estática no depende de la skin (los colores de fondo/rejilla son fijos), así que se genera una vez y no en `setSkin` — decisión del agente (pendiente de revisar).
+- **No:** mover algo al canvas o quitar de React — `score/lines/level` ya solo viajan al cambiar y `PlayRoom` no los muestra en la barra para Bloques. Motivo: no hay nada por frame en el estado.
+
+**Correcciones no aplicadas:** ninguna. (Posible mejora futura: cachear el texto del panel para evitar `toLocaleString` por frame; coste despreciable.)
+
+**Criterios de aceptación añadidos:**
+
+- [ ] Con las skins NEÓN y RETRO, DevTools → Performance no muestra frames largos ni memoria creciente.
+- [ ] Cambiar de pestaña un minuto y volver no hace caer la pieza de golpe ni salta nada.
+- [ ] Pausar/reanudar y JUGAR DE NUEVO funcionan; no se duplica la caída ni las teclas.
+- [ ] Salir de `/play/bloques` y volver no deja errores en consola ni bucles duplicados.
+- [ ] Las cuatro skins y el tablero (fondo, rejilla, panel) se ven igual que antes.
+
+---
+
 ## Lo que **no** entra en este spec
 
 - Modo Desafío completo (selector de modo, niveles con basura/obstáculos/retraso de bloqueo/rotación invertida).

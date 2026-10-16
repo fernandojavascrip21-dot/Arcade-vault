@@ -283,6 +283,46 @@ del sprite medido en el PNG):
 - [ ] Mecánica, puntuación, velocidades y hitboxes no cambian con ninguna skin.
 - [ ] Todo elemento jugable de RETRO y NEÓN tiene contraste ≥ 3:1 contra su fondo.
 
+## 9 — Addendum (2026-10-09): rendimiento
+
+Auditoría estática contra las reglas del spec 17 (`engine.ts` = `components/games/rompemuros/engine.ts`).
+
+| #   | Punto                                  | Antes                                                                                     | Después                                    |
+| --- | -------------------------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------ |
+| 1   | Un solo RAF, `start`/`stop` simétricos | ❌ `start()` no idempotente (segunda llamada reinicia partida y recarga imagen); resto ✅ | ✅ bandera `running`                       |
+| 2   | Delta acotado                          | ❌ `step` acotado a 2, pero `dt` crudo en partículas y transición de nivel                | ✅ `dt` ≤ `MAX_DT_MS` (50 ms)              |
+| 3   | Movimiento escalado por `dt`           | ✅ `step = dt / FRAME_MS`                                                                 | ✅                                         |
+| 4   | Pausa sin avance ni colado             | ✅ el bucle sigue y actualiza `lastTimestamp`                                             | ✅                                         |
+| 5   | `onStateChange` solo con cambios       | ✅ `notifyStateChange` compara snapshot                                                   | ✅                                         |
+| 6   | Wrapper                                | ✅ `rompemuros-game.tsx` (montaje `[]`, refs, efectos `paused`/`skin`, `stop()`)          | ✅                                         |
+| 7   | `onGameOver` una vez                   | ✅ `finished` congela el bucle hasta `restart()`                                          | ✅                                         |
+| 8   | `shadowBlur` acotado                   | ✅ solo NEÓN, en ladrillo/pala/pelota, con `resetGlow()`                                  | ✅                                         |
+| 9   | Sin asignaciones por frame             | ❌ `getDifficultyOptionRects()` (`map`) en cada frame de la pantalla de dificultad        | ✅ `DIFFICULTY_OPTION_RECTS` constante     |
+| 10  | Capas estáticas cacheadas              | ❌ RETRO: 200 `fillRect` de scanlines por frame                                           | ✅ canvas auxiliar regenerado en `setSkin` |
+| 11  | Sin `canvas.width`/layout en bucle     | ✅ `getBoundingClientRect` solo en handlers de ratón                                      | ✅                                         |
+| 12  | Colecciones acotadas                   | ✅ partículas con vida de 600 ms; se vacían en `initGame`/`advanceLevel`                  | ✅                                         |
+| 13  | `save()`/`restore()`                   | — el motor no usa `save`/`restore`                                                        | —                                          |
+
+**Contratos:** sin cambios (`RompemurosEngine`, `movePaddleBy`, `RompemurosState` intactos).
+
+**Decisiones:**
+
+- Sí: mantener el `step` por frames de 60 Hz (`FRAME_MS`, tope 2) en lugar de pasar a `dt` en segundos — motor de pasos continuos ya correcto; no se altera la jugabilidad.
+- Sí: `DIFFICULTY_OPTION_RECTS` a nivel de módulo (solo aritmética, seguro en servidor) — decisión del agente (pendiente de revisar).
+- Sí: el canvas auxiliar de scanlines se crea dentro de la fábrica, nunca a nivel de módulo — decisión del agente (pendiente de revisar).
+- No: cachear el texto `Score: ${score}` — coste de un string por frame, irrelevante — decisión del agente (pendiente de revisar).
+
+**Correcciones no aplicadas:** ninguna. Los textos con plantilla (`Score`, "Nivel N completado") siguen construyéndose por frame (coste despreciable).
+
+**Criterios de aceptación:**
+
+- [ ] Con RETRO y NEÓN, DevTools → Performance sin frames largos ni memoria creciente durante una partida.
+- [ ] RETRO se ve igual que antes (scanlines cada 3 px, mismo tono) y CLÁSICO/NEÓN no muestran scanlines.
+- [ ] Cambiar de skin (también en pausa) actualiza las scanlines al instante.
+- [ ] Cambiar de pestaña un minuto y volver no salta de nivel ni borra de golpe las partículas.
+- [ ] Pausar/reanudar, JUGAR DE NUEVO y salir/volver a `/play/rompemuros` sin errores en consola.
+- [ ] El mando táctil sigue moviendo la pala (`movePaddleBy`).
+
 ---
 
 ## Lo que **no** entra en este spec

@@ -15,8 +15,8 @@ C5 estética · C6 catálogo · C7 esfuerzo (5 = bajo) · C8 propiedad intelectu
 
 | Estado         | Juegos | Qué significa                                                      |
 | -------------- | ------ | ------------------------------------------------------------------ |
-| ✅ Hechos      | 5      | Jugables en la plataforma (motor en `components/games/`).          |
-| ⏳ Pendientes  | 4      | Aprobados, en orden de prioridad; el siguiente pasa a `/add-game`. |
+| ✅ Hechos      | 6      | Jugables en la plataforma (motor en `components/games/`).          |
+| ⏳ Pendientes  | 3      | Aprobados, en orden de prioridad; el siguiente pasa a `/add-game`. |
 | ❌ Descartados | 2      | Evaluados y rechazados; no se vuelven a proponer.                  |
 | 💡 Sugerencias | 19     | Propuestas nuevas del `game-planner`, aún sin aprobar.             |
 
@@ -32,13 +32,13 @@ Fuente de los hechos: `references/implementd-game.md` (tabla `games` de Supabase
 - [x] 🟢 **ROMPEMUROS** (`rompemuros`) · Acción · Arkanoid — Destruye la muralla con la pala y la bola. · `components/games/rompemuros/`
 - [x] 🟢 **SERPIENTE** (`serpiente`) · Clásico · Snake — Crece sin morderte la cola. · `components/games/serpiente/`
 - [x] 🟢 **RANA** (`rana`) · Acción · Frogger — Cruza la autopista y el río sin perder el salto. · `components/games/rana/` (rescatada de Descartados en el spec 17: pasa a Acción y puntúa sin bono de tiempo)
+- [x] 🟢 **LABERINTO** (`laberinto`) · Clásico · Comecocos — Come todos los puntos y escapa de los guardianes. · `components/games/laberinto/` (spec 20)
 
 ### ⏳ Pendientes
 
 - [ ] 🟢 **1. INVASORES** (`invasores`) · Espacio · 39/40 · recomendado — Defiende la base del enjambre orbital. Ya en catálogo (sin migración); reutiliza disparos de ASTEROIDES y rejilla de ROMPEMUROS. → `/add-game invasores`
 - [ ] 🟡 **2. CIEMPIÉS** (`ciempies`) · Acción · 36/40 · alternativa — Detén al ciempiés antes de que llegue al suelo. Necesita fila nueva en `games`; no justo después de INVASORES. → `/add-game ciempies`
 - [ ] 🟡 **3. BOMBARDERO** (`bombardero`) · Acción · 34/40 · alternativa — Arrasa la ciudad antes de tocar tierra. La ciudad debe generarse de forma procedural en cada partida para evitar repetición; fila nueva en `games`. → `/add-game bombardero`
-- [ ] 🟡 **4. LABERINTO** (`laberinto`) · Clásico · 33/40 · alternativa — Come todos los puntos y escapa de los guardianes. Ya en catálogo; esfuerzo alto (IA de guardianes). → `/add-game laberinto`
 
 ### ❌ Descartados
 
