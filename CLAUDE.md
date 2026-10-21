@@ -7,11 +7,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What this is
 
 **Arcade Vault** — a platform for playing games online and competing for the highest score
-(see `README.md`). Specs 01–17 and 20 are implemented (`specs/`): visual screens, landing,
+(see `README.md`). Specs 01–17, 20 and 21 are implemented (`specs/`): visual screens, landing,
 English routes, About/contact (Resend), Supabase integration, catalog + leaderboards, light/dark
 theme, player names with rankings, touch controls (13), the responsive mobile play room (14), the
 desktop play room (15) and seven playable canvas games (06/08/10/11 plus Bombardero 16, Rana 17
-and Laberinto 20). Specs 18 and 19 are discarded `Draft` alternatives of Laberinto (20 won).
+and Laberinto 20) plus real authentication (21). Specs 18 and 19 are discarded `Draft` alternatives of Laberinto (20 won).
 Next game in the pipeline: TORRE, two `Draft` variants in `specs/game-jam/torre/` (not yet chosen
 or implemented).
 UI copy is in Spanish; routes, file names and code identifiers are in English (except game
@@ -93,7 +93,8 @@ addendum in the game's spec, run lint/build, never touch Supabase or scores and 
 
 Copy `.env.example`: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (public),
 `RESEND_API_KEY`, `CONTACT_TO_EMAIL` (server-only, used by `app/api/contact/route.ts`),
-`SUPERBASE_DB_PASSWORD`. Never commit real values.
+`RESEND_FROM_EMAIL` (optional, server-only; sender of the welcome email, default
+`onboarding@resend.dev` = sandbox), `SUPERBASE_DB_PASSWORD`. Never commit real values.
 
 ## Architecture
 
@@ -116,23 +117,39 @@ Copy `.env.example`: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHAB
 ## Routes
 
 `/` (home, `app/home-client.tsx`) · `/games` (catalog + category filter) · `/game/[id]` (detail) ·
-`/play/[id]` (play room) · `/hall-of-fame` (rankings) · `/about` · `/auth` · `POST /api/contact` (Resend).
+`/play/[id]` (play room) · `/hall-of-fame` (rankings) · `/about` · `POST /api/contact` (Resend) · auth (spec 21): `/auth`
+(login/register tabs + Google/GitHub), `/auth/callback` (Route Handler, code → session), `/auth/check-email`,
+`/auth/player-name`, `/auth/forgot-password`, `/auth/reset-password`. The whole site stays public.
 Old Spanish routes (`/juego`, `/jugar`, `/salon-fama`) were removed with no redirects (spec 03).
 Pages are Server Components that fetch data and pass it to `*-client.tsx` / client components.
 
 ## Data layer (Supabase)
 
-- Tables `games` (catalog) and `scores` (`game_id`, `player_name`, `score`). The catalog and
+- Tables `games` (catalog), `scores` (`game_id`, `player_name`, `score`, nullable `user_id`) and
+  `profiles` (`user_id`, unique `player_name`, spec 21). The catalog and
   leaderboards are **not** in code anymore; `app/data.ts` only holds the UI category filter.
 - `lib/supabase/server.ts` (`createClient`, `@supabase/ssr`) for server code, `client.ts` for the browser.
 - `lib/supabase/queries.ts` — server-only reads: `getGames`, `getGameById`, `getBoard`,
   `getBoardsForGames`, `getBestPerGame`, `getTopPlayersGlobal`, `getGeneralBoard`, `getPlayerHistory`,
-  `getScoreRank`. Never import from client code.
+  `getScoreRank`, `getProfile`, `isPlayerNameAvailable`. Never import from client code.
 - Server Actions: `saveScoreAction(gameId, playerName, score)` in `app/play/[id]/actions.ts`
-  (validates score/name/game, inserts, returns board + rank) and `getPlayerHistoryAction` in
+  (validates score/game, inserts, returns board + rank + the saved `name`; with a session and
+  profile it saves with the **profile's** name and `user_id` and ignores the client's name) and `getPlayerHistoryAction` in
   `app/hall-of-fame/actions.ts`. The pipeline is generic by `game_id`: a new game needs only a new
   `games` row.
 - Domain types in `lib/types.ts`; `lib/scores.ts` has `rankColor` (uses CSS tokens).
+- **Auth** (spec 21, Supabase Auth: email+password with email confirmation, Google, GitHub):
+  `proxy.ts` (Next 16 `middleware` successor) + `lib/supabase/proxy.ts` only refresh the session
+  with `getClaims()`; they protect no route. Login/signup/reset/profile logic is in Server Actions
+  (`app/auth/actions.ts`, PKCE cookies via `@supabase/ssr`), which return `AuthFormState` for
+  `useActionState` forms and translate Supabase errors through `lib/constants/auth.ts`. Every
+  account picks a unique player name in `/auth/player-name` (table `profiles`, no renaming yet);
+  the welcome email (`lib/email/welcome.ts`, Resend, sent with `after()`, best effort) goes out once,
+  when the profile is created. DB-enforced identity: RLS on `scores`/`profiles` plus the trigger
+  `scores_enforce_identity` (an account's score takes its profile name; a guest cannot use a
+  registered name). Auth settings (Site URL, redirect URLs, OAuth providers) live in the Supabase
+  dashboard, not in the repo. **Conventions from this spec:** interfaces go in `lib/interfaces/`,
+  constants in `lib/constants/`; shared auth form pieces in `components/auth/`.
 - **Player names** (`lib/player-name.ts`, spec 12): `normalizePlayerName` (trim, collapse spaces,
   uppercase, max 14) and `validatePlayerName` (3–14 chars, letters/digits/`_`/space; `INVITADO`
   always valid). Shared by client and server; the **server always re-validates**.
@@ -145,8 +162,11 @@ Pages are Server Components that fetch data and pass it to `*-client.tsx` / clie
   anti-flash script in `app/layout.tsx` sets `data-theme` on `<html>` before hydration. Colors are CSS
   tokens in `app/globals.css` (`--cian`, `--magenta`, `--amarillo`, `--rango-*`…) redefined for light
   mode — use tokens, not hard-coded hex, so both themes work.
-- `session-context` — simulated session (no real auth); player name persisted in `localStorage`
-  key `arcade-vault:player-name` via `useSyncExternalStore`, falling back to memory. `playGuest()` = guest.
+- `session-context` — real session (spec 21): `supabase.auth` (`onAuthStateChange`) + the profile;
+  the server/hydration snapshot is always "no session". Exposes `user` (profile name, or the guest
+  name), `isAuthenticated`, `needsPlayerName`, `isGuest`, `setName`/`playGuest` (guests only),
+  `logout`, `refreshProfile`. The guest name stays in `localStorage` key `arcade-vault:player-name`
+  via `useSyncExternalStore`, falling back to memory. `login(name)` no longer exists.
 - `credits-context` — simulated arcade credits (start 3, max 99), memory only.
 - Not in `contexts/`: per-game skin preferences (`arcadevault.<slug>.skin.v1`, see Games), the
   touch-controller toggle (`arcadevault.touch-controls.v1`) and the rotate hint
