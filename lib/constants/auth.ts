@@ -38,3 +38,22 @@ export const AUTH_ERRORS: Record<string, string> = {
   session_not_found: "Tu sesión venció. Vuelve a iniciar sesión.",
   not_authenticated: "Tu sesión venció. Vuelve a iniciar sesión.",
 };
+
+// Reenvío del correo de confirmación (/auth/check-email).
+export const RESEND_COOLDOWN_SECONDS = 60;
+
+// /auth/player-name: espera de la comprobación de disponibilidad y pausa del
+// estado "CUENTA CREADA" antes de redirigir.
+export const NAME_CHECK_DEBOUNCE_MS = 400;
+export const ACCOUNT_CREATED_REDIRECT_MS = 1800;
+
+// Avisos de /auth según `?error=` (los pone /auth/callback).
+export const AUTH_PAGE_NOTICES: Record<string, string> = {
+  "link-invalid": "El enlace venció o ya se usó. Pide uno nuevo con tu correo.",
+  oauth: "No se pudo iniciar sesión con ese proveedor. Inténtalo de nuevo.",
+};
+
+export const OAUTH_PROVIDERS = [
+  { id: "google", label: "Google" },
+  { id: "github", label: "GitHub" },
+] as const;
