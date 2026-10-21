@@ -1,6 +1,7 @@
 "use server";
 
 import { headers } from "next/headers";
+import { after } from "next/server";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import {
@@ -21,6 +22,7 @@ import {
   normalizePlayerName,
   validatePlayerName,
 } from "@/lib/player-name";
+import { sendWelcomeEmail } from "@/lib/email/welcome";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile, isPlayerNameAvailable } from "@/lib/supabase/queries";
 
@@ -225,6 +227,14 @@ export async function claimPlayerNameAction(
     }
   } catch {
     return { ok: false, error: GENERIC_AUTH_ERROR };
+  }
+
+  // Bienvenida best effort, una sola vez: solo llega aquí quien acaba de crear
+  // su perfil. `after` la envía sin bloquear ni cambiar la respuesta.
+  const email = auth.user.email;
+  if (email) {
+    const siteUrl = await getOrigin();
+    after(() => sendWelcomeEmail(email, name, siteUrl));
   }
 
   revalidatePath("/", "layout");
