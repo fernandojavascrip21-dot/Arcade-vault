@@ -220,7 +220,7 @@ function HudStat({
 export function PlayRoom({ game }: { game: Game }) {
   const router = useRouter();
   const { spendCredit } = useCredits();
-  const { user, setName } = useSession();
+  const { user, isAuthenticated, setName } = useSession();
 
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(3);
@@ -550,7 +550,8 @@ export function PlayRoom({ game }: { game: Game }) {
     setOver(true);
   };
 
-  const nameValue = nameDraft ?? user ?? "";
+  // Con perfil el nombre es el de la cuenta: fijo y no editable (spec 21).
+  const nameValue = isAuthenticated ? (user ?? "") : (nameDraft ?? user ?? "");
   const nameNormalized = normalizePlayerName(nameValue);
   const nameError = nameNormalized
     ? validatePlayerName(nameNormalized)
@@ -568,14 +569,16 @@ export function PlayRoom({ game }: { game: Game }) {
       return;
     }
 
-    if (name !== GUEST_NAME) setName(name);
+    // Las cuentas con perfil guardan con su nombre fijo; solo los invitados
+    // recuerdan el nombre escrito.
+    if (!isAuthenticated && name !== GUEST_NAME) setName(name);
     setSavedResult({
       result: {
         board: result.board,
         rank: result.rank,
         total: result.total,
       },
-      name,
+      name: result.name,
     });
     setSaved(true);
     setSaveMsg("");
@@ -926,6 +929,7 @@ export function PlayRoom({ game }: { game: Game }) {
                         Tu nombre
                         <input
                           value={nameValue}
+                          readOnly={isAuthenticated}
                           onChange={(e) => setNameDraft(e.target.value)}
                           // Los motores escuchan el teclado en window y cancelan sus
                           // teclas (A, S, D, P...): sin esto el input no las recibe.
@@ -935,7 +939,9 @@ export function PlayRoom({ game }: { game: Game }) {
                           placeholder="JUGADOR_01"
                           autoComplete="off"
                           aria-invalid={showNameError ? true : undefined}
-                          className="border border-cian/30 bg-cian/5 px-3.5 py-3 text-[15px] uppercase text-foreground focus:border-cian focus:shadow-[0_0_20px_rgba(0,245,255,.4)]"
+                          className={`border border-cian/30 bg-cian/5 px-3.5 py-3 text-[15px] uppercase text-foreground focus:border-cian focus:shadow-[0_0_20px_rgba(0,245,255,.4)] ${
+                            isAuthenticated ? "cursor-not-allowed opacity-70" : ""
+                          }`}
                         />
                       </label>
                       {showNameError ? (
@@ -950,14 +956,16 @@ export function PlayRoom({ game }: { game: Game }) {
                       >
                         {saving ? "GUARDANDO..." : "GUARDAR PUNTUACIÓN"}
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => handleSave(GUEST_NAME)}
-                        disabled={saving}
-                        className="whitespace-nowrap font-display text-[9px] text-[#8b98a3] underline-offset-4 mobile:min-h-11 mobile:w-full transition-colors hover:text-amarillo hover:underline disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        GUARDAR COMO INVITADO
-                      </button>
+                      {!isAuthenticated ? (
+                        <button
+                          type="button"
+                          onClick={() => handleSave(GUEST_NAME)}
+                          disabled={saving}
+                          className="whitespace-nowrap font-display text-[9px] text-[#8b98a3] underline-offset-4 mobile:min-h-11 mobile:w-full transition-colors hover:text-amarillo hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          GUARDAR COMO INVITADO
+                        </button>
+                      ) : null}
                     </form>
                   ) : null}
 
