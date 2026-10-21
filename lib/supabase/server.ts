@@ -1,8 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
-// Cliente de Supabase para Server Components y Route Handlers. No hay lógica
-// de auth todavía — ningún componente lo usa aún (ver spec 05).
+// Cliente de Supabase para Server Components, Server Actions y Route Handlers.
+// Lee y escribe las cookies de sesión (spec 21); `proxy.ts` refresca el token.
 export async function createClient() {
   const cookieStore = await cookies();
 
@@ -21,7 +21,7 @@ export async function createClient() {
             }
           } catch {
             // setAll se llamó desde un Server Component: se ignora porque
-            // no hay middleware que refresque la sesión en este spec.
+            // `proxy.ts` ya refresca la sesión en cada petición.
           }
         },
       },
