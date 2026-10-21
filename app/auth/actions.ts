@@ -8,8 +8,8 @@ import {
   safeNext,
   translateAuthError,
   validatePassword,
-  type AuthFormState,
 } from "@/lib/auth";
+import type { AuthFormState } from "@/lib/interfaces/auth";
 import {
   GENERIC_AUTH_ERROR,
   NEUTRAL_RESEND_MESSAGE,

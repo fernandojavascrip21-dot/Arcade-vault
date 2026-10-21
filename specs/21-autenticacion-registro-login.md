@@ -112,7 +112,9 @@ create trigger scores_enforce_identity before insert on public.scores
   for each row execute function public.scores_enforce_identity();
 ```
 
-Tipos en `lib/types.ts`:
+Organización del código nuevo de este spec: las **interfaces** viven en `lib/interfaces/` (`profile.ts`, `session.ts`, `auth.ts`) y las **constantes** en `lib/constants/` (`auth.ts`: límites de contraseña, mensajes y mapa de errores de Supabase en español). `lib/types.ts` no se amplía.
+
+Interfaz en `lib/interfaces/profile.ts`:
 
 ```ts
 export interface Profile {
@@ -121,10 +123,10 @@ export interface Profile {
 }
 ```
 
-`SessionValue` (`contexts/session-context.tsx`):
+`SessionValue` (`lib/interfaces/session.ts`; la implementa `contexts/session-context.tsx`):
 
 ```ts
-interface SessionValue {
+export interface SessionValue {
   user: string | null; // nombre de jugador de la cuenta, o el nombre de invitado recordado
   isAuthenticated: boolean; // hay sesión real de Supabase con perfil
   needsPlayerName: boolean; // hay sesión real pero aún no hay perfil
@@ -132,10 +134,11 @@ interface SessionValue {
   setName: (name: string) => void; // solo invitados
   playGuest: () => void;
   logout: () => Promise<void>;
+  refreshProfile: () => Promise<void>; // relee el perfil tras crearlo en /auth/player-name
 }
 ```
 
-`login(name)` desaparece (el acceso lo hacen las Server Actions). Rutas nuevas: `/auth/callback`, `/auth/check-email`, `/auth/player-name`, `/auth/forgot-password`, `/auth/reset-password`. Variable de entorno nueva: `RESEND_FROM_EMAIL` (opcional, servidor); `RESEND_API_KEY` ya existe (spec 04).
+`login(name)` desaparece (el acceso lo hacen las Server Actions). `refreshProfile` se añadió durante la implementación: `onAuthStateChange` no se dispara al insertar en `profiles`, así que `/auth/player-name` la llama tras crear el perfil para que el navbar se actualice. Rutas nuevas: `/auth/callback`, `/auth/check-email`, `/auth/player-name`, `/auth/forgot-password`, `/auth/reset-password`. Variable de entorno nueva: `RESEND_FROM_EMAIL` (opcional, servidor); `RESEND_API_KEY` ya existe (spec 04).
 
 ---
 
@@ -144,7 +147,7 @@ interface SessionValue {
 1. **Configurar Supabase (manual, antes del código).** En el panel: Site URL (`http://localhost:3000` en desarrollo y la URL de producción) y Redirect URLs con `/auth/callback`; activar confirmación de correo; crear OAuth Apps de Google y GitHub y activar ambos proveedores con su client id/secret (secretos solo en el panel, nunca en el repo); longitud mínima de contraseña 8. Anotar si el correo de la cuenta de Resend coincide con el que se usará en las pruebas (sandbox, ver riesgos).
 2. **Migración** con el Supabase MCP: todo el SQL del §3 en una migración (`apply_migration`). Después correr `get_advisors` (seguridad) y arreglar lo que reporte. Si `scores` ya tiene una política de insert, eliminarla en la misma migración.
 3. **Capa Supabase**: `proxy.ts` (raíz) + helper `lib/supabase/proxy.ts` que refresca la sesión con `getClaims()`; leer antes `node_modules/next/dist/docs/01-app/03-api-reference/03-file-conventions/proxy.md`. Añadir `getProfile(userId)` y `isPlayerNameAvailable(name)` en `lib/supabase/queries.ts`. Actualizar los comentarios de `server.ts`/`client.ts`. El sitio sigue funcionando igual (aún sin pantallas nuevas).
-4. **Server Actions y callback**: `app/auth/actions.ts` (lista del Scope) y `app/auth/callback/route.ts`. Reglas: tras acceso sin perfil → `/auth/player-name`; con perfil → `next` (solo rutas internas, validado) o `/`. `signUpAction` redirige a `/auth/check-email?email=…` aunque el correo ya exista; `resendConfirmationAction` aplica la misma respuesta neutra; `signInAction` usa un único mensaje genérico para credenciales inválidas. Traducir los errores de Supabase a español en un mapa central.
+4. **Server Actions y callback**: `app/auth/actions.ts` (lista del Scope) y `app/auth/callback/route.ts`. Reglas: tras acceso sin perfil → `/auth/player-name`; con perfil → `next` (solo rutas internas, validado) o `/`. `signUpAction` redirige a `/auth/check-email?email=…` aunque el correo ya exista; `resendConfirmationAction` aplica la misma respuesta neutra; `signInAction` usa un único mensaje genérico para credenciales inválidas. Traducir los errores de Supabase a español en un mapa central. Los fallos de OAuth o de un `error` del proveedor en el callback redirigen a `/auth?error=oauth` (además de `link-invalid`); `/auth` muestra un aviso para cada uno.
 5. **Sesión real**: reescribir `contexts/session-context.tsx` con la interfaz del §3 (`onAuthStateChange` + lectura del perfil; hidratación sin desajuste, mismo patrón `useSyncExternalStore` para la parte de invitado). Ajustar `nav-bar.tsx` (usuario real, SALIR vía `logout`, enlace "ELIGE TU NOMBRE" si `needsPlayerName`).
 6. **Pantallas** (con `/frontend-design`): reescribir `app/auth/page.tsx` y crear `check-email`, `player-name`, `forgot-password` y `reset-password`. Validación en línea con `lib/player-name.ts`, estados de carga/error, botones deshabilitados mientras se envía, `autoComplete` correcto en inputs, foco y `aria-live` en errores.
 7. **Correo de bienvenida**: crear `lib/email/welcome.ts` y llamarlo desde `claimPlayerNameAction` después de crear el perfil (sin `await` bloqueante del resultado: captura cualquier error y no cambia la respuesta). Añadir `RESEND_FROM_EMAIL` a `.env.example` con el comentario del sandbox.

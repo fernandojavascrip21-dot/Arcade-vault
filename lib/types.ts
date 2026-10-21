@@ -41,9 +41,3 @@ export interface SavedResult {
   rank: number; // 1 + cuántas puntuaciones son estrictamente mayores
   total: number; // total de partidas guardadas de ese juego
 }
-
-// Perfil de una cuenta (spec 21): un nombre de jugador único por usuario.
-export interface Profile {
-  userId: string;
-  playerName: string;
-}

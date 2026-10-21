@@ -55,7 +55,7 @@ function NavLink({
 export function NavBar() {
   const pathname = usePathname();
   const { credits, insertCoin } = useCredits();
-  const { user, logout } = useSession();
+  const { user, needsPlayerName, logout } = useSession();
   const isNarrow = useMediaQuery("(max-width: 999px)");
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -121,7 +121,23 @@ export function NavBar() {
               Acerca de
             </NavLink>
 
-            {user ? (
+            {needsPlayerName ? (
+              <div className="flex items-center gap-2.5">
+                <Link
+                  href="/auth/player-name"
+                  className="whitespace-nowrap border border-amarillo bg-amarillo/5 px-4 py-3 font-display text-[10px] text-amarillo transition-colors hover:bg-amarillo/20 active:scale-95"
+                >
+                  ELIGE TU NOMBRE
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => void logout()}
+                  className="whitespace-nowrap text-[11px] uppercase tracking-wider text-texto-tenue transition-colors hover:text-magenta"
+                >
+                  Salir
+                </button>
+              </div>
+            ) : user ? (
               <div className="flex items-center gap-2.5">
                 <div className="grid h-[34px] w-[34px] place-items-center border border-amarillo font-display text-[11px] text-amarillo [box-shadow:0_0_14px_rgba(245,255,0,.4)]">
                   {user.charAt(0)}
@@ -131,7 +147,7 @@ export function NavBar() {
                 </div>
                 <button
                   type="button"
-                  onClick={logout}
+                  onClick={() => void logout()}
                   className="whitespace-nowrap text-[11px] uppercase tracking-wider text-texto-tenue transition-colors hover:text-magenta"
                 >
                   Salir
@@ -221,13 +237,35 @@ export function NavBar() {
             >
               Acerca de
             </Link>
-            <Link
-              href="/auth"
-              onClick={closeMenu}
-              className="font-display text-xs text-magenta"
-            >
-              Iniciar Sesión
-            </Link>
+            {needsPlayerName ? (
+              <Link
+                href="/auth/player-name"
+                onClick={closeMenu}
+                className="font-display text-xs text-amarillo"
+              >
+                Elige tu nombre
+              </Link>
+            ) : null}
+            {needsPlayerName || user ? (
+              <button
+                type="button"
+                onClick={() => {
+                  closeMenu();
+                  void logout();
+                }}
+                className="text-left font-display text-xs text-magenta"
+              >
+                Salir{user && !needsPlayerName ? ` (${user})` : ""}
+              </button>
+            ) : (
+              <Link
+                href="/auth"
+                onClick={closeMenu}
+                className="font-display text-xs text-magenta"
+              >
+                Iniciar Sesión
+              </Link>
+            )}
           </div>
         </div>
       ) : null}

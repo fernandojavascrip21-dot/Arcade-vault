@@ -2,13 +2,8 @@
 // Server Components (page.tsx); nunca desde código de cliente.
 
 import { createClient } from "@/lib/supabase/server";
-import type {
-  BoardRow,
-  Game,
-  GeneralRow,
-  HistoryRow,
-  Profile,
-} from "@/lib/types";
+import type { Profile } from "@/lib/interfaces/profile";
+import type { BoardRow, Game, GeneralRow, HistoryRow } from "@/lib/types";
 
 type GameRow = {
   id: string;

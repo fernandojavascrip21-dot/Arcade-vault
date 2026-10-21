@@ -12,7 +12,7 @@ const labelCls = "grid gap-2 text-xs uppercase tracking-[2px] text-texto-tenue";
 
 export default function AuthPage() {
   const router = useRouter();
-  const { login, playGuest } = useSession();
+  const { setName, playGuest } = useSession();
   const [tab, setTab] = useState<"login" | "register">("login");
   const [user, setUser] = useState("");
 
@@ -22,7 +22,7 @@ export default function AuthPage() {
   // sociales hacen lo mismo: sesión simulada con el nombre introducido.
   const submit = () => {
     const name = normalizePlayerName(user) || "JUGADOR_01";
-    login(name);
+    setName(name);
     router.push("/");
   };
 

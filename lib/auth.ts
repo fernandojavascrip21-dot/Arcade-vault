@@ -11,12 +11,6 @@ import {
   PASSWORD_MIN,
 } from "@/lib/constants/auth";
 
-export type AuthFormState = {
-  ok: boolean;
-  error?: string;
-  message?: string;
-};
-
 export function isValidEmail(email: string): boolean {
   return email.length <= EMAIL_MAX && EMAIL_RE.test(email);
 }

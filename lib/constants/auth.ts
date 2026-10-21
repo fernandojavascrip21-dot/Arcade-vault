@@ -1,7 +1,7 @@
 // Constantes de autenticación (spec 21). Solo valores: la lógica vive en
 // `lib/auth.ts` y las Server Actions en `app/auth/actions.ts`.
 
-import type { AuthFormState } from "@/lib/auth";
+import type { AuthFormState } from "@/lib/interfaces/auth";
 
 export const PASSWORD_MIN = 8;
 export const PASSWORD_MAX = 72; // límite de bcrypt en Supabase Auth
