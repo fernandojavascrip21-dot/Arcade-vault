@@ -1,6 +1,6 @@
 # SPEC 21 — Registro, login y autenticación real con Supabase Auth
 
-> **Status:** Aprovado
+> **Status:** Implementado
 > **Depends on:** SPEC 05, SPEC 07, SPEC 12
 > **Date:** 2026-10-19
 > **Objective:** Reemplazar la sesión simulada por autenticación real con Supabase Auth (email + contraseña, Google y GitHub, confirmación de correo y recuperación de contraseña), de modo que cada cuenta tenga un nombre de jugador único con el que se guardan sus puntuaciones.

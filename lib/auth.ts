@@ -9,6 +9,9 @@ import {
   GENERIC_AUTH_ERROR,
   PASSWORD_MAX,
   PASSWORD_MIN,
+  PASSWORD_RE,
+  PASSWORD_SYMBOL_RE,
+  PASSWORD_RULE_HINT,
 } from "@/lib/constants/auth";
 
 export function isValidEmail(email: string): boolean {
@@ -21,6 +24,18 @@ export function validatePassword(password: string): string | null {
   }
   if (password.length > PASSWORD_MAX) {
     return `La contraseña admite como máximo ${PASSWORD_MAX} caracteres.`;
+  }
+  const missing: string[] = [];
+  if (!/[a-z]/.test(password)) missing.push("una minúscula");
+  if (!/[A-Z]/.test(password)) missing.push("una mayúscula");
+  if (!/\d/.test(password)) missing.push("un número");
+  if (!PASSWORD_SYMBOL_RE.test(password)) missing.push("un símbolo");
+  if (missing.length > 0) {
+    return `La contraseña necesita ${missing.join(", ").replace(/, ([^,]*)$/, " y $1")}.`;
+  }
+  // Red de seguridad: la regla completa es la fuente de verdad.
+  if (!PASSWORD_RE.test(password)) {
+    return `La contraseña no cumple la regla. ${PASSWORD_RULE_HINT}`;
   }
   return null;
 }
