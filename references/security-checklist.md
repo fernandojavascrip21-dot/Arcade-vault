@@ -1,10 +1,13 @@
 ## Checklist de seguridad básico
 
-- [ ] RLS: Row Level Security habilitado en ambas tablas: `games` y `scores`
-- [ ] Minimum password length — mínimo 8 caracteres
-- [ ] Leaked password protection — (el warning 4)
-- [ ] Max signup rate — limitar signups por IP (anti-bot)
-- [ ] Headers de seguridad en Next.js
+Estado según el spec 22 (`specs/22-checklist-seguridad-basico.md`, 2026-10-22):
+
+- [x] RLS: Row Level Security habilitado en `games`, `scores` y `profiles`; políticas verificadas contra el spec 21 (sin cambios).
+- [x] Minimum password length — mínimo 8 caracteres en el panel de Supabase, más letras minúsculas, mayúsculas, dígitos y símbolos. La app valida lo mismo en el servidor con `PASSWORD_RE` (`lib/constants/auth.ts`).
+- [ ] Leaked password protection — **diferido**: es exclusivo del plan Pro y el proyecto está en Free. Revisar si pasa a Pro.
+- [x] Max signup rate — límite de **5 requests / 5 min por IP** en "Rate limit for sign-ups and sign-ins" (campo combinado con logins; el panel no tiene límite por hora). Sin CAPTCHA.
+- [x] Headers de seguridad en Next.js — `securityHeaders` en `next.config.ts`: los 3 de abajo + `Strict-Transport-Security` y `Permissions-Policy`. Sin CSP (spec propio).
+- [x] Hash de contraseñas — lo hace Supabase Auth (bcrypt); la app nunca guarda ni registra la contraseña. Verificado con conteo sobre `auth.users`.
 
 Ej:
 
@@ -29,4 +32,7 @@ headers: async () => [{ source: "/(.*)", headers: securityHeaders }];
 | authenticated_security_definer_function_executable | Signed-In Users Can Execute SECURITY DEFINER Function | WARN  | EXTERNAL | ["SECURITY"] | Detects `SECURITY DEFINER` functions that are callable by signed-in users. Revoke `EXECUTE`, switch the function to `SECURITY INVOKER`, or move it out of your exposed API schema if signed-in users should not call it. | Function `public.rls_auto_enable()` can be executed by the `authenticated` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/rls_auto_enable`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.                              | https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable | {"schema":"public","name":"rls_auto_enable","language":"plpgsql","arguments":"","security_definer":true}                 | authenticated_security_definer_function_executable_public_rls_auto_enable_                     | 2026-10-23T03:29:14.678Z |
 | auth_leaked_password_protection                    | Leaked Password Protection Disabled                   | WARN  | EXTERNAL | ["SECURITY"] | Leaked password protection is currently disabled.                                                                                                                                                                        | Supabase Auth prevents the use of compromised passwords by checking against HaveIBeenPwned.org. Enable this feature to enhance security.                                                                                                                          | https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection               | {"entity":"Auth","type":"auth"}                                                                                          | auth_leaked_password_protection                                                                |                          |
 
-- [ ] TODO: vayan al panel de warnings y errores de Supabase
+- [x] Panel de warnings de Supabase revisado (`get_advisors`, 2026-10-22):
+  - `rls_auto_enable` (anon y authenticated): **corregido** con la migración `revoke_rls_auto_enable_execute` (la función solo la usa el event trigger `ensure_rls`, que corre como `postgres`).
+  - `is_player_name_available` (anon y authenticated): **aceptado**. Es intencional: con RLS, invitados y usuarios nuevos solo pueden saber si un nombre está libre mediante esta función `SECURITY DEFINER`, que devuelve un booleano; los nombres ya son públicos en los rankings.
+  - `auth_leaked_password_protection`: **diferido** (plan Pro).

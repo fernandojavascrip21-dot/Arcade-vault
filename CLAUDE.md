@@ -155,7 +155,26 @@ Pages are Server Components that fetch data and pass it to `*-client.tsx` / clie
   uppercase, max 14) and `validatePlayerName` (3–14 chars, letters/digits/`_`/space; `INVITADO`
   always valid). Shared by client and server; the **server always re-validates**.
 
-## Client state (`contexts/`, wired in `contexts/providers.tsx`)
+## Security (spec 22)
+
+- **Headers**: `securityHeaders` in `next.config.ts` (`X-Content-Type-Options`, `X-Frame-Options: DENY`,
+  `Referrer-Policy`, `Strict-Transport-Security`, `Permissions-Policy`) for every route. No CSP yet
+  (own spec: it must allow the theme anti-flash script, Supabase, Google Fonts and OAuth). `DENY` means
+  the site cannot be embedded in any iframe.
+- **Passwords**: `PASSWORD_RE` (`lib/constants/auth.ts`) = 8–72 chars with lowercase, uppercase, digit
+  and symbol; `validatePassword` (`lib/auth.ts`) gives the Spanish message of what is missing. It runs in
+  `signUpAction` and `updatePasswordAction` (server), **not** in `signInAction` (old passwords must still
+  log in). Keep it identical to the Supabase panel setting (Auth > Sign In / Providers > Email: min length
+  8 + lowercase, uppercase, digits and symbols) or users get a generic `weak_password`. Hashing is Supabase
+  Auth's (bcrypt); the app never stores or logs the password.
+- **Panel-only config (not in the repo)**: signups/sign-ins rate limit = 5 requests / 5 min per IP
+  (Auth > Rate Limits; one combined field, no per-hour option). If real players get blocked, raise it there.
+- **Accepted / deferred**: advisor warning on `is_player_name_available` is intentional (`SECURITY DEFINER`
+  boolean, needed by guests); leaked password protection needs the Pro plan; CSP and CAPTCHA are future
+  specs. `rls_auto_enable` has no `EXECUTE` for `anon`/`authenticated` (only the `ensure_rls` event trigger uses it).
+  Checklist: `references/security-checklist.md`.
+
+## Client state (`contexts/, wired in `contexts/providers.tsx`)
 
 `ThemeProvider` → `SessionProvider` → `CreditsProvider`.
 
