@@ -22,8 +22,8 @@ Con el spec 21 la plataforma ya tiene cuentas reales, así que conviene cerrar l
 **In:**
 
 - **RLS**: verificar (SQL + `get_advisors`) que `games`, `scores` y `profiles` tienen RLS habilitado y que sus políticas coinciden con el spec 21 (`games` solo lectura pública; `scores` lectura pública e insert con `user_id` nulo o propio; `profiles` solo lectura/insert propios). Corregir lo que difiera.
-- **Longitud mínima de contraseña**: fijar mínimo 8 caracteres en Supabase Auth (Auth > Sign In / Providers > Password) y activar el requisito "minúsculas, mayúsculas y dígitos" en el mismo panel (misma regla que la regex de abajo, como segunda barrera).
-- **Validación de contraseña con expresión regular**: nueva constante `PASSWORD_RE = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,72}$/` en `lib/constants/auth.ts` (el 8 y el 72 salen de `PASSWORD_MIN`/`PASSWORD_MAX`). `validatePassword` en `lib/auth.ts` la usa y devuelve mensajes en español específicos (falta minúscula / mayúscula / número, longitud). Se aplica en `signUpAction` y `updatePasswordAction` (servidor, que es quien manda) y como ayuda en línea en `app/auth/auth-form.tsx` y `reset-password-form.tsx`, cuyos textos "Mínimo 8 caracteres" pasan a describir la regla completa. `signInAction` **no** aplica la regex (no debe rechazar contraseñas antiguas). El mensaje `weak_password` se actualiza.
+- **Longitud mínima de contraseña**: fijar mínimo 8 caracteres en Supabase Auth (Auth > Sign In / Providers > Password) y activar el requisito "minúsculas, mayúsculas, dígitos y símbolos" en el mismo panel (misma regla que la regex de abajo, como segunda barrera).
+- **Validación de contraseña con expresión regular**: nueva constante `PASSWORD_RE = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|<>?,./`~]).{8,72}$/` (el símbolo es uno del conjunto que acepta Supabase Auth) en `lib/constants/auth.ts` (el 8 y el 72 salen de `PASSWORD_MIN`/`PASSWORD_MAX`). `validatePassword` en `lib/auth.ts` la usa y devuelve mensajes en español específicos (falta minúscula / mayúscula / número / símbolo, longitud). Se aplica en `signUpAction` y `updatePasswordAction` (servidor, que es quien manda) y como ayuda en línea en `app/auth/auth-form.tsx` y `reset-password-form.tsx`, cuyos textos "Mínimo 8 caracteres" pasan a describir la regla completa. `signInAction` **no** aplica la regex (no debe rechazar contraseñas antiguas). El mensaje `weak_password` se actualiza.
 - **Hash de contraseñas (verificación, sin código)**: Supabase Auth ya guarda la contraseña con bcrypt en `auth.users.encrypted_password`; la app nunca la almacena ni la hashea (la envía por HTTPS a Supabase desde las Server Actions). Se verifica con una consulta de solo conteo (sin leer hashes) y se documenta. Comprobado el 2026-10-22: 3 usuarios, 1 con hash bcrypt (`$2a$`/`$2b$`) y 2 sin contraseña (cuentas de Google/GitHub).
 - **Límite de signups por IP**: ajustar en el panel (Auth > Rate Limits) el máximo de registros por IP por hora a un valor bajo (propuesta: 10) y registrar el valor elegido en el spec al implementar. Sin CAPTCHA.
 - **Headers de seguridad** en `next.config.ts` (`headers()` para `source: "/(.*)"`):
@@ -85,9 +85,9 @@ const securityHeaders = [
 
 1. **Auditoría de RLS** (solo lectura): `list_tables` y consulta a `pg_policies` vía `execute_sql`; comparar con el §3 del spec 21. Anotar discrepancias; si no hay, no se cambia nada.
 2. **Migración** `revoke_rls_auto_enable_execute` con `apply_migration`. Volver a correr `get_advisors` (seguridad): deben desaparecer los dos avisos de `rls_auto_enable`.
-3. **Regex de contraseña**: `PASSWORD_RE` en `lib/constants/auth.ts`, `validatePassword` en `lib/auth.ts`, textos de ayuda en los dos formularios y mensaje `weak_password`. Probar con una tabla de casos (7 caracteres, sin mayúscula, sin minúscula, sin número, 73 caracteres, válida).
+3. **Regex de contraseña**: `PASSWORD_RE` en `lib/constants/auth.ts`, `validatePassword` en `lib/auth.ts`, textos de ayuda en los dos formularios y mensaje `weak_password`. Probar con una tabla de casos (7 caracteres, sin mayúscula, sin minúscula, sin número, sin símbolo, 73 caracteres, válida).
 4. **Headers**: añadir `securityHeaders` y `headers()` en `next.config.ts` (dejando intactos `allowedDevOrigins` y el resto). Probar con `npm run dev` y `curl -I http://localhost:3000/`.
-5. **Panel de Supabase (manual)**: contraseña mínima 8 + minúsculas, mayúsculas y dígitos; Rate Limits > signups por IP/hora al valor acordado. Anotar los valores finales en este spec.
+5. **Panel de Supabase (manual)**: contraseña mínima 8 + minúsculas, mayúsculas, dígitos y símbolos; Rate Limits > signups por IP/hora al valor acordado. Anotar los valores finales en este spec.
 6. **Verificación funcional**: recorrer registro, login (email y Google/GitHub), reset de contraseña, `/play/*` en pantalla completa y guardar una puntuación, para confirmar que los headers no rompen nada.
 7. **Documentación**: actualizar `CLAUDE.md` y `references/security-checklist.md`; `npm run lint` y `npm run build`.
 
@@ -97,8 +97,8 @@ const securityHeaders = [
 
 - [ ] `list_tables` muestra `rls_enabled: true` en `games`, `scores` y `profiles`, y las políticas coinciden con el spec 21.
 - [ ] `get_advisors` (seguridad) ya no reporta `rls_auto_enable`; solo quedan `is_player_name_available` (aceptado) y _leaked password protection_ (diferido).
-- [ ] `signUpAction` y `updatePasswordAction` rechazan, con un mensaje en español que dice qué falta, contraseñas de 7 caracteres, de 73, sin minúscula, sin mayúscula o sin número; la validación ocurre en el servidor aunque se salte el formulario.
-- [ ] Una contraseña de 8–72 caracteres con minúscula, mayúscula y número permite el registro y el cambio de contraseña.
+- [ ] `signUpAction` y `updatePasswordAction` rechazan, con un mensaje en español que dice qué falta, contraseñas de 7 caracteres, de 73, sin minúscula, sin mayúscula, sin número o sin símbolo; la validación ocurre en el servidor aunque se salte el formulario.
+- [ ] Una contraseña de 8–72 caracteres con minúscula, mayúscula, número y símbolo permite el registro y el cambio de contraseña.
 - [ ] Supabase Auth también rechaza una contraseña sin esas clases si se llama directo a su API (segunda barrera del panel).
 - [ ] Un usuario con contraseña antigua que no cumple la regex puede seguir iniciando sesión.
 - [ ] El panel muestra el límite de signups por IP configurado y su valor está anotado en este spec.
@@ -114,13 +114,13 @@ const securityHeaders = [
 
 ## 6 — Decisiones tomadas y descartadas
 
-- **Leaked password protection diferida** (elegido) frente a activarla o subir a Pro: es una función exclusiva del plan Pro y el proyecto está en Free. Se compensa con mínimo 8 y complejidad de letras y números; se revisa si el proyecto pasa a Pro.
+- **Leaked password protection diferida** (elegido) frente a activarla o subir a Pro: es una función exclusiva del plan Pro y el proyecto está en Free. Se compensa con mínimo 8 y complejidad de letras, números y símbolos; se revisa si el proyecto pasa a Pro.
 - **Headers: los 3 del checklist + HSTS y Permissions-Policy** (elegido) frente a solo los 3 o a añadir CSP: HSTS y Permissions-Policy son de bajo riesgo para la app (el juego usa fullscreen del propio documento, no cámara/micrófono/geolocalización), mientras que CSP puede romper el script anti-flash del tema, OAuth y fuentes, y se deja para un spec propio.
 - **Aceptar el warning de `is_player_name_available`** (elegido) frente a rediseñarla: es intencional. Con RLS, `profiles` solo deja leer la fila propia, así que invitados y usuarios nuevos necesitan una función `SECURITY DEFINER` para saber si un nombre está libre; solo devuelve un booleano. Quitar el acceso público exigiría un secreto de servidor nuevo y más cambios. Riesgo aceptado: se pueden sondear nombres por REST, pero los nombres ya son públicos en los rankings.
 - **No hashear en la app** (elegido): el requisito "la contraseña se guarda hasheada" ya lo cumple Supabase Auth (bcrypt, con sal, solo servidor). Un hash propio en el cliente lo haría equivalente a la contraseña y chocaría con la regex; en el servidor sería doble hash sin beneficio. Lo que sí se hace es verificarlo y documentarlo.
 - **Revocar `EXECUTE` de `rls_auto_enable`**: la app no la llama (verificado con búsqueda en el código) y no hay motivo para exponerla por REST.
 - **Solo rate limit nativo de Supabase para signups** (elegido) frente a añadir CAPTCHA: no requiere código ni secretos nuevos y cubre el checklist ("limitar signups por IP"). CAPTCHA queda como siguiente paso si aparece abuso.
-- **Regex 8–72 con minúscula, mayúscula y número** (elegido) frente a exigir símbolo o solo letra+número: pedida expresamente como validación; el símbolo frustra el registro. Se valida en servidor y se refleja en el panel de Supabase. Sin validar en el login para no bloquear cuentas existentes.
+- **Regex 8–72 con minúscula, mayúscula, número y símbolo** (elegido; decisión del 2026-10-22, antes sin símbolo) frente a no exigir símbolo o solo letra+número: el panel de Supabase quedó en "letras, dígitos y símbolos" y la regex debe coincidir para no mostrar un `weak_password` genérico. Se valida en servidor y se refleja en el panel de Supabase. Sin validar en el login para no bloquear cuentas existentes.
 - **Vencimiento de sesión separado en el SPEC 23** (elegido) frente a meterlo aquí: toca `proxy.ts`, `SessionProvider` y `/auth`, y dejaría de ser un checklist básico.
 
 ---

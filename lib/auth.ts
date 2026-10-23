@@ -10,6 +10,7 @@ import {
   PASSWORD_MAX,
   PASSWORD_MIN,
   PASSWORD_RE,
+  PASSWORD_SYMBOL_RE,
   PASSWORD_RULE_HINT,
 } from "@/lib/constants/auth";
 
@@ -28,6 +29,7 @@ export function validatePassword(password: string): string | null {
   if (!/[a-z]/.test(password)) missing.push("una minúscula");
   if (!/[A-Z]/.test(password)) missing.push("una mayúscula");
   if (!/\d/.test(password)) missing.push("un número");
+  if (!PASSWORD_SYMBOL_RE.test(password)) missing.push("un símbolo");
   if (missing.length > 0) {
     return `La contraseña necesita ${missing.join(", ").replace(/, ([^,]*)$/, " y $1")}.`;
   }

@@ -6,12 +6,14 @@ import type { AuthFormState } from "@/lib/interfaces/auth";
 export const PASSWORD_MIN = 8;
 export const PASSWORD_MAX = 72; // límite de bcrypt en Supabase Auth
 
-// Regla completa (spec 22): minúscula, mayúscula y número, de 8 a 72
-// caracteres. Mantener igual que el requisito del panel de Supabase Auth.
+// Regla completa (spec 22): minúscula, mayúscula, número y símbolo, de 8 a 72
+// caracteres. Mantener igual que el requisito del panel de Supabase Auth
+// (mismo conjunto de símbolos que acepta Supabase).
+export const PASSWORD_SYMBOL_RE = /[!@#$%^&*()_+\-=[\]{};':"\\|<>?,./`~]/;
 export const PASSWORD_RE = new RegExp(
-  `^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).{${PASSWORD_MIN},${PASSWORD_MAX}}$`,
+  `^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*${PASSWORD_SYMBOL_RE.source}).{${PASSWORD_MIN},${PASSWORD_MAX}}$`,
 );
-export const PASSWORD_RULE_HINT = `De ${PASSWORD_MIN} a ${PASSWORD_MAX} caracteres, con minúscula, mayúscula y número.`;
+export const PASSWORD_RULE_HINT = `De ${PASSWORD_MIN} a ${PASSWORD_MAX} caracteres, con minúscula, mayúscula, número y símbolo.`;
 
 export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export const EMAIL_MAX = 254;
