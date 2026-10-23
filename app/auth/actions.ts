@@ -13,8 +13,10 @@ import {
 import type { AuthFormState } from "@/lib/interfaces/auth";
 import {
   GENERIC_AUTH_ERROR,
+  NAME_TAKEN_ERROR,
   NEUTRAL_RESEND_MESSAGE,
   NEUTRAL_RESET_MESSAGE,
+  OAUTH_QUERY_PARAMS,
   PLAYER_NAME_CREATED_MESSAGE,
 } from "@/lib/constants/auth";
 import {
@@ -22,6 +24,7 @@ import {
   normalizePlayerName,
   validatePlayerName,
 } from "@/lib/player-name";
+import type { SupabaseServerClient } from "@/lib/interfaces/supabase";
 import { sendWelcomeEmail } from "@/lib/email/welcome";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile, isPlayerNameAvailable } from "@/lib/supabase/queries";
@@ -43,10 +46,11 @@ async function getOrigin(): Promise<string> {
 
 // Destino tras un acceso: sin perfil → elegir nombre; con perfil → `next` o "/".
 async function destinationAfterSignIn(
+  supabase: SupabaseServerClient,
   userId: string,
   next: string | null,
 ): Promise<string> {
-  const profile = await getProfile(userId);
+  const profile = await getProfile(userId, supabase);
   if (!profile) return "/auth/player-name";
   return next ?? "/";
 }
@@ -79,7 +83,7 @@ export async function signInAction(
 
   let destination: string;
   try {
-    destination = await destinationAfterSignIn(data.user.id, next);
+    destination = await destinationAfterSignIn(supabase, data.user.id, next);
   } catch {
     destination = next ?? "/";
   }
@@ -128,7 +132,10 @@ export async function signInWithProviderAction(
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider,
-    options: { redirectTo: callback.toString() },
+    options: {
+      redirectTo: callback.toString(),
+      queryParams: { ...OAUTH_QUERY_PARAMS },
+    },
   });
   if (error || !data.url) redirect("/auth?error=oauth");
   redirect(data.url);
@@ -181,7 +188,7 @@ export async function updatePasswordAction(
 
   let destination = "/";
   try {
-    destination = await destinationAfterSignIn(auth.user.id, null);
+    destination = await destinationAfterSignIn(supabase, auth.user.id, null);
   } catch {}
   revalidatePath("/", "layout");
   redirect(destination);
@@ -206,11 +213,11 @@ export async function claimPlayerNameAction(
 
   try {
     // Si ya tiene perfil no se crea otro (ni, más adelante, se reenvía correo).
-    if (await getProfile(auth.user.id)) {
+    if (await getProfile(auth.user.id, supabase)) {
       return { ok: true, message: PLAYER_NAME_CREATED_MESSAGE };
     }
-    if (!(await isPlayerNameAvailable(name))) {
-      return { ok: false, error: "Ese nombre ya está en uso." };
+    if (!(await isPlayerNameAvailable(name, supabase))) {
+      return { ok: false, error: NAME_TAKEN_ERROR };
     }
     const { error } = await supabase
       .from("profiles")
@@ -219,10 +226,7 @@ export async function claimPlayerNameAction(
       // 23505: otro usuario lo tomó entre la comprobación y el insert.
       return {
         ok: false,
-        error:
-          error.code === "23505"
-            ? "Ese nombre ya está en uso."
-            : GENERIC_AUTH_ERROR,
+        error: error.code === "23505" ? NAME_TAKEN_ERROR : GENERIC_AUTH_ERROR,
       };
     }
   } catch {

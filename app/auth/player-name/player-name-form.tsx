@@ -12,9 +12,17 @@ import {
   ACCOUNT_CREATED_REDIRECT_MS,
   INITIAL_AUTH_STATE,
   NAME_CHECK_DEBOUNCE_MS,
+  NAME_SUGGESTION_SUFFIXES,
+  NAME_SUGGESTIONS_MAX,
+  NAME_TAKEN_ERROR,
+  PLAYER_NAME_INTRO,
   PLAYER_NAME_CREATED_MESSAGE,
 } from "@/lib/constants/auth";
-import type { NameAvailability } from "@/lib/interfaces/auth";
+import type {
+  NameAvailability,
+  NameSuggestions,
+  PlayerNameFormProps,
+} from "@/lib/interfaces/auth";
 import {
   GUEST_NAME,
   NAME_MAX,
@@ -24,15 +32,21 @@ import {
 } from "@/lib/player-name";
 import { createClient } from "@/lib/supabase/client";
 
-export function PlayerNameForm({ next }: { next: string }) {
+export function PlayerNameForm({ next, email }: PlayerNameFormProps) {
   const router = useRouter();
-  const { refreshProfile } = useSession();
+  const { refreshProfile, logout } = useSession();
+
+  const switchAccount = async () => {
+    await logout();
+    router.push("/auth");
+  };
   const [state, formAction] = useActionState(
     claimPlayerNameAction,
     INITIAL_AUTH_STATE,
   );
   const [raw, setRaw] = useState("");
   const [checked, setChecked] = useState<NameAvailability | null>(null);
+  const [suggested, setSuggested] = useState<NameSuggestions | null>(null);
 
   const name = normalizePlayerName(raw);
   const localError =
@@ -51,7 +65,29 @@ export function PlayerNameForm({ next }: { next: string }) {
         "is_player_name_available",
         { p_name: name },
       );
-      if (!error) setChecked({ name, available: data === true });
+      if (error) return;
+      const available = data === true;
+      setChecked({ name, available });
+      if (available) return;
+
+      // En uso: propone variantes válidas y libres.
+      const candidates = NAME_SUGGESTION_SUFFIXES.map(
+        (suffix) => `${name.slice(0, NAME_MAX - suffix.length)}${suffix}`,
+      ).filter((c) => !validatePlayerName(c));
+      const results = await Promise.all(
+        candidates.map(async (candidate) => {
+          const res = await createClient().rpc("is_player_name_available", {
+            p_name: candidate,
+          });
+          return res.error || res.data !== true ? null : candidate;
+        }),
+      );
+      setSuggested({
+        name,
+        options: results
+          .filter((c): c is string => c !== null)
+          .slice(0, NAME_SUGGESTIONS_MAX),
+      });
     }, NAME_CHECK_DEBOUNCE_MS);
     return () => clearTimeout(id);
   }, [canCheck, name]);
@@ -98,7 +134,7 @@ export function PlayerNameForm({ next }: { next: string }) {
     idle: `${NAME_MIN} a ${NAME_MAX} caracteres: letras, números y _`,
     invalid: localError,
     checking: "Comprobando…",
-    taken: "Ese nombre ya está en uso.",
+    taken: NAME_TAKEN_ERROR,
     free: "Disponible",
   }[status];
 
@@ -113,8 +149,23 @@ export function PlayerNameForm({ next }: { next: string }) {
   return (
     <AuthCard title="ELIGE TU NOMBRE DE JUGADOR">
       <p className="text-center text-[13px] leading-relaxed text-texto-tenue">
-        Es el que verás en el ranking. Después no se puede cambiar.
+        {PLAYER_NAME_INTRO}
       </p>
+      {email ? (
+        <div className="grid gap-1.5 border border-cian/30 bg-cian/5 px-3.5 py-3 text-center">
+          <span className="text-[10px] tracking-[2px] text-texto-tenue">
+            SESIÓN INICIADA CON
+          </span>
+          <span className="break-all text-[13px] text-foreground">{email}</span>
+          <button
+            type="button"
+            onClick={() => void switchAccount()}
+            className="text-[11px] uppercase tracking-[2px] text-amarillo underline-offset-4 hover:underline"
+          >
+            Usar otra cuenta
+          </button>
+        </div>
+      ) : null}
       <form action={formAction} className="grid gap-4">
         <label className="grid gap-3">
           <span className="text-xs uppercase tracking-[2px] text-texto-tenue">
@@ -143,6 +194,27 @@ export function PlayerNameForm({ next }: { next: string }) {
           {status === "free" ? "● " : status === "taken" ? "✕ " : ""}
           {statusText}
         </p>
+        {status === "taken" &&
+        suggested?.name === name &&
+        suggested.options.length > 0 ? (
+          <div className="grid gap-2 text-center">
+            <span className="text-[10px] tracking-[2px] text-texto-tenue">
+              LIBRES PARA TI
+            </span>
+            <div className="flex flex-wrap justify-center gap-2">
+              {suggested.options.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => setRaw(option)}
+                  className="border border-cian/50 bg-cian/5 px-3 py-2 font-display text-[10px] tracking-wider text-cian transition-colors hover:bg-cian/15 active:scale-95"
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
         <FormMessage error={state.error} />
         <SubmitButton
           pendingText="GUARDANDO…"

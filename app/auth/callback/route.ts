@@ -31,7 +31,7 @@ export async function GET(request: Request): Promise<Response> {
   if (next?.startsWith("/auth/reset-password")) return to(next);
 
   try {
-    const profile = await getProfile(data.user.id);
+    const profile = await getProfile(data.user.id, supabase);
     if (!profile) return to("/auth/player-name");
   } catch {
     return to(next ?? "/");

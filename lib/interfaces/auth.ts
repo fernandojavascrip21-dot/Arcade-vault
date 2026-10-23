@@ -42,3 +42,14 @@ export interface NameAvailability {
   name: string;
   available: boolean;
 }
+
+export interface PlayerNameFormProps {
+  next: string; // ruta a la que ir tras crear el perfil
+  email: string | null; // correo de la cuenta con la que se inició sesión
+}
+
+// Nombres libres propuestos cuando el elegido (`name`) ya está en uso.
+export interface NameSuggestions {
+  name: string;
+  options: string[];
+}

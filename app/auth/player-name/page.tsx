@@ -14,10 +14,10 @@ export default async function PlayerNamePage({
   if (!data.user) redirect("/auth");
 
   // Con perfil ya creado no hay nada que elegir (y no se reenvía la bienvenida).
-  if (await getProfile(data.user.id)) redirect("/");
+  if (await getProfile(data.user.id, supabase)) redirect("/");
 
   const params = await searchParams;
   const next = safeNext(typeof params.next === "string" ? params.next : null);
 
-  return <PlayerNameForm next={next ?? "/"} />;
+  return <PlayerNameForm next={next ?? "/"} email={data.user.email ?? null} />;
 }

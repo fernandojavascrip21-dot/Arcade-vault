@@ -12,6 +12,7 @@ import {
 import { AuthCard } from "@/components/auth/auth-card";
 import { AuthField } from "@/components/auth/auth-field";
 import { FormMessage } from "@/components/auth/form-message";
+import { GitHubIcon, GoogleIcon } from "@/components/auth/provider-icons";
 import { ResendForm } from "@/components/auth/resend-form";
 import { SubmitButton } from "@/components/auth/submit-button";
 import { useSession } from "@/contexts/session-context";
@@ -151,8 +152,9 @@ export function AuthForm({ notice, offerResend, next }: AuthFormProps) {
             type="submit"
             name="provider"
             value={p.id}
-            className="border border-foreground/16 p-3.5 text-center text-[13px] tracking-wide text-foreground transition-colors hover:border-cian hover:text-cian active:scale-95"
+            className="flex items-center justify-center gap-2.5 border border-foreground/16 p-3.5 text-center text-[13px] tracking-wide text-foreground transition-colors hover:border-cian hover:text-cian active:scale-95"
           >
+            {p.id === "google" ? <GoogleIcon /> : <GitHubIcon />}
             {p.label}
           </button>
         ))}

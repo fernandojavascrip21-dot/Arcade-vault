@@ -131,7 +131,8 @@ Pages are Server Components that fetch data and pass it to `*-client.tsx` / clie
 - `lib/supabase/server.ts` (`createClient`, `@supabase/ssr`) for server code, `client.ts` for the browser.
 - `lib/supabase/queries.ts` — server-only reads: `getGames`, `getGameById`, `getBoard`,
   `getBoardsForGames`, `getBestPerGame`, `getTopPlayersGlobal`, `getGeneralBoard`, `getPlayerHistory`,
-  `getScoreRank`, `getProfile`, `isPlayerNameAvailable`. Never import from client code.
+  `getScoreRank`, `getProfile`, `isPlayerNameAvailable` (these two take an optional existing server client:
+  pass the one you already have so the same session is seen). Never import from client code.
 - Server Actions: `saveScoreAction(gameId, playerName, score)` in `app/play/[id]/actions.ts`
   (validates score/game, inserts, returns board + rank + the saved `name`; with a session and
   profile it saves with the **profile's** name and `user_id` and ignores the client's name) and `getPlayerHistoryAction` in
@@ -165,7 +166,8 @@ Pages are Server Components that fetch data and pass it to `*-client.tsx` / clie
 - `session-context` — real session (spec 21): `supabase.auth` (`onAuthStateChange`) + the profile;
   the server/hydration snapshot is always "no session". Exposes `user` (profile name, or the guest
   name), `isAuthenticated`, `needsPlayerName`, `isGuest`, `setName`/`playGuest` (guests only),
-  `logout`, `refreshProfile`. The guest name stays in `localStorage` key `arcade-vault:player-name`
+  `email`, `avatarUrl` (provider photo from `user_metadata`), `logout`, `refreshProfile` (= `syncSession`: re-reads the cookies; it also runs on every route change
+  because Server Action logins end in a soft navigation the browser client never hears about). The guest name stays in `localStorage` key `arcade-vault:player-name`
   via `useSyncExternalStore`, falling back to memory. `login(name)` no longer exists.
 - `credits-context` — simulated arcade credits (start 3, max 99), memory only.
 - Not in `contexts/`: per-game skin preferences (`arcadevault.<slug>.skin.v1`, see Games), the

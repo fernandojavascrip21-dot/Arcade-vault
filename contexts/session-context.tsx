@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import {
   createContext,
   useCallback,
@@ -15,8 +16,16 @@ import { signOutAction } from "@/app/auth/actions";
 import type { AuthState, SessionValue } from "@/lib/interfaces/session";
 import { createClient } from "@/lib/supabase/client";
 
+// Foto de la cuenta: Google la guarda como `picture`, GitHub como `avatar_url`.
+function readAvatarUrl(metadata: Record<string, unknown> | undefined) {
+  const url = metadata?.avatar_url ?? metadata?.picture;
+  return typeof url === "string" && url.startsWith("https://") ? url : null;
+}
+
 const NO_SESSION: AuthState = {
   userId: null,
+  email: null,
+  avatarUrl: null,
   playerName: null,
   profileLoaded: false,
 };
@@ -89,26 +98,34 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       if (cancelled) return;
       setAuth((prev) =>
         prev.userId === userId
-          ? { userId, playerName, profileLoaded: true }
+          ? { ...prev, playerName, profileLoaded: true }
           : prev,
       );
     };
 
     // INITIAL_SESSION se emite al suscribirse. No se llama a Supabase dentro
     // del callback (riesgo de bloqueo): se difiere con setTimeout.
-    const { data } = createClient().auth.onAuthStateChange((_event, session) => {
-      const userId = session?.user.id ?? null;
-      if (!userId) {
-        setAuth(NO_SESSION);
-        return;
-      }
-      setAuth((prev) =>
-        prev.userId === userId
-          ? prev
-          : { userId, playerName: null, profileLoaded: false },
-      );
-      setTimeout(() => void loadProfile(userId), 0);
-    });
+    const { data } = createClient().auth.onAuthStateChange(
+      (_event, session) => {
+        const userId = session?.user.id ?? null;
+        if (!userId) {
+          setAuth(NO_SESSION);
+          return;
+        }
+        setAuth((prev) =>
+          prev.userId === userId
+            ? prev
+            : {
+                userId,
+                email: session?.user.email ?? null,
+                avatarUrl: readAvatarUrl(session?.user.user_metadata),
+                playerName: null,
+                profileLoaded: false,
+              },
+        );
+        setTimeout(() => void loadProfile(userId), 0);
+      },
+    );
 
     return () => {
       cancelled = true;
@@ -116,17 +133,38 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const refreshProfile = useCallback(async () => {
-    const userId = auth.userId;
-    if (!userId) return;
+  // Relee la sesión de las cookies (el cliente no se entera de los accesos por
+  // Server Action, que terminan en una navegación suave) y el perfil.
+  const syncSession = useCallback(async () => {
+    const { data } = await createClient().auth.getSession();
+    const userId = data.session?.user.id ?? null;
+    const email = data.session?.user.email ?? null;
+    const avatarUrl = readAvatarUrl(data.session?.user.user_metadata);
+    if (!userId) {
+      setAuth((prev) => (prev.userId === null ? prev : NO_SESSION));
+      return;
+    }
     let playerName: string | null = null;
     try {
       playerName = await fetchPlayerName(userId);
     } catch {}
     setAuth((prev) =>
-      prev.userId === userId ? { userId, playerName, profileLoaded: true } : prev,
+      prev.userId === userId &&
+      prev.playerName === playerName &&
+      prev.profileLoaded
+        ? prev
+        : { userId, email, avatarUrl, playerName, profileLoaded: true },
     );
-  }, [auth.userId]);
+  }, []);
+
+  const pathname = usePathname();
+  useEffect(() => {
+    // Diferido: no se actualiza estado de forma síncrona dentro del efecto.
+    const id = setTimeout(() => void syncSession(), 0);
+    return () => clearTimeout(id);
+  }, [pathname, syncSession]);
+
+  const refreshProfile = syncSession;
 
   const setName = useCallback((name: string) => {
     writeName(name);
@@ -156,9 +194,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const user = auth.playerName ?? guestName;
   const isGuest = !isAuthenticated && isGuestFlag;
 
+  const email = auth.email;
+  const avatarUrl = auth.avatarUrl;
+
   const value = useMemo<SessionValue>(
     () => ({
       user,
+      email,
+      avatarUrl,
       isAuthenticated,
       needsPlayerName,
       isGuest,
@@ -169,6 +212,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }),
     [
       user,
+      email,
+      avatarUrl,
       isAuthenticated,
       needsPlayerName,
       isGuest,

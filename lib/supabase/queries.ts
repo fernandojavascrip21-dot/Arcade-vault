@@ -3,6 +3,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import type { Profile } from "@/lib/interfaces/profile";
+import type { SupabaseServerClient } from "@/lib/interfaces/supabase";
 import type { BoardRow, Game, GeneralRow, HistoryRow } from "@/lib/types";
 
 type GameRow = {
@@ -176,23 +177,27 @@ export async function getScoreRank(
 }
 
 // Perfil de una cuenta (spec 21). RLS solo deja leer el propio.
-export async function getProfile(userId: string): Promise<Profile | null> {
-  const supabase = await createClient();
+export async function getProfile(
+  userId: string,
+  client?: SupabaseServerClient,
+): Promise<Profile | null> {
+  const supabase = client ?? (await createClient());
   const { data, error } = await supabase
     .from("profiles")
     .select("user_id, player_name")
     .eq("user_id", userId)
     .maybeSingle();
   if (error) throw error;
-  return data
-    ? { userId: data.user_id, playerName: data.player_name }
-    : null;
+  return data ? { userId: data.user_id, playerName: data.player_name } : null;
 }
 
 // ¿Está libre el nombre de jugador? Usa la función SECURITY DEFINER del spec 21
 // para no leer perfiles ajenos.
-export async function isPlayerNameAvailable(name: string): Promise<boolean> {
-  const supabase = await createClient();
+export async function isPlayerNameAvailable(
+  name: string,
+  client?: SupabaseServerClient,
+): Promise<boolean> {
+  const supabase = client ?? (await createClient());
   const { data, error } = await supabase.rpc("is_player_name_available", {
     p_name: name,
   });

@@ -33,7 +33,7 @@ export async function saveScoreAction(
     // user_id e ignora el nombre del cliente. Sin perfil o sin sesión, se trata
     // como invitado y el trigger de la base reserva los nombres de cuentas.
     const { data: auth } = await supabase.auth.getUser();
-    const profile = auth.user ? await getProfile(auth.user.id) : null;
+    const profile = auth.user ? await getProfile(auth.user.id, supabase) : null;
 
     let name = playerName;
     if (!profile) {

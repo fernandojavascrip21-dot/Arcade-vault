@@ -57,3 +57,16 @@ export const OAUTH_PROVIDERS = [
   { id: "google", label: "Google" },
   { id: "github", label: "GitHub" },
 ] as const;
+
+export const NAME_TAKEN_ERROR =
+  "Ese nombre ya está en uso. Si ya lo elegiste con otra cuenta, cierra sesión y entra con esa cuenta.";
+
+// Sugerencias de nombre cuando el elegido ya está en uso (/auth/player-name).
+export const NAME_SUGGESTION_SUFFIXES = ["2", "_21", "_99", "_X"] as const;
+export const NAME_SUGGESTIONS_MAX = 3;
+export const PLAYER_NAME_INTRO =
+  "Tu cuenta con este correo ya está creada. Solo falta elegir tu nombre de jugador: es el que verás en el ranking y después no se puede cambiar.";
+
+// Fuerza al proveedor a preguntar con qué cuenta entrar en vez de reutilizar la
+// que tenga abierta el navegador (evita entrar sin querer con otra cuenta).
+export const OAUTH_QUERY_PARAMS = { prompt: "select_account" } as const;
