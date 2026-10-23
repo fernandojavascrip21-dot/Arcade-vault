@@ -7,7 +7,7 @@ import { AuthCard } from "@/components/auth/auth-card";
 import { AuthField } from "@/components/auth/auth-field";
 import { FormMessage } from "@/components/auth/form-message";
 import { SubmitButton } from "@/components/auth/submit-button";
-import { INITIAL_AUTH_STATE, PASSWORD_MIN } from "@/lib/constants/auth";
+import { INITIAL_AUTH_STATE, PASSWORD_RULE_HINT } from "@/lib/constants/auth";
 
 export function ResetPasswordForm() {
   const [state, formAction] = useActionState(
@@ -35,7 +35,7 @@ export function ResetPasswordForm() {
           required
         />
         <p className="-mt-2 text-[11px] text-texto-debil">
-          Mínimo {PASSWORD_MIN} caracteres.
+          {PASSWORD_RULE_HINT}
         </p>
         <FormMessage error={state.error} />
         <SubmitButton pendingText="GUARDANDO…">GUARDAR CONTRASEÑA</SubmitButton>

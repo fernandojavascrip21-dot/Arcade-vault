@@ -19,7 +19,7 @@ import { useSession } from "@/contexts/session-context";
 import {
   INITIAL_AUTH_STATE,
   OAUTH_PROVIDERS,
-  PASSWORD_MIN,
+  PASSWORD_RULE_HINT,
 } from "@/lib/constants/auth";
 import type { AuthFormProps } from "@/lib/interfaces/auth";
 
@@ -110,8 +110,8 @@ export function AuthForm({ notice, offerResend, next }: AuthFormProps) {
         />
         {registering ? (
           <p className="-mt-2 text-[11px] text-texto-debil">
-            Mínimo {PASSWORD_MIN} caracteres. Te enviaremos un enlace para
-            confirmar el correo.
+            {PASSWORD_RULE_HINT} Te enviaremos un enlace para confirmar el
+            correo.
           </p>
         ) : (
           <Link

@@ -6,6 +6,13 @@ import type { AuthFormState } from "@/lib/interfaces/auth";
 export const PASSWORD_MIN = 8;
 export const PASSWORD_MAX = 72; // límite de bcrypt en Supabase Auth
 
+// Regla completa (spec 22): minúscula, mayúscula y número, de 8 a 72
+// caracteres. Mantener igual que el requisito del panel de Supabase Auth.
+export const PASSWORD_RE = new RegExp(
+  `^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).{${PASSWORD_MIN},${PASSWORD_MAX}}$`,
+);
+export const PASSWORD_RULE_HINT = `De ${PASSWORD_MIN} a ${PASSWORD_MAX} caracteres, con minúscula, mayúscula y número.`;
+
 export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export const EMAIL_MAX = 254;
 
@@ -26,7 +33,7 @@ export const PLAYER_NAME_CREATED_MESSAGE = "CUENTA CREADA";
 export const AUTH_ERRORS: Record<string, string> = {
   invalid_credentials: "Correo o contraseña incorrectos.",
   email_not_confirmed: "Confirma tu correo antes de iniciar sesión.",
-  weak_password: `La contraseña es demasiado débil (mínimo ${PASSWORD_MIN} caracteres).`,
+  weak_password: `La contraseña es demasiado débil. ${PASSWORD_RULE_HINT}`,
   same_password: "La nueva contraseña debe ser distinta de la anterior.",
   email_address_invalid: "El correo no es válido.",
   validation_failed: "Revisa los datos e inténtalo de nuevo.",
