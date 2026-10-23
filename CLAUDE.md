@@ -7,10 +7,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What this is
 
 **Arcade Vault** — a platform for playing games online and competing for the highest score
-(see `README.md`). Specs 01–15 are all implemented (`specs/`, status `Implementado`): visual
-screens, landing, English routes, About/contact (Resend), Supabase integration, catalog +
-leaderboards, four playable canvas games, light/dark theme, player names with rankings, touch
-controls (13), the responsive mobile play room (14) and the desktop play room (15).
+(see `README.md`). Specs 01–17, 20 and 21 are implemented (`specs/`): visual screens, landing,
+English routes, About/contact (Resend), Supabase integration, catalog + leaderboards, light/dark
+theme, player names with rankings, touch controls (13), the responsive mobile play room (14), the
+desktop play room (15) and seven playable canvas games (06/08/10/11 plus Bombardero 16, Rana 17
+and Laberinto 20) plus real authentication (21). Specs 18 and 19 are discarded `Draft` alternatives of Laberinto (20 won).
+Next game in the pipeline: TORRE, two `Draft` variants in `specs/game-jam/torre/` (not yet chosen
+or implemented).
 UI copy is in Spanish; routes, file names and code identifiers are in English (except game
 ids/slugs, which are Spanish).
 
@@ -45,54 +48,38 @@ There is no test runner and no typecheck script configured. Type errors surface 
 
 ## Skills
 
-Skills live in `.agents/skills/` and are symlinked from `.claude/skills/`.
+Project skills live in `.agents/skills/`; the four stable ones are symlinked from `.claude/skills/`.
 
 - `/spec` — design a feature spec (`specs/NN-slug.md`, state `Draft`). No code.
 - `/spec-impl NN-slug` — implement an approved spec.
-- `/spec-impl-game NN-slug` — project-specific variant of `/spec-impl` for game specs: follows the
-  live `/spec-impl` phases, then runs `skin-designer`, `mobile-porter` and
-  `game-performance-booster` on the new game, each once the previous one has finished (sequential,
-  never in parallel — they edit the same `play-room.tsx` and `engine.ts`).
-- `/add-game` — project-specific variant of `/spec` for integrating a new game (port from
-  `references/started-games/` or from scratch). Produces the spec only; `/spec-impl` does the work.
-- `/frontend-design` — **always use it when designing user interfaces** (project rule).
+- `/spec-impl-game NN-slug` — `/spec-impl` for game specs, then runs `skin-designer`,
+  `mobile-porter` and `game-performance-booster` on the new game, **sequentially** (they edit the
+  same `play-room.tsx` and `engine.ts`).
+- `/add-game` — `/spec` variant for integrating a new game (port from `references/started-games/`
+  or from scratch). Produces the spec only.
+- **Experimental, not symlinked** (not invocable until linked in `.claude/skills/`): `spec-v2`
+  (copy of `spec`) and `spec-impl-v2` (`spec-impl` plus a strict rule: never implement anything
+  marked "Out of scope" or deferred; ask instead).
+- `/frontend-design` — **always use it when designing user interfaces** (project rule). It is a
+  user-level skill (`~/.claude/skills/`), not part of the repo.
 
-Subagents live in `.claude/agents/`:
+Subagents live in `.claude/agents/` (all `model: sonnet`). Read `.claude/agents/<name>.md` for the
+full rules, limits and output format.
 
-- `game-planner` (`model: sonnet`) — evaluates game suggestions and decides which game fits the
-  platform next; keeps the traffic-light to-do list in `references/games-suggestion-all.md`
-  (done / pending by priority / discarded — no round history). Run it before `/add-game`.
-- `game-jam` (`model: sonnet`) — given the name of a specific game already decided on (typically one
-  approved in "⏳ Pendientes" of `references/games-suggestion-all.md`, e.g. BOMBARDERO), turns it
-  into **two** full numeric `Draft` specs with different mechanic resolutions (same id/category,
-  same shape as specs 06/08/10/11) at `specs/game-jam/<slug>-a.md` and `<slug>-b.md`. No code, no
-  Supabase. Review both, pick one, approve it, and renumber into `specs/NN-slug.md` before
-  `/spec-impl`. (`specs/16-juego-bombardero.md` started as an earlier single-spec draft there, from before the
-  two-variant format.)
-- `skin-designer` (`model: sonnet`) — audits that every game has at least the skins `clasico`
-  (default), `retro` and `neon`, implements missing ones following the skin contract (engine
-  palette table + `setSkin`, controlled `skin` prop, SKIN chips in the `PlayRoom` ⋮ menu), checks dark-mode
-  contrast (≥ 3:1), documents a dated addendum in each game's spec and runs lint/build. Keeps the
-  per-game skin registry in `references/games-skins.md`. Must be given a game (or "todos");
-  otherwise it stops without changing anything and asks which one — never picks one itself. Never
-  touches Supabase, mechanics or scores; doesn't commit.
-- `mobile-porter` (`model: sonnet`) — audits that a game plays well in both the desktop and the
-  mobile browser, against specs 13 (touch controller) and 14 (responsive play room), and adds what
-  is missing by copying the existing games: `TOUCH_LAYOUTS` entry, `PlayRoom` branches, `mobile:`
-  variants. Never designs new controller pieces (it reports them instead) and only touches an
-  engine under the spec 13 exception (`movePaddleBy`). Documents a dated addendum in the game's
-  spec and runs lint/build; no visual check — that is manual. Must be given a game (or "todos");
-  otherwise it stops and asks. Never touches Supabase, mechanics, scores or skins; doesn't commit.
-- `game-performance-booster` (`model: sonnet`) — audits a game's engine, wrapper and `PlayRoom`
-  branches against the performance rules spec 17 (Rana) follows by design: a single RAF that
-  `stop()` cleans up, frame delta capped (≤ 50 ms), `dt`-scaled movement, `onStateChange` only on
-  change (nothing per-frame in React state), `shadowBlur` only on main fills and reset after each
-  entity, no per-frame allocations, static layers (scanlines) cached. Fixes what fails by copying
-  the engine that already complies, **only if the frame stays pixel-identical and gameplay is
-  unchanged** — otherwise it reports the fix instead of applying it. Static audit only (no FPS
-  measurement; the manual check is the user's). Documents a dated addendum in the game's spec and
-  runs lint/build. Must be given a game (or "todos"); otherwise it stops and asks. Never touches
-  Supabase, mechanics, scores, skins or the touch controller; doesn't commit.
+- `game-planner` — evaluates game suggestions and decides which game comes next; keeps the to-do
+  list in `references/games-suggestion-all.md`. Run it before `/add-game` or `game-jam`.
+- `game-jam` — turns an already chosen game into two `Draft` specs with different mechanics
+  (`specs/game-jam/<slug>/<slug>-a.md` and `-b.md`). Pick one, approve it and renumber it into
+  `specs/NN-slug.md` before `/spec-impl`.
+- `skin-designer` — makes sure a game has the `clasico` / `retro` / `neon` skins and adds the
+  missing ones; registry in `references/games-skins.md`.
+- `mobile-porter` — makes a game playable on mobile (touch controller of spec 13, responsive play
+  room of spec 14).
+- `game-performance-booster` — static performance audit of a game against the spec 17 rules;
+  applies only fixes that keep frame and gameplay identical.
+
+The last three must be given a game (or "todos") — otherwise they stop and ask; they write a dated
+addendum in the game's spec, run lint/build, never touch Supabase or scores and never commit.
 
 ## Hooks and MCP
 
@@ -106,7 +93,8 @@ Subagents live in `.claude/agents/`:
 
 Copy `.env.example`: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (public),
 `RESEND_API_KEY`, `CONTACT_TO_EMAIL` (server-only, used by `app/api/contact/route.ts`),
-`SUPERBASE_DB_PASSWORD`. Never commit real values.
+`RESEND_FROM_EMAIL` (optional, server-only; sender of the welcome email, default
+`onboarding@resend.dev` = sandbox), `SUPERBASE_DB_PASSWORD`. Never commit real values.
 
 ## Architecture
 
@@ -129,23 +117,40 @@ Copy `.env.example`: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHAB
 ## Routes
 
 `/` (home, `app/home-client.tsx`) · `/games` (catalog + category filter) · `/game/[id]` (detail) ·
-`/play/[id]` (play room) · `/hall-of-fame` (rankings) · `/about` · `/auth` · `POST /api/contact` (Resend).
+`/play/[id]` (play room) · `/hall-of-fame` (rankings) · `/about` · `POST /api/contact` (Resend) · auth (spec 21): `/auth`
+(login/register tabs + Google/GitHub), `/auth/callback` (Route Handler, code → session), `/auth/check-email`,
+`/auth/player-name`, `/auth/forgot-password`, `/auth/reset-password`. The whole site stays public.
 Old Spanish routes (`/juego`, `/jugar`, `/salon-fama`) were removed with no redirects (spec 03).
 Pages are Server Components that fetch data and pass it to `*-client.tsx` / client components.
 
 ## Data layer (Supabase)
 
-- Tables `games` (catalog) and `scores` (`game_id`, `player_name`, `score`). The catalog and
+- Tables `games` (catalog), `scores` (`game_id`, `player_name`, `score`, nullable `user_id`) and
+  `profiles` (`user_id`, unique `player_name`, spec 21). The catalog and
   leaderboards are **not** in code anymore; `app/data.ts` only holds the UI category filter.
 - `lib/supabase/server.ts` (`createClient`, `@supabase/ssr`) for server code, `client.ts` for the browser.
 - `lib/supabase/queries.ts` — server-only reads: `getGames`, `getGameById`, `getBoard`,
   `getBoardsForGames`, `getBestPerGame`, `getTopPlayersGlobal`, `getGeneralBoard`, `getPlayerHistory`,
-  `getScoreRank`. Never import from client code.
+  `getScoreRank`, `getProfile`, `isPlayerNameAvailable` (these two take an optional existing server client:
+  pass the one you already have so the same session is seen). Never import from client code.
 - Server Actions: `saveScoreAction(gameId, playerName, score)` in `app/play/[id]/actions.ts`
-  (validates score/name/game, inserts, returns board + rank) and `getPlayerHistoryAction` in
+  (validates score/game, inserts, returns board + rank + the saved `name`; with a session and
+  profile it saves with the **profile's** name and `user_id` and ignores the client's name) and `getPlayerHistoryAction` in
   `app/hall-of-fame/actions.ts`. The pipeline is generic by `game_id`: a new game needs only a new
   `games` row.
 - Domain types in `lib/types.ts`; `lib/scores.ts` has `rankColor` (uses CSS tokens).
+- **Auth** (spec 21, Supabase Auth: email+password with email confirmation, Google, GitHub):
+  `proxy.ts` (Next 16 `middleware` successor) + `lib/supabase/proxy.ts` only refresh the session
+  with `getClaims()`; they protect no route. Login/signup/reset/profile logic is in Server Actions
+  (`app/auth/actions.ts`, PKCE cookies via `@supabase/ssr`), which return `AuthFormState` for
+  `useActionState` forms and translate Supabase errors through `lib/constants/auth.ts`. Every
+  account picks a unique player name in `/auth/player-name` (table `profiles`, no renaming yet);
+  the welcome email (`lib/email/welcome.ts`, Resend, sent with `after()`, best effort) goes out once,
+  when the profile is created. DB-enforced identity: RLS on `scores`/`profiles` plus the trigger
+  `scores_enforce_identity` (an account's score takes its profile name; a guest cannot use a
+  registered name). Auth settings (Site URL, redirect URLs, OAuth providers) live in the Supabase
+  dashboard, not in the repo. **Conventions from this spec:** interfaces go in `lib/interfaces/`,
+  constants in `lib/constants/`; shared auth form pieces in `components/auth/`.
 - **Player names** (`lib/player-name.ts`, spec 12): `normalizePlayerName` (trim, collapse spaces,
   uppercase, max 14) and `validatePlayerName` (3–14 chars, letters/digits/`_`/space; `INVITADO`
   always valid). Shared by client and server; the **server always re-validates**.
@@ -158,8 +163,12 @@ Pages are Server Components that fetch data and pass it to `*-client.tsx` / clie
   anti-flash script in `app/layout.tsx` sets `data-theme` on `<html>` before hydration. Colors are CSS
   tokens in `app/globals.css` (`--cian`, `--magenta`, `--amarillo`, `--rango-*`…) redefined for light
   mode — use tokens, not hard-coded hex, so both themes work.
-- `session-context` — simulated session (no real auth); player name persisted in `localStorage`
-  key `arcade-vault:player-name` via `useSyncExternalStore`, falling back to memory. `playGuest()` = guest.
+- `session-context` — real session (spec 21): `supabase.auth` (`onAuthStateChange`) + the profile;
+  the server/hydration snapshot is always "no session". Exposes `user` (profile name, or the guest
+  name), `isAuthenticated`, `needsPlayerName`, `isGuest`, `setName`/`playGuest` (guests only),
+  `email`, `avatarUrl` (provider photo from `user_metadata`), `logout`, `refreshProfile` (= `syncSession`: re-reads the cookies; it also runs on every route change
+  because Server Action logins end in a soft navigation the browser client never hears about). The guest name stays in `localStorage` key `arcade-vault:player-name`
+  via `useSyncExternalStore`, falling back to memory. `login(name)` no longer exists.
 - `credits-context` — simulated arcade credits (start 3, max 99), memory only.
 - Not in `contexts/`: per-game skin preferences (`arcadevault.<slug>.skin.v1`, see Games), the
   touch-controller toggle (`arcadevault.touch-controls.v1`) and the rotate hint
@@ -170,9 +179,11 @@ Pages are Server Components that fetch data and pass it to `*-client.tsx` / clie
 
 ## Games
 
-Playable games (id → engine): `asteroides` (Asteroids), `bloques` (Tetris), `rompemuros` (Arkanoid),
-`serpiente` (Snake), `rana` (Frogger), `laberinto` (maze chase), under `components/games/<slug>/{engine.ts,<slug>-game.tsx}` — except
-Asteroides, whose folder is `components/games/asteroids/` (`asteroids-game.tsx`).
+Playable games (id → classic): `asteroides` (Asteroids), `bloques` (Tetris), `rompemuros` (Arkanoid),
+`serpiente` (Snake), `bombardero` (Blitz/Bomber), `rana` (Frogger), `laberinto` (maze chase), under
+`components/games/<slug>/{engine.ts,<slug>-game.tsx}` — except Asteroides, whose folder is
+`components/games/asteroids/` (`asteroids-game.tsx`). Catalog with descriptions:
+`references/implementd-game.md`.
 
 - `engine.ts` is framework-free: `create<Name>Engine(canvas, handlers, options?)` →
   `{ start, stop, setPaused, restart, setSkin }` (plus game-specific methods, e.g. Rompemuros
@@ -228,7 +239,8 @@ Asteroides, whose folder is `components/games/asteroids/` (`asteroids-game.tsx`)
   is two columns in `mobile-landscape:` and `desktop-short:`.
 - **`fixed` overlays in the play room must use `createPortal(…, document.body)`**: `<main>` keeps a
   `transform` from `animate-fade`, which makes it the containing block of `position: fixed`.
-- Pipeline for a new game: `game-planner` agent (decide which game) → `/add-game` (spec) →
+- Pipeline for a new game: `game-planner` agent (decide which game) → `/add-game` or the
+  `game-jam` agent (spec; game-jam gives two variants to choose from) →
   `/spec-impl-game` (code, then `skin-designer` for skins, `mobile-porter` for touch + mobile
   play room and `game-performance-booster` for the performance audit, in that order). The same
   steps by hand: `/spec-impl`, then each agent.

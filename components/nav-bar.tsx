@@ -8,6 +8,7 @@ import { useState, type ReactNode } from "react";
 import { useCredits } from "@/contexts/credits-context";
 import { useSession } from "@/contexts/session-context";
 import { useTheme } from "@/contexts/theme-context";
+import { LogoutButton, UserAvatar, UserBadge } from "@/components/user-badge";
 import { useMediaQuery } from "@/lib/use-media-query";
 
 // El ícono visible lo resuelve el CSS de [data-theme] (ver globals.css), no
@@ -55,7 +56,11 @@ function NavLink({
 export function NavBar() {
   const pathname = usePathname();
   const { credits, insertCoin } = useCredits();
-  const { user, logout } = useSession();
+  const { user, email, avatarUrl, isAuthenticated, needsPlayerName, logout } =
+    useSession();
+  const hasSession = needsPlayerName || Boolean(user);
+  // Sin perfil aún, la sesión se identifica por el correo.
+  const shownName = needsPlayerName ? email : user;
   const isNarrow = useMediaQuery("(max-width: 999px)");
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -89,7 +94,7 @@ export function NavBar() {
         </Link>
 
         {!isNarrow ? (
-          <div className="flex flex-wrap items-center justify-end gap-x-[22px] gap-y-3">
+          <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-3">
             <div className="flex items-center gap-2.5 border border-amarillo/35 bg-amarillo/5 px-2.5 py-2">
               <span className="whitespace-nowrap text-[10px] tracking-[2px] text-amarillo/70">
                 CRÉDITOS
@@ -121,21 +126,29 @@ export function NavBar() {
               Acerca de
             </NavLink>
 
-            {user ? (
-              <div className="flex items-center gap-2.5">
-                <div className="grid h-[34px] w-[34px] place-items-center border border-amarillo font-display text-[11px] text-amarillo [box-shadow:0_0_14px_rgba(245,255,0,.4)]">
-                  {user.charAt(0)}
-                </div>
-                <div className="whitespace-nowrap text-[13px] tracking-wider">
-                  {user}
-                </div>
-                <button
-                  type="button"
-                  onClick={logout}
-                  className="whitespace-nowrap text-[11px] uppercase tracking-wider text-texto-tenue transition-colors hover:text-magenta"
+            {needsPlayerName ? (
+              <div className="flex items-center gap-3">
+                <UserBadge
+                  name={email}
+                  status="pending"
+                  avatarUrl={avatarUrl}
+                />
+                <Link
+                  href="/auth/player-name"
+                  className="whitespace-nowrap border border-amarillo bg-amarillo/5 px-4 py-3 font-display text-[10px] text-amarillo transition-colors hover:bg-amarillo/20 active:scale-95"
                 >
-                  Salir
-                </button>
+                  ELIGE TU NOMBRE
+                </Link>
+                <LogoutButton onClick={() => void logout()} />
+              </div>
+            ) : user ? (
+              <div className="flex items-center gap-3">
+                <UserBadge
+                  name={user}
+                  status={isAuthenticated ? "active" : "guest"}
+                  avatarUrl={isAuthenticated ? avatarUrl : null}
+                />
+                <LogoutButton onClick={() => void logout()} />
               </div>
             ) : (
               <Link
@@ -160,6 +173,15 @@ export function NavBar() {
                 {creditsText}
               </span>
             </button>
+            {hasSession ? (
+              <button
+                type="button"
+                onClick={() => setMenuOpen(true)}
+                aria-label={`Sesión de ${shownName ?? "jugador"}. Abrir menú`}
+              >
+                <UserAvatar name={shownName} avatarUrl={avatarUrl} />
+              </button>
+            ) : null}
             <ThemeToggleButton />
             <button
               type="button"
@@ -187,6 +209,44 @@ export function NavBar() {
             <div className="font-display text-[10px] tracking-wider text-texto-debil">
               MENÚ
             </div>
+            {hasSession ? (
+              <div className="grid gap-3.5 border border-cian/30 bg-cian/5 p-3.5">
+                <div className="flex items-center gap-3">
+                  <UserAvatar name={shownName} avatarUrl={avatarUrl} />
+                  <div className="grid min-w-0 leading-tight">
+                    <span className="text-[9px] tracking-[2px] text-texto-tenue">
+                      {isAuthenticated || needsPlayerName
+                        ? "SESIÓN INICIADA COMO"
+                        : "JUGANDO COMO"}
+                    </span>
+                    <span className="truncate text-[14px] tracking-wider">
+                      {shownName ?? "Sin nombre"}
+                    </span>
+                  </div>
+                </div>
+                {needsPlayerName ? (
+                  <>
+                    <p className="text-[12px] leading-relaxed text-amarillo">
+                      Falta elegir tu nombre de jugador.
+                    </p>
+                    <Link
+                      href="/auth/player-name"
+                      onClick={closeMenu}
+                      className="border border-amarillo bg-amarillo/5 px-3.5 py-3 text-center font-display text-[10px] text-amarillo"
+                    >
+                      ELIGE TU NOMBRE
+                    </Link>
+                  </>
+                ) : null}
+                <LogoutButton
+                  fullWidth
+                  onClick={() => {
+                    closeMenu();
+                    void logout();
+                  }}
+                />
+              </div>
+            ) : null}
             <div className="flex items-center justify-between">
               <span className="text-[11px] uppercase tracking-wider text-texto-tenue">
                 Tema
@@ -221,13 +281,15 @@ export function NavBar() {
             >
               Acerca de
             </Link>
-            <Link
-              href="/auth"
-              onClick={closeMenu}
-              className="font-display text-xs text-magenta"
-            >
-              Iniciar Sesión
-            </Link>
+            {!hasSession ? (
+              <Link
+                href="/auth"
+                onClick={closeMenu}
+                className="font-display text-xs text-magenta"
+              >
+                Iniciar Sesión
+              </Link>
+            ) : null}
           </div>
         </div>
       ) : null}
