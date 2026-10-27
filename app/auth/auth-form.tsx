@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 
 import {
   signInAction,
@@ -26,6 +26,10 @@ import type { AuthFormProps } from "@/lib/interfaces/auth";
 export function AuthForm({ notice, offerResend, next }: AuthFormProps) {
   const router = useRouter();
   const { playGuest } = useSession();
+  const noticeRef = useRef<HTMLParagraphElement>(null);
+  useEffect(() => {
+    if (notice) noticeRef.current?.focus();
+  }, [notice]);
   const [tab, setTab] = useState<"login" | "register">("login");
   const [signInState, signInFormAction] = useActionState(
     signInAction,
@@ -46,17 +50,21 @@ export function AuthForm({ notice, offerResend, next }: AuthFormProps) {
 
   return (
     <AuthCard>
-      {notice ? (
-        <div className="grid gap-3 border border-amarillo/40 bg-amarillo/5 px-3.5 py-3">
-          <p
-            role="status"
-            className="text-[13px] leading-relaxed text-amarillo"
-          >
-            {notice}
-          </p>
-          {offerResend ? <ResendForm /> : null}
-        </div>
-      ) : null}
+      <div aria-live="polite" className={notice ? undefined : "sr-only"}>
+        {notice ? (
+          <div className="grid gap-3 border border-amarillo/40 bg-amarillo/5 px-3.5 py-3">
+            <p
+              ref={noticeRef}
+              tabIndex={-1}
+              role="status"
+              className="text-[13px] leading-relaxed text-amarillo"
+            >
+              {notice}
+            </p>
+            {offerResend ? <ResendForm /> : null}
+          </div>
+        ) : null}
+      </div>
 
       <div
         role="tablist"

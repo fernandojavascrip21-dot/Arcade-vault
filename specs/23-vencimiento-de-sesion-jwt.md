@@ -82,7 +82,7 @@ export function isSessionExpired(
 
 ## 5 — Criterios de aceptación
 
-- [ ] `isSessionExpired` devuelve el resultado esperado en: sesión reciente, 6 d 23 h, 7 d + 1 s, sin `amr` y `amr` vacío (los dos últimos, "no vencida").
+- [x] `isSessionExpired` devuelve el resultado esperado en: sesión reciente, 6 d 23 h, 7 d + 1 s, sin `amr` y `amr` vacío (los dos últimos, "no vencida").
 - [ ] Con una sesión de más de 7 días (simulada con una duración corta), cualquier navegación redirige a `/auth?error=session-expired` y `/auth` muestra el aviso en español.
 - [ ] Tras el vencimiento el navbar muestra INICIAR SESIÓN y las cookies de Supabase fueron borradas.
 - [ ] Iniciar sesión de nuevo funciona y reinicia la cuenta de los 7 días (también con Google y GitHub).
@@ -110,6 +110,41 @@ export function isSessionExpired(
 - **Mismo spec para vencimiento y protección** (elegido) frente a un spec 24: ambos editan `proxy.ts` y comparten la comprobación de sesión.
 
 ---
+
+### Ajustes durante la implementación — 2026-10-26
+
+- El usuario autorizó continuar sin la verificación previa con sesiones reales de email, Google y GitHub del paso 1. No había sesiones de prueba ni registro previo disponible. Se implementa la lectura de `amr` y se retira el registro temporal del proxy; la conservación del claim después del refresco queda pendiente de comprobación real. No se adopta la cookie alternativa sin evidencia de que `amr` falle.
+- La simulación con sesión real del paso 6 queda pendiente junto con la revisión del navbar, OAuth, recuperación y guardado de puntuaciones. Se verifican automáticamente el helper y el proxy con claims simulados, incluyendo cookies y peticiones POST, sin cambiar la duración de producción de 7 días.
+
+### Verificación de la implementación — 2026-10-26
+
+Ejecutar `node --test tests/auth-session.test.mjs`: seis pruebas con el código real del helper/proxy, `NextRequest`/`NextResponse` reales y Supabase Auth simulado. Cubren los casos de antigüedad (incluido el límite exacto), `amr` ausente/vacío/ilegible, selección del timestamp más antiguo, redirecciones GET con `next`, cookies borradas en request y response tras refresco + cierre, POST/PUT/HEAD vencidos sin redirección, rutas Auth públicas sin bucles, rechazo de claims con error y acceso de invitados/cuentas sin perfil a las rutas públicas. No equivalen a comprobar Supabase ni el navegador con sesiones reales.
+
+| Criterio                                 | Resultado comprobable / pendiente                                                                                                                                                                                                                                                                                                         |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Helper y casos de antigüedad             | Automático: pasa.                                                                                                                                                                                                                                                                                                                         |
+| Navegación vencida y aviso               | Proxy automático: pasa; aviso y foco implementados, pendientes en navegador.                                                                                                                                                                                                                                                              |
+| Navbar y borrado de cookies              | Borrado del proxy automático: pasa; sincronización visual pendiente.                                                                                                                                                                                                                                                                      |
+| Reiniciar sesión por email/Google/GitHub | Pendiente con sesiones reales.                                                                                                                                                                                                                                                                                                            |
+| Refresco conserva inicio                 | Pendiente con sesiones reales de los tres métodos.                                                                                                                                                                                                                                                                                        |
+| Puntuación vencida como invitado         | Proxy POST automático: pasa; guardar puntuación real pendiente.                                                                                                                                                                                                                                                                           |
+| Ausencia de bucles Auth                  | Proxy automático: pasa; flujo completo pendiente.                                                                                                                                                                                                                                                                                         |
+| Pasos de cuenta con/sin sesión           | Proxy automático: pasa; páginas en navegador pendientes.                                                                                                                                                                                                                                                                                  |
+| Pasos de cuenta vencidos                 | Proxy automático: pasa con `session-expired`.                                                                                                                                                                                                                                                                                             |
+| Recuperación y OAuth                     | Pendiente con correos/proveedores reales.                                                                                                                                                                                                                                                                                                 |
+| Rutas públicas e identidad sin perfil    | Proxy automático: pasa; navegación real pendiente.                                                                                                                                                                                                                                                                                        |
+| Cookie alternativa                       | No aplica: no se adoptó.                                                                                                                                                                                                                                                                                                                  |
+| Lint y build                             | `npm run lint`, `npx tsc --noEmit` y `npm run build -- --webpack`: pasan. `npm run build` con Turbopack no se completa por restricciones del entorno (descarga de fuentes y apertura de puerto interno, `Operation not permitted`). Se deja el criterio general sin marcar hasta validar el comando por defecto en un entorno compatible. |
+
+Comprobación manual pendiente:
+
+1. Iniciar sesión con cada método y comparar únicamente `amr[].timestamp` antes y después de `refreshSession()`: debe existir y conservarse. No guardar ni publicar tokens completos.
+2. En desarrollo, cambiar temporalmente `SESSION_MAX_AGE_SECONDS` a 60; iniciar sesión, esperar más de 60 segundos y navegar a `/games`. Comprobar el aviso en español, el foco, `next=/games`, cookies Auth borradas y navbar INICIAR SESIÓN sin recarga manual.
+3. Repetir sobre `/auth/player-name` y `/auth/reset-password` con sesión vencida; sin sesión deben llevar a `/auth?next=…`. Con sesión válida, reset-password abre y player-name abre si aún no hay perfil (con perfil conserva su redirección existente).
+4. Vencer durante una partida y guardar puntuación sin navegar antes: la acción no debe redirigir; debe comportarse como invitado, incluido el posible rechazo de nombre reservado.
+5. Comprobar correo de recuperación → callback → reset-password; iniciar sesión de nuevo con email, Google y GitHub, y comprobar que el nuevo inicio reinicia el plazo.
+6. Sin sesión, recorrer `/`, `/games`, `/game/bloques`, `/play/bloques`, `/hall-of-fame` y `/about`; repetir con cuenta sin perfil. Revisar `/auth`, `/auth/callback` y los pasos de cuenta sin bucles.
+7. Restaurar la constante a 604800 (7 días) y volver a ejecutar pruebas, lint y build.
 
 ## 7 — Riesgos identificados
 

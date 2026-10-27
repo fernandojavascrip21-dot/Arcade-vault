@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { updateSession } from "@/lib/supabase/proxy";
 
-// Next 16: `proxy` sustituye a `middleware`. Solo refresca la sesión (spec 21).
+// Next 16: refresco, vencimiento y protección de pasos de cuenta (specs 21 y 23).
 export async function proxy(request: NextRequest) {
   return updateSession(request);
 }

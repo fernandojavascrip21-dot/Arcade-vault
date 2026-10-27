@@ -17,6 +17,10 @@ export const PASSWORD_RULE_HINT = `De ${PASSWORD_MIN} a ${PASSWORD_MAX} caracter
 
 // Vida máxima de una sesión, medida desde el inicio de sesión (spec 23).
 export const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7; // 7 días
+export const PROTECTED_ROUTES: readonly string[] = [
+  "/auth/player-name",
+  "/auth/reset-password",
+];
 
 export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export const EMAIL_MAX = 254;
@@ -59,8 +63,9 @@ export const RESEND_COOLDOWN_SECONDS = 60;
 export const NAME_CHECK_DEBOUNCE_MS = 400;
 export const ACCOUNT_CREATED_REDIRECT_MS = 1800;
 
-// Avisos de /auth según `?error=` (los pone /auth/callback).
+// Avisos de /auth según `?error=` (callback y proxy).
 export const AUTH_PAGE_NOTICES: Record<string, string> = {
+  "session-expired": "Tu sesión venció. Vuelve a iniciar sesión.",
   "link-invalid": "El enlace venció o ya se usó. Pide uno nuevo con tu correo.",
   oauth: "No se pudo iniciar sesión con ese proveedor. Inténtalo de nuevo.",
 };
