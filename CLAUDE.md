@@ -41,9 +41,10 @@ npm run build    # production build (Turbopack)
 npm start        # serve the production build
 npm run lint     # ESLint (flat config; note: the script is `eslint`, not `next lint`)
 npx next typegen # regenerate .next/types when route/layout prop types drift
+node --test tests/auth-session.test.mjs # spec 23: helper and proxy, mocked Supabase Auth
 ```
 
-There is no test runner and no typecheck script configured. Type errors surface via `npm run build`
+Session regression tests use Node's built-in test runner (command above); there is no typecheck script configured. Type errors surface via `npm run build`
 (or `npx tsc --noEmit`). If you add a test runner, document the single-test invocation here.
 
 ## Skills
@@ -140,8 +141,15 @@ Pages are Server Components that fetch data and pass it to `*-client.tsx` / clie
   `games` row.
 - Domain types in `lib/types.ts`; `lib/scores.ts` has `rankColor` (uses CSS tokens).
 - **Auth** (spec 21, Supabase Auth: email+password with email confirmation, Google, GitHub):
-  `proxy.ts` (Next 16 `middleware` successor) + `lib/supabase/proxy.ts` only refresh the session
-  with `getClaims()`; they protect no route. Login/signup/reset/profile logic is in Server Actions
+  `proxy.ts` (Next 16 `middleware` successor) + `lib/supabase/proxy.ts` refresh the session
+  with `getClaims()` and limit sessions to 7 days from the oldest signed `amr[].timestamp`
+  (spec 23, `SESSION_MAX_AGE_SECONDS`; missing/unreadable `amr` fails open). Expiry signs out
+  only the current session, copies cleared cookies to redirects, and sends GET navigation to
+  `/auth?error=session-expired&next=…`; public `/auth` routes are excluded to avoid loops.
+  Non-GET expired requests continue as guests. Only `/auth/player-name` and
+  `/auth/reset-password` require valid claims (`PROTECTED_ROUTES`); games stay public and
+  accounts without profiles may keep browsing. `/auth/callback` always stays public.
+  The Supabase access token lifetime stays at 3600 seconds. Login/signup/reset/profile logic is in Server Actions
   (`app/auth/actions.ts`, PKCE cookies via `@supabase/ssr`), which return `AuthFormState` for
   `useActionState` forms and translate Supabase errors through `lib/constants/auth.ts`. Every
   account picks a unique player name in `/auth/player-name` (table `profiles`, no renaming yet);
