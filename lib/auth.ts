@@ -12,6 +12,7 @@ import {
   PASSWORD_RE,
   PASSWORD_SYMBOL_RE,
   PASSWORD_RULE_HINT,
+  SESSION_MAX_AGE_SECONDS,
 } from "@/lib/constants/auth";
 
 export function isValidEmail(email: string): boolean {
@@ -45,6 +46,29 @@ export function safeNext(next: string | null | undefined): string | null {
   if (!next || !next.startsWith("/")) return null;
   if (next.startsWith("//") || next.includes("\\")) return null;
   return next;
+}
+
+// Instante de inicio de sesión (segundos) desde el claim `amr` del JWT: el
+// `timestamp` más antiguo. `null` si falta o no es legible (spec 23).
+export function getAuthenticatedAt(amr: unknown): number | null {
+  if (!Array.isArray(amr)) return null;
+  let oldest: number | null = null;
+  for (const entry of amr) {
+    const ts = (entry as { timestamp?: unknown } | null)?.timestamp;
+    if (typeof ts !== "number" || !Number.isFinite(ts)) continue;
+    if (oldest === null || ts < oldest) oldest = ts;
+  }
+  return oldest;
+}
+
+// Falla abierto: sin marca legible la sesión se considera no vencida (spec 23).
+export function isSessionExpired(
+  authenticatedAtSeconds: number | null,
+  nowSeconds: number,
+  maxAgeSeconds = SESSION_MAX_AGE_SECONDS,
+): boolean {
+  if (authenticatedAtSeconds === null) return false;
+  return nowSeconds - authenticatedAtSeconds > maxAgeSeconds;
 }
 
 export function translateAuthError(code: string | undefined): string {

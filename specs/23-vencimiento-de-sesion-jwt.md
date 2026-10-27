@@ -1,6 +1,6 @@
 # SPEC 23 — Vencimiento de sesión (JWT) y protección de rutas en el proxy
 
-> **Status:** Draft
+> **Status:** Aprovado
 > **Depends on:** SPEC 21, SPEC 22
 > **Date:** 2026-10-22
 > **Objective:** Hacer que `proxy.ts` limite la sesión a 7 días (usando el JWT que ya emite Supabase Auth, obligando a volver a iniciar sesión al vencer) y exija sesión en los pasos de cuenta `/auth/player-name` y `/auth/reset-password`.

@@ -1,4 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
+import { appendFileSync } from "node:fs";
 import { NextResponse, type NextRequest } from "next/server";
 
 // Refresca la sesión de Supabase en cada petición (spec 21). No protege rutas:
@@ -28,7 +29,21 @@ export async function updateSession(request: NextRequest) {
   );
 
   // No poner código entre createServerClient y getClaims: dispara el refresco.
-  await supabase.auth.getClaims();
+  const { data: tmpClaims } = await supabase.auth.getClaims();
+  // TEMP spec 23 paso 1 (borrar): verifica que amr[].timestamp se conserva al refrescar.
+  if (tmpClaims) {
+    appendFileSync(
+      "/private/tmp/claude-501/spec23-amr.log",
+      JSON.stringify({
+        path: request.nextUrl.pathname,
+        iat: tmpClaims.claims.iat,
+        exp: tmpClaims.claims.exp,
+        amr: tmpClaims.claims.amr,
+        session_id: tmpClaims.claims.session_id,
+        at: new Date().toISOString(),
+      }) + "\n",
+    );
+  }
 
   return response;
 }

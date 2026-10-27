@@ -15,6 +15,9 @@ export const PASSWORD_RE = new RegExp(
 );
 export const PASSWORD_RULE_HINT = `De ${PASSWORD_MIN} a ${PASSWORD_MAX} caracteres, con minúscula, mayúscula, número y símbolo.`;
 
+// Vida máxima de una sesión, medida desde el inicio de sesión (spec 23).
+export const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7; // 7 días
+
 export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export const EMAIL_MAX = 254;
 
