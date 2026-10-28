@@ -8,6 +8,8 @@ Estado según el spec 22 (`specs/22-checklist-seguridad-basico.md`, 2026-10-22):
 - [x] Max signup rate — límite de **5 requests / 5 min por IP** en "Rate limit for sign-ups and sign-ins" (campo combinado con logins; el panel no tiene límite por hora). Sin CAPTCHA.
 - [x] Headers de seguridad en Next.js — `securityHeaders` en `next.config.ts`: los 3 de abajo + `Strict-Transport-Security` y `Permissions-Policy`. Sin CSP (spec propio).
 - [x] Hash de contraseñas — lo hace Supabase Auth (bcrypt); la app nunca guarda ni registra la contraseña. Verificado con conteo sobre `auth.users`.
+- [x] Origen público fijo (spec 24) — `SITE_URL` + `getSiteUrl()`; enlaces de correo/OAuth y callback sin cabeceras del cliente; URL del correo de bienvenida escapada.
+- [ ] Panel (a marcar a mano, spec 24): *Secure password change* activo (tras probar el reset); Redirect URLs sin comodines amplios (`*`, `https://*`); Site URL = dominio de producción; confirmación de correo activa; política de contraseñas = `PASSWORD_RE`; rate limit vigente (si se sube, el login queda sin freno en la app). Mantener `getUser()` en cada página protegida.
 
 Ej:
 

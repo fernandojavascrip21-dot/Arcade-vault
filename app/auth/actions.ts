@@ -1,6 +1,5 @@
 "use server";
 
-import { headers } from "next/headers";
 import { after } from "next/server";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
@@ -25,23 +24,24 @@ import {
   validatePlayerName,
 } from "@/lib/player-name";
 import type { SupabaseServerClient } from "@/lib/interfaces/supabase";
+import { getSiteUrl } from "@/lib/site-url";
 import { sendWelcomeEmail } from "@/lib/email/welcome";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile, isPlayerNameAvailable } from "@/lib/supabase/queries";
 
+// Origen público fijo (spec 24); null si SITE_URL no es válida (falla cerrado).
+function siteUrlOrNull(): string | null {
+  try {
+    return getSiteUrl();
+  } catch (err) {
+    console.error("[auth] SITE_URL:", err);
+    return null;
+  }
+}
+
 function text(formData: FormData, key: string): string {
   const value = formData.get(key);
   return typeof value === "string" ? value : "";
-}
-
-// Origen público del sitio para los enlaces de los correos y OAuth.
-async function getOrigin(): Promise<string> {
-  const h = await headers();
-  const origin = h.get("origin");
-  if (origin) return origin;
-  const host = h.get("x-forwarded-host") ?? h.get("host");
-  const proto = h.get("x-forwarded-proto") ?? "http";
-  return `${proto}://${host}`;
 }
 
 // Destino tras un acceso: sin perfil → elegir nombre; con perfil → `next` o "/".
@@ -104,11 +104,14 @@ export async function signUpAction(
   const passwordError = validatePassword(password);
   if (passwordError) return { ok: false, error: passwordError };
 
+  const siteUrl = siteUrlOrNull();
+  if (!siteUrl) return { ok: false, error: GENERIC_AUTH_ERROR };
+
   const supabase = await createClient();
   const { error } = await supabase.auth.signUp({
     email,
     password,
-    options: { emailRedirectTo: `${await getOrigin()}/auth/callback` },
+    options: { emailRedirectTo: `${siteUrl}/auth/callback` },
   });
 
   // Un correo ya registrado no devuelve error: misma respuesta que uno nuevo.
@@ -126,7 +129,9 @@ export async function signInWithProviderAction(
     redirect("/auth?error=oauth");
   }
   const next = safeNext(text(formData, "next"));
-  const callback = new URL(`${await getOrigin()}/auth/callback`);
+  const siteUrl = siteUrlOrNull();
+  if (!siteUrl) redirect("/auth?error=oauth");
+  const callback = new URL(`${siteUrl}/auth/callback`);
   if (next) callback.searchParams.set("next", next);
 
   const supabase = await createClient();
@@ -150,9 +155,12 @@ export async function requestPasswordResetAction(
     return { ok: false, error: "El correo no es válido." };
   }
 
+  const siteUrl = siteUrlOrNull();
+  if (!siteUrl) return { ok: false, error: GENERIC_AUTH_ERROR };
+
   const supabase = await createClient();
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${await getOrigin()}/auth/callback?next=/auth/reset-password`,
+    redirectTo: `${siteUrl}/auth/callback?next=/auth/reset-password`,
   });
   // Solo se muestran los límites de envío; el resto recibe la respuesta neutra.
   if (
@@ -237,7 +245,8 @@ export async function claimPlayerNameAction(
   // su perfil. `after` la envía sin bloquear ni cambiar la respuesta.
   const email = auth.user.email;
   if (email) {
-    const siteUrl = await getOrigin();
+    const siteUrl = siteUrlOrNull();
+    if (!siteUrl) return { ok: true, message: PLAYER_NAME_CREATED_MESSAGE };
     after(() => sendWelcomeEmail(email, name, siteUrl));
   }
 
@@ -254,11 +263,14 @@ export async function resendConfirmationAction(
     return { ok: false, error: "El correo no es válido." };
   }
 
+  const siteUrl = siteUrlOrNull();
+  if (!siteUrl) return { ok: false, error: GENERIC_AUTH_ERROR };
+
   const supabase = await createClient();
   const { error } = await supabase.auth.resend({
     type: "signup",
     email,
-    options: { emailRedirectTo: `${await getOrigin()}/auth/callback` },
+    options: { emailRedirectTo: `${siteUrl}/auth/callback` },
   });
   if (
     error?.code === "over_email_send_rate_limit" ||

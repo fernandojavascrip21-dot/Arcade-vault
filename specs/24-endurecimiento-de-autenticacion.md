@@ -113,3 +113,32 @@ Variable nueva en `.env.example`: `SITE_URL=` (servidor; en Vercel, el dominio d
 - **_Secure password change_ activado antes de tiempo** podría bloquear el reset si la sesión de recuperación no cuenta como reciente; por eso el paso 6 lo activa solo tras probarlo.
 - **OAuth y Redirect URLs**: el dominio de `SITE_URL` debe estar en la lista de Supabase y en los proveedores; si se cambia el dominio, actualizar ambos.
 - **Next 16**: Route Handlers y Server Actions cambiaron; leer la documentación local antes de editar.
+
+---
+
+## 8 — Verificación (2026-10-27)
+
+**Código (hecho en la rama `spec-24-endurecimiento-de-autenticacion`):**
+
+- [x] `getSiteUrl()` en `lib/site-url.ts` + `tests/site-url.test.mjs` (6 casos).
+- [x] `getOrigin()` eliminado; las cinco Server Actions y el callback usan `getSiteUrl()` y fallan cerrado.
+- [x] `grep` de `Origin` / `Host` / `X-Forwarded-*` limpio en `app/`, `lib/`, `components/` y `contexts/`.
+- [x] Correo de bienvenida: `gamesUrl` escapada en el HTML.
+- [x] `reauthentication_needed` en `AUTH_ERRORS` y enlace a `/auth/forgot-password` en `reset-password-form.tsx`.
+- [x] `.env.example`, `CLAUDE.md` y `references/security-checklist.md` actualizados.
+- [x] `node --test tests/auth-session.test.mjs tests/site-url.test.mjs` (12 OK), `npm run lint` y `npm run build` sin errores.
+
+**Comprobaciones de panel (a marcar a mano; no las hace el agente):**
+
+- [ ] `SITE_URL` definida en Vercel (dominio de producción, `https`) y en `.env.local`.
+- [ ] Redirect URLs sin comodines amplios (`*`, `https://*`).
+- [ ] Site URL = dominio de producción.
+- [ ] Confirmación de correo activa.
+- [ ] Política de contraseñas igual a `PASSWORD_RE` (8 caracteres + minúscula, mayúscula, dígito y símbolo).
+- [ ] Rate limit vigente (5 requests / 5 min por IP).
+- [ ] _Secure password change_ activado **después** de probar el reset por correo.
+
+**Pruebas de extremo a extremo (pendientes):**
+
+- [ ] Registro, reenvío de confirmación, reset de contraseña, Google y GitHub en local y en producción.
+- [ ] Sesión antigua que intenta fijar contraseña recibe el mensaje de `reauthentication_needed`.

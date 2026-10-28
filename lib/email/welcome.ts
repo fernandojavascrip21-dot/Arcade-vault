@@ -27,6 +27,7 @@ export async function sendWelcomeEmail(
 
     const gamesUrl = `${siteUrl.replace(/\/$/, "")}/games`;
     const name = escapeHtml(playerName);
+    const gamesUrlHtml = escapeHtml(gamesUrl);
 
     const text = [
       `¡Bienvenido a Arcade Vault, ${playerName}!`,
@@ -44,8 +45,8 @@ export async function sendWelcomeEmail(
         <div style="font-size:20px;letter-spacing:3px;color:#00f5ff;">ARCADE<span style="color:#ff006e;">VAULT</span></div>
         <p style="margin:24px 0 8px;font-size:14px;color:#cdd8de;">Tu cuenta está lista. Te vas a ver en los rankings como:</p>
         <p style="margin:0 0 24px;font-size:22px;letter-spacing:4px;color:#f5ff00;">${name}</p>
-        <a href="${gamesUrl}" style="display:inline-block;padding:14px 22px;background:#00f5ff;color:#0a0a0f;text-decoration:none;font-weight:bold;letter-spacing:2px;">ELEGIR UN JUEGO</a>
-        <p style="margin:24px 0 0;font-size:12px;color:#6f7d88;">Si el botón no funciona, abre ${gamesUrl}</p>
+        <a href="${gamesUrlHtml}" style="display:inline-block;padding:14px 22px;background:#00f5ff;color:#0a0a0f;text-decoration:none;font-weight:bold;letter-spacing:2px;">ELEGIR UN JUEGO</a>
+        <p style="margin:24px 0 0;font-size:12px;color:#6f7d88;">Si el botón no funciona, abre ${gamesUrlHtml}</p>
       </td></tr>
     </table>
   </body>
