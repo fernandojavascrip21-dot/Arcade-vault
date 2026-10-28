@@ -1,6 +1,6 @@
 # SPEC 24 — Endurecimiento de la autenticación (origen fijo, cambio de contraseña y límites)
 
-> **Status:** Aprovado
+> **Status:**Implementado
 > **Depends on:** SPEC 21, SPEC 22, SPEC 23
 > **Date:** 2026-10-27
 > **Objective:** Cerrar los hallazgos de la revisión de seguridad de la autenticación: dejar de construir los enlaces de correo/OAuth con cabeceras del cliente, escapar la URL del correo de bienvenida, exigir reautenticación al cambiar la contraseña y documentar las comprobaciones de panel que no viven en el repo.
