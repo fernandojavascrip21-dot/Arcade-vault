@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState } from "react";
 
 import { updatePasswordAction } from "@/app/auth/actions";
@@ -7,7 +8,11 @@ import { AuthCard } from "@/components/auth/auth-card";
 import { AuthField } from "@/components/auth/auth-field";
 import { FormMessage } from "@/components/auth/form-message";
 import { SubmitButton } from "@/components/auth/submit-button";
-import { INITIAL_AUTH_STATE, PASSWORD_RULE_HINT } from "@/lib/constants/auth";
+import {
+  AUTH_ERRORS,
+  INITIAL_AUTH_STATE,
+  PASSWORD_RULE_HINT,
+} from "@/lib/constants/auth";
 
 export function ResetPasswordForm() {
   const [state, formAction] = useActionState(
@@ -38,6 +43,14 @@ export function ResetPasswordForm() {
           {PASSWORD_RULE_HINT}
         </p>
         <FormMessage error={state.error} />
+        {state.error === AUTH_ERRORS.reauthentication_needed && (
+          <Link
+            href="/auth/forgot-password"
+            className="text-center text-[12px] text-cian underline"
+          >
+            PEDIR ENLACE NUEVO
+          </Link>
+        )}
         <SubmitButton pendingText="GUARDANDO…">GUARDAR CONTRASEÑA</SubmitButton>
       </form>
     </AuthCard>

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { safeNext } from "@/lib/auth";
+import { getSiteUrl } from "@/lib/site-url";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/supabase/queries";
 
@@ -7,14 +8,20 @@ import { getProfile } from "@/lib/supabase/queries";
 // Intercambia el `code` (PKCE) por la sesión y redirige; nunca muestra la
 // pantalla de error de Next.
 export async function GET(request: Request): Promise<Response> {
-  const { searchParams, origin } = new URL(request.url);
+  const { searchParams } = new URL(request.url);
 
-  // Detrás de un proxy/CDN el origen público viene en x-forwarded-host.
-  const forwardedHost = request.headers.get("x-forwarded-host");
-  const base =
-    process.env.NODE_ENV !== "development" && forwardedHost
-      ? `https://${forwardedHost}`
-      : origin;
+  // Origen público fijo (spec 24): nunca se confía en Host ni x-forwarded-*.
+  let base: string;
+  try {
+    base = getSiteUrl();
+  } catch (err) {
+    console.error("[auth/callback] SITE_URL:", err);
+    // Sin origen válido: Location relativo, nunca otro host.
+    return new Response(null, {
+      status: 307,
+      headers: { Location: "/auth?error=oauth" },
+    });
+  }
   const to = (path: string) => NextResponse.redirect(`${base}${path}`);
 
   if (searchParams.get("error")) return to("/auth?error=oauth");

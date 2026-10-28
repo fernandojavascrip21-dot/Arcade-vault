@@ -31,6 +31,7 @@ All run on `model: sonnet`. For full rules, limits and output format read `.clau
 - **`skin-designer`**: Makes sure a game has the `clasico` / `retro` / `neon` skins (Bloques: `retro` / `neon` / `pastel` / `pixel`) and adds the missing ones; registry in `references/games-skins.md`.
 - **`mobile-porter`**: Makes a game playable on mobile (touch controller of spec 13, responsive play room of spec 14).
 - **`game-performance-booster`**: Static performance audit of a game against the spec 17 rules; applies only fixes that keep frame and gameplay identical.
+- **`security-auditor`**: On-demand audit of application code and Supabase security metadata against specs 21–23 and the security checklist. Invoke it for the whole app by default or name a specific area. Every run creates a new report in `references/security/`; it never changes application code, Supabase data or configuration.
 
 `skin-designer`, `mobile-porter` and `game-performance-booster` must be given a game (or "todos"); if not, they stop and ask. They document a dated addendum in the game's spec, run lint/build and never commit.
 

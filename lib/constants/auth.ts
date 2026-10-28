@@ -51,6 +51,8 @@ export const AUTH_ERRORS: Record<string, string> = {
   over_request_rate_limit:
     "Demasiados intentos. Espera unos minutos e inténtalo de nuevo.",
   otp_expired: "El enlace venció o ya se usó. Solicita uno nuevo.",
+  reauthentication_needed:
+    "Por seguridad, pide un enlace nuevo para cambiar tu contraseña.",
   session_not_found: "Tu sesión venció. Vuelve a iniciar sesión.",
   not_authenticated: "Tu sesión venció. Vuelve a iniciar sesión.",
 };

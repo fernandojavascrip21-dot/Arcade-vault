@@ -95,7 +95,8 @@ addendum in the game's spec, run lint/build, never touch Supabase or scores and 
 Copy `.env.example`: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (public),
 `RESEND_API_KEY`, `CONTACT_TO_EMAIL` (server-only, used by `app/api/contact/route.ts`),
 `RESEND_FROM_EMAIL` (optional, server-only; sender of the welcome email, default
-`onboarding@resend.dev` = sandbox), `SUPERBASE_DB_PASSWORD`. Never commit real values.
+`onboarding@resend.dev` = sandbox), `SITE_URL` (server-only, spec 24: fixed public origin, `https`; see Auth),
+`SUPERBASE_DB_PASSWORD`. Never commit real values.
 
 ## Architecture
 
@@ -157,7 +158,11 @@ Pages are Server Components that fetch data and pass it to `*-client.tsx` / clie
   when the profile is created. DB-enforced identity: RLS on `scores`/`profiles` plus the trigger
   `scores_enforce_identity` (an account's score takes its profile name; a guest cannot use a
   registered name). Auth settings (Site URL, redirect URLs, OAuth providers) live in the Supabase
-  dashboard, not in the repo. **Conventions from this spec:** interfaces go in `lib/interfaces/`,
+  dashboard, not in the repo. **Origin (spec 24)**: email/OAuth links and the callback use
+  `getSiteUrl()` (`lib/site-url.ts`, env `SITE_URL`), never `Origin`/`Host`/`X-Forwarded-*`; outside
+  `development` it fails closed (actions return `GENERIC_AUTH_ERROR`, callback → `/auth?error=oauth`).
+  Keep `getUser()` in every protected page (`PROTECTED_ROUTES` matches exact paths only).
+  `updatePasswordAction` maps `reauthentication_needed` (Supabase *Secure password change*). **Conventions from this spec:** interfaces go in `lib/interfaces/`,
   constants in `lib/constants/`; shared auth form pieces in `components/auth/`.
 - **Player names** (`lib/player-name.ts`, spec 12): `normalizePlayerName` (trim, collapse spaces,
   uppercase, max 14) and `validatePlayerName` (3–14 chars, letters/digits/`_`/space; `INVITADO`
